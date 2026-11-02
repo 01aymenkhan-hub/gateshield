@@ -102,6 +102,7 @@ export default function VisitorCategoryView({
   // Modals
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [isCheckOutOpen, setIsCheckOutOpen] = useState(false);
+  const [selectedCheckoutVisit, setSelectedCheckoutVisit] = useState<any>(null);
   const [selectedBadgeVisit, setSelectedBadgeVisit] = useState<any>(null);
 
   const loadGates = useCallback(async () => {
@@ -203,7 +204,7 @@ export default function VisitorCategoryView({
       'Phone',
       'Host Name',
       'Department',
-      'Card No',
+      'Card / Vehicle No',
       'Entry Gate',
       'Check In Time',
       'Exit Gate',
@@ -219,7 +220,7 @@ export default function VisitorCategoryView({
       `"${v.person?.phoneNumber || ''}"`,
       `"${v.hostName}"`,
       `"${v.department}"`,
-      `"${v.visitorCardNo || ''}"`,
+      `"${String(v.person?.category || '').toUpperCase() === 'DELIVERY' ? v.vehicleNo || v.visitorCardNo || '' : v.visitorCardNo || ''}"`,
       `"${v.entryGate?.name || ''}"`,
       `"${new Date(v.checkInTime).toLocaleString()}"`,
       `"${v.exitGate?.name || ''}"`,
@@ -286,7 +287,7 @@ export default function VisitorCategoryView({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by Name, CNIC, Phone, Card #, Host..."
+                placeholder="Search by Name, CNIC, Phone, Card #, Vehicle #, Host..."
                 className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               />
             </div>
@@ -347,7 +348,9 @@ export default function VisitorCategoryView({
                   <th className="px-5 py-3.5">Person Profile</th>
                   <th className="px-4 py-3.5">Category</th>
                   <th className="px-4 py-3.5">Host / Dept</th>
-                  <th className="px-4 py-3.5">Card / Pass #</th>
+                  <th className="px-4 py-3.5">
+                    {category === 'DELIVERY' ? 'Vehicle #' : 'Card / Vehicle #'}
+                  </th>
                   <th className="px-4 py-3.5">Entry Gate &amp; Time</th>
                   <th className="px-4 py-3.5">Status</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
@@ -417,9 +420,11 @@ export default function VisitorCategoryView({
                         <p className="text-[10px] text-slate-400">{v.department}</p>
                       </td>
 
-                      {/* Card / Badge */}
+                      {/* Card / Vehicle # */}
                       <td className="px-4 py-3.5 font-mono font-bold text-blue-600 dark:text-blue-400">
-                        {v.visitorCardNo || 'N/A'}
+                        {String(v.person?.category || '').toUpperCase() === 'DELIVERY'
+                          ? v.vehicleNo || v.visitorCardNo || 'N/A'
+                          : v.visitorCardNo || 'N/A'}
                       </td>
 
                       {/* Entry Gate & Time */}
@@ -469,8 +474,11 @@ export default function VisitorCategoryView({
 
                           {v.status === 'CHECKED_IN' && (
                             <button
-                              onClick={() => setIsCheckOutOpen(true)}
-                              className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 transition-colors shadow-xs"
+                              onClick={() => {
+                                setSelectedCheckoutVisit(v);
+                                setIsCheckOutOpen(true);
+                              }}
+                              className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 transition-colors shadow-xs cursor-pointer"
                             >
                               Exit
                             </button>
@@ -534,7 +542,11 @@ export default function VisitorCategoryView({
 
       <CheckOutModal
         isOpen={isCheckOutOpen}
-        onClose={() => setIsCheckOutOpen(false)}
+        initialVisit={selectedCheckoutVisit}
+        onClose={() => {
+          setIsCheckOutOpen(false);
+          setSelectedCheckoutVisit(null);
+        }}
         onSuccess={fetchVisits}
       />
 

@@ -4,6 +4,21 @@ import { getSessionUser, getEmployeeSessionUser } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { createAppNotification } from '@/lib/notifications';
 import { ParcelRow } from '@/app/api/employee/parcels/route';
+import { ensureImageStoredAsFileUrl } from '@/lib/fileStorage';
+
+let parcelSenderColumnsEnsured = false;
+
+async function ensureParcelSenderColumns() {
+  if (parcelSenderColumnsEnsured) return;
+  try {
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "parcels" ADD COLUMN IF NOT EXISTS "senderName" TEXT, ADD COLUMN IF NOT EXISTS "senderPhone" TEXT;`
+    );
+    parcelSenderColumnsEnsured = true;
+  } catch (err) {
+    console.warn('[Parcels] Column check warning:', err);
+  }
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -33,6 +48,8 @@ export async function PATCH(
       );
     }
 
+    await ensureParcelSenderColumns();
+
     const existingRows = await prisma.$queryRaw<ParcelRow[]>`
       SELECT
         p."id",
@@ -42,6 +59,8 @@ export async function PATCH(
         p."ownerPhone",
         p."departmentId",
         p."departmentName",
+        p."senderName",
+        p."senderPhone",
         p."senderPlatform",
         p."expectedArrivalDate",
         p."source"::text AS "source",
@@ -149,14 +168,24 @@ export async function PATCH(
         );
       }
 
-      const photoUrl =
+      const rawPhotoUrl =
         typeof body.photoUrl === 'string' && body.photoUrl.trim()
           ? body.photoUrl.trim()
           : parcel.photoUrl;
 
-      if (!photoUrl) {
+      if (!rawPhotoUrl) {
         return NextResponse.json(
           { error: 'Please capture or upload a Parcel Photo before receiving.' },
+          { status: 400 }
+        );
+      }
+
+      let photoUrl: string | null = rawPhotoUrl;
+      try {
+        photoUrl = await ensureImageStoredAsFileUrl(rawPhotoUrl, 'parcels', 'parcel');
+      } catch (imgErr: any) {
+        return NextResponse.json(
+          { error: imgErr?.message || 'Invalid Parcel Photo format.' },
           { status: 400 }
         );
       }

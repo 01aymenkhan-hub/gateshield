@@ -418,7 +418,11 @@ export default function PersonDetailPage({
                 <tr>
                   <th className="px-5 py-3.5">Visit #</th>
                   <th className="px-4 py-3.5">Host Person &amp; Dept</th>
-                  <th className="px-4 py-3.5">Card #</th>
+                  <th className="px-4 py-3.5">
+                    {String(person.category || '').toUpperCase() === 'DELIVERY'
+                      ? 'Vehicle #'
+                      : 'Card / Vehicle #'}
+                  </th>
                   <th className="px-4 py-3.5">Check-In</th>
                   <th className="px-4 py-3.5">Check-Out</th>
                   <th className="px-4 py-3.5">Duration</th>
@@ -458,7 +462,7 @@ export default function PersonDetailPage({
                         </td>
 
                         <td className="px-4 py-3.5 font-mono font-semibold text-slate-700 dark:text-slate-300">
-                          {v.visitorCardNo || 'N/A'}
+                          {v.vehicleNo || v.visitorCardNo || 'N/A'}
                         </td>
 
                         <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">

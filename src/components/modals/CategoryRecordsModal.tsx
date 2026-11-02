@@ -354,7 +354,9 @@ export default function CategoryRecordsModal({
                         </td>
 
                         <td className="px-4 py-3.5 font-mono font-bold text-blue-600 dark:text-blue-400">
-                          {visit.visitorCardNo || 'N/A'}
+                          {String(visit.person?.category || '').toUpperCase() === 'DELIVERY'
+                            ? visit.vehicleNo || visit.visitorCardNo || 'N/A'
+                            : visit.visitorCardNo || 'N/A'}
                         </td>
 
                         <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">
@@ -457,9 +459,15 @@ export default function CategoryRecordsModal({
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400 block">{t('card_badge', 'Badge')}</span>
+                        <span className="text-[10px] text-slate-400 block">
+                          {String(visit.person?.category || '').toUpperCase() === 'DELIVERY'
+                            ? t('vehicle_no_label', 'Vehicle No.')
+                            : t('card_badge', 'Badge')}
+                        </span>
                         <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
-                          {visit.visitorCardNo || 'N/A'}
+                          {String(visit.person?.category || '').toUpperCase() === 'DELIVERY'
+                            ? visit.vehicleNo || visit.visitorCardNo || 'N/A'
+                            : visit.visitorCardNo || 'N/A'}
                         </span>
                       </div>
                     </div>

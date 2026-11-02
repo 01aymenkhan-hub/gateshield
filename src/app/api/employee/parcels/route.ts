@@ -13,6 +13,8 @@ export interface ParcelRow {
   ownerPhone: string;
   departmentId: string | null;
   departmentName: string;
+  senderName?: string | null;
+  senderPhone?: string | null;
   senderPlatform: string;
   expectedArrivalDate: Date | string | null;
   source: 'EXPECTED' | 'UNEXPECTED';
@@ -33,6 +35,20 @@ export interface ParcelRow {
   updatedAt: Date;
 }
 
+let parcelSenderColumnsEnsured = false;
+
+async function ensureParcelSenderColumns() {
+  if (parcelSenderColumnsEnsured) return;
+  try {
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "parcels" ADD COLUMN IF NOT EXISTS "senderName" TEXT, ADD COLUMN IF NOT EXISTS "senderPhone" TEXT;`
+    );
+    parcelSenderColumnsEnsured = true;
+  } catch (err) {
+    console.warn('[Parcels] Column check warning:', err);
+  }
+}
+
 export async function GET() {
   try {
     const emp = await getEmployeeSessionUser();
@@ -50,6 +66,8 @@ export async function GET() {
       );
     }
 
+    await ensureParcelSenderColumns();
+
     // Strict horizontal privilege isolation: ONLY parcels belonging to this logged-in employee
     const parcels = await prisma.$queryRaw<ParcelRow[]>`
       SELECT
@@ -60,6 +78,8 @@ export async function GET() {
         p."ownerPhone",
         p."departmentId",
         p."departmentName",
+        p."senderName",
+        p."senderPhone",
         p."senderPlatform",
         p."expectedArrivalDate",
         p."source"::text AS "source",

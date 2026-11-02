@@ -40,7 +40,10 @@ export default function RegistrationSuccessModal({
   if (!isOpen || !visit) return null;
 
   const person = visit.person || {};
-  const visitorCardNo = visit.visitorCardNo || 'N/A';
+  const isDelivery = String(person.category || '').toUpperCase() === 'DELIVERY';
+  const visitorCardNo = isDelivery
+    ? visit.vehicleNo || visit.visitorCardNo || 'N/A'
+    : visit.visitorCardNo || 'N/A';
 
   /* ── Preserve Original Admin Panel UI 100% Unchanged ── */
   if (isAdmin) {
@@ -82,7 +85,7 @@ export default function RegistrationSuccessModal({
 
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Visitor Card Badge #
+                {isDelivery ? 'Vehicle Number' : 'Visitor Card Badge #'}
               </span>
               <span className="text-xs font-mono font-extrabold px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                 {visitorCardNo}
@@ -100,10 +103,12 @@ export default function RegistrationSuccessModal({
 
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Visit To
+                {isDelivery ? 'Delivery Source / Company' : 'Visit To'}
               </span>
               <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                {visit.hostName} ({visit.department})
+                {isDelivery
+                  ? person.company || visit.hostName || 'N/A'
+                  : `${visit.hostName} (${visit.department})`}
               </span>
             </div>
 
@@ -244,7 +249,9 @@ export default function RegistrationSuccessModal({
               dir="auto"
               className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400"
             >
-              {t('reg_card_badge_no')}
+              {isDelivery
+                ? t('vehicle_no_label', 'Vehicle Number')
+                : t('reg_card_badge_no')}
             </span>
             <span
               dir="ltr"
@@ -274,13 +281,17 @@ export default function RegistrationSuccessModal({
               dir="auto"
               className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400"
             >
-              {t('reg_visit_to')}
+              {isDelivery
+                ? t('delivery_source_label', 'Delivery Source / Company Name')
+                : t('reg_visit_to')}
             </span>
             <span
               dir="auto"
               className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200"
             >
-              {visit.hostName} ({visit.department})
+              {isDelivery
+                ? person.company || visit.hostName || 'N/A'
+                : `${visit.hostName} (${visit.department})`}
             </span>
           </div>
 

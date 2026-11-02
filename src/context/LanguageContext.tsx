@@ -721,7 +721,21 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   employee_label: { en: 'Employee', ur: 'ملازم' },
   select_employee_placeholder: { en: 'Select Employee', ur: 'ملازم منتخب کریں' },
   search_employee_placeholder: { en: 'Search employee name...', ur: 'ملازم کا نام تلاش کریں...' },
-  parcel_from_label: { en: 'Parcel From', ur: 'پارسل بھیجنے والا' },
+  parcel_sender_name_label: { en: 'Parcel Sender Name', ur: 'پارسل بھیجنے والے کا نام' },
+  parcel_sender_name_placeholder: { en: 'Enter parcel sender name', ur: 'پارسل بھیجنے والے کا نام درج کریں' },
+  parcel_sender_phone_label: { en: 'Parcel Sender Phone Number', ur: 'پارسل بھیجنے والے کا فون نمبر' },
+  parcel_sender_phone_placeholder: { en: 'e.g. 03001234567', ur: 'مثلاً 03001234567' },
+  employee_name_label: { en: 'Employee Name', ur: 'ملازم کا نام' },
+  employee_name_placeholder: { en: 'Enter employee name', ur: 'ملازم کا نام درج کریں' },
+  employee_phone_label: { en: 'Employee Phone Number', ur: 'ملازم کا فون نمبر' },
+  employee_phone_placeholder: { en: 'e.g. 03001234567', ur: 'مثلاً 03001234567' },
+  employee_department_label: { en: 'Employee Department', ur: 'ملازم کا شعبہ (ڈیپارٹمنٹ)' },
+  select_department_placeholder: { en: 'Select Department', ur: 'شعبہ منتخب کریں' },
+  no_departments_available: {
+    en: 'No departments available. Please configure departments in the Admin Panel.',
+    ur: 'کوئی شعبہ دستیاب نہیں ہے۔ براہ کرم ایڈمن پینل میں شعبے شامل کریں۔',
+  },
+  parcel_from_label: { en: 'Parcel From', ur: 'پارسل کا ذریعہ (Parcel From)' },
   select_parcel_from: { en: 'Select Sender', ur: 'بھیجنے والا منتخب کریں' },
   other_sender_label: { en: 'Sender Name', ur: 'بھیجنے والے کا نام' },
   other_sender_placeholder: { en: 'Enter sender name', ur: 'بھیجنے والے کا نام لکھیں' },
@@ -819,6 +833,144 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
     ur: 'رجسٹریشن کی درخواست جمع کروائیں',
   },
   back_to_login_btn: { en: 'Back to Login', ur: 'واپس لاگ ان پر جائیں' },
+
+  // Delivery Registration Workflow
+  delivery_source_title: {
+    en: 'Delivery Source / Company Name',
+    ur: 'ڈلیوری سورس / کمپنی کا نام',
+  },
+  delivery_source_subtitle: {
+    en: 'Enter the name of the cargo company, courier service, or source from which the delivery arrived',
+    ur: 'اس کارگو کمپنی، کوریئر سروس یا ادارے کا نام درج کریں جہاں سے ڈلیوری آئی ہے',
+  },
+  delivery_source_label: {
+    en: 'Delivery Source / Company Name',
+    ur: 'ڈلیوری سورس / کمپنی کا نام',
+  },
+  delivery_source_placeholder: {
+    en: 'e.g. TCS, DHL, Leopards, Daraz, Supplier Name',
+    ur: 'مثلاً ٹی سی ایس، ڈی ایچ ایل، لیپرڈز، دراز یا کمپنی کا نام',
+  },
+  delivery_source_required_hint: {
+    en: 'Please enter Delivery Source / Company Name to continue',
+    ur: 'آگے بڑھنے کے لیے ڈلیوری سورس / کمپنی کا نام درج کریں',
+  },
+  capture_image_title: {
+    en: 'Capture Image',
+    ur: 'تصویر لیں',
+  },
+  capture_image_optional_sub: {
+    en: 'Capture a photo of the delivery person (optional) or tap Next to continue',
+    ur: 'ڈلیوری لانے والے شخص کی تصویر لیں (اختیاری) یا آگے بڑھنے کے لیے اگلا بٹن دبائیں',
+  },
+  capture_document_title: {
+    en: 'Capture Document',
+    ur: 'ڈلیوری دستاویز کی تصویر لیں',
+  },
+  capture_document_subtitle: {
+    en: 'Capture a clear picture of the delivery slip, parcel receipt, or document provided by the delivery person',
+    ur: 'ڈلیوری والے شخص کی فراہم کردہ ڈلیوری سلپ، رسید یا دستاویز کی صاف تصویر لیں',
+  },
+  capture_document_btn: {
+    en: 'Capture Document',
+    ur: 'دستاویز کی تصویر لیں',
+  },
+  retake_document_btn: {
+    en: 'Retake Document',
+    ur: 'دوبارہ تصویر لیں',
+  },
+  document_captured_title: {
+    en: 'Delivery Document Captured',
+    ur: 'ڈلیوری دستاویز کی تصویر محفوظ ہو گئی',
+  },
+  document_attached_badge: {
+    en: 'Document Attached ✓',
+    ur: 'دستاویز منسلک ✓',
+  },
+  delivery_document_required_hint: {
+    en: 'Please capture the delivery document image to continue',
+    ur: 'آگے بڑھنے کے لیے ڈلیوری دستاویز کی تصویر لینا ضروری ہے',
+  },
+  delivery_document_image_label: {
+    en: 'Delivery Document Image',
+    ur: 'ڈلیوری دستاویز کی تصویر',
+  },
+  incoming_delivery_doc_label: {
+    en: 'Incoming Delivery Document (Check-in)',
+    ur: 'آمد کی ڈلیوری دستاویز (چیک اِن)',
+  },
+  outgoing_delivery_doc_label: {
+    en: 'Outgoing Delivery Document (Checkout)',
+    ur: 'اخراج کی ڈلیوری دستاویز (چیک آؤٹ)',
+  },
+  captured_at_checkin_label: {
+    en: 'Captured at Check-in',
+    ur: 'چیک اِن کے وقت محفوظ کردہ',
+  },
+  captured_at_checkout_label: {
+    en: 'Captured at Checkout',
+    ur: 'چیک آؤٹ کے وقت محفوظ کردہ',
+  },
+  next_btn: {
+    en: 'Next',
+    ur: 'اگلا',
+  },
+  phone_and_vc_title: {
+    en: 'Phone Number & VC Card Number',
+    ur: 'فون نمبر اور وزیٹر کارڈ نمبر',
+  },
+  phone_and_vehicle_title: {
+    en: 'Phone Number & Vehicle Number',
+    ur: 'فون نمبر اور گاڑی کا نمبر',
+  },
+  vehicle_no_label: {
+    en: 'Vehicle Number',
+    ur: 'گاڑی کا نمبر (Vehicle Number)',
+  },
+  vehicle_no_hint: {
+    en: 'Enter the delivery vehicle registration number (e.g. KHI-1234 or LEB-4589)',
+    ur: 'ڈلیوری والی گاڑی کا رجسٹریشن نمبر درج کریں (مثلاً KHI-1234 یا LEB-4589)',
+  },
+  vehicle_no_placeholder: {
+    en: 'e.g. KHI-1234 or LEB-4589',
+    ur: 'مثلاً KHI-1234 یا LEB-4589',
+  },
+  vehicle_no_error: {
+    en: 'Please enter a valid Vehicle Number (at least 3 alphanumeric characters).',
+    ur: 'براہ کرم گاڑی کا درست نمبر درج کریں (کم از کم 3 حروف یا ہندسے)۔',
+  },
+  delivery_checkout_title: {
+    en: 'Delivery Checkout',
+    ur: 'ڈلیوری چیک آؤٹ',
+  },
+  delivery_checkout_instruction: {
+    en: 'Capture a clear picture of the outgoing goods list, dispatch slip, gate pass, or invoice provided by the delivery person before confirming checkout.',
+    ur: 'چیک آؤٹ کی تصدیق سے پہلے ڈلیوری والے شخص کی فراہم کردہ آؤٹ گوئنگ سامان کی فہرست، ڈسپیچ سلپ، گیٹ پاس یا رسید کی صاف تصویر لیں۔',
+  },
+  capture_outgoing_doc_label: {
+    en: 'Outgoing Delivery Document',
+    ur: 'آؤٹ گوئنگ ڈلیوری دستاویز',
+  },
+  capture_outgoing_doc_btn: {
+    en: 'Capture Outgoing Document',
+    ur: 'آؤٹ گوئنگ دستاویز کی تصویر لیں',
+  },
+  retake_outgoing_doc_btn: {
+    en: 'Retake Outgoing Document',
+    ur: 'دوبارہ تصویر لیں',
+  },
+  outgoing_doc_captured_badge: {
+    en: 'Outgoing Document Captured ✓',
+    ur: 'آؤٹ گوئنگ دستاویز محفوظ ہو گئی ✓',
+  },
+  confirm_checkout_btn: {
+    en: 'Confirm Checkout',
+    ur: 'چیک آؤٹ کی تصدیق کریں',
+  },
+  information_form_title: {
+    en: 'Information Form',
+    ur: 'معلومات کا فارم',
+  },
 };
 
 const LanguageContext = createContext<LanguageContextType>({

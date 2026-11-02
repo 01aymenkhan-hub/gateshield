@@ -8,22 +8,26 @@ Implements the field-aware OCR pipeline:
 4. Uses relative region matching and strict field validators.
 5. Performs targeted crop OCR fallback for any missing or invalid field.
 6. Returns structured 8-field JSON.
+
+Concurrency:
+The CPU-heavy pipeline above (see `ocr_pipeline.py`) runs in dedicated OCR
+worker processes (see `ocr_worker.py`) so the FastAPI event loop stays
+responsive and multiple scans are processed in parallel. Request/response
+formats, validation, and error messages are unchanged.
 """
 
+import json
 import os
-import uuid
 import logging
+import time
+from contextlib import asynccontextmanager
 from pathlib import Path
-import cv2
-import numpy as np
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from .ocr_engine import run_ocr
-from .preprocessor import normalize_card_image, enhance_card_image
-from .parser import parse_cnic_fields
-from .dls_parser import parse_dls_fields
+from .ocr_worker import InvalidImageError, OcrWorkerPool
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -33,6 +37,43 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"}
 
+# Benchmark-only: when "1", adds an X-OCR-Timing header with stage timings.
+# Disabled by default; never enable on the public production server.
+OCR_TIMING_HEADER = os.environ.get("OCR_TIMING_HEADER", "").strip() == "1"
+
+logger = logging.getLogger("cnic-ocr")
+
+# Internal per-request timing log (stdout of the OCR service only).
+timing_logger = logging.getLogger("cnic-ocr.timing")
+if not timing_logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(message)s"))
+    timing_logger.addHandler(_handler)
+    timing_logger.setLevel(logging.INFO)
+    timing_logger.propagate = False
+
+worker_logger = logging.getLogger("cnic-ocr.worker")
+if not worker_logger.handlers:
+    _whandler = logging.StreamHandler()
+    _whandler.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(message)s"))
+    worker_logger.addHandler(_whandler)
+    worker_logger.setLevel(logging.INFO)
+    worker_logger.propagate = False
+
+ocr_pool = OcrWorkerPool()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    import asyncio
+
+    await asyncio.to_thread(ocr_pool.start)
+    try:
+        yield
+    finally:
+        ocr_pool.shutdown()
+
+
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
@@ -40,6 +81,7 @@ app = FastAPI(
     title="CNIC OCR Backend",
     description="Field-aware Pakistani CNIC OCR Service",
     version="0.2.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -50,7 +92,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logger = logging.getLogger("cnic-ocr")
+
+def _validate_upload(file: UploadFile) -> None:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided.")
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '{ext}'. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+        )
+
+
+def _respond(response: dict, timings: dict, request_started: float, read_s: float, size: int):
+    timings["upload_read_s"] = round(read_s, 4)
+    timings["upload_bytes"] = size
+    timings["request_total_s"] = round(time.perf_counter() - request_started, 4)
+    timings["ipc_and_dispatch_s"] = round(
+        max(
+            0.0,
+            timings["request_total_s"]
+            - read_s
+            - timings.get("queue_wait_s", 0.0)
+            - timings.get("processing_total_s", 0.0),
+        ),
+        4,
+    )
+    timing_logger.info("ocr_timing %s", json.dumps(timings, separators=(",", ":")))
+
+    if OCR_TIMING_HEADER:
+        return JSONResponse(
+            content=response,
+            headers={"X-OCR-Timing": json.dumps(timings, separators=(",", ":"))},
+        )
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -68,97 +144,19 @@ async def scan_cnic(file: UploadFile = File(...)):
     Receive a CNIC image, normalize, preprocess, run targeted OCR,
     and return the structured 8-field result.
     """
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided.")
-
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type '{ext}'. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
-        )
+    request_started = time.perf_counter()
+    _validate_upload(file)
 
     try:
+        t = time.perf_counter()
         contents = await file.read()
-        nparr = np.frombuffer(contents, np.uint8)
-        raw_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        read_s = time.perf_counter() - t
 
-        if raw_img is None or raw_img.size == 0:
-            raise HTTPException(status_code=400, detail="Invalid image file or format.")
+        response, timings = await ocr_pool.submit("cnic", contents)
+        return _respond(response, timings, request_started, read_s, len(contents))
 
-        # 1. Card normalization (perspective correction + standard working resolution 1000x630)
-        normalized_card = normalize_card_image(raw_img)
-
-        # 2. Contrast enhancement (CLAHE + unsharp mask)
-        enhanced_card = enhance_card_image(normalized_card)
-
-        # 3. Pass 1: Full-card OCR on preprocessed card
-        ocr_result = run_ocr(enhanced_card)
-
-        # 4. Region-aware parser + targeted crop OCR fallback
-        parsed_data = parse_cnic_fields(
-            normalized_card=enhanced_card,
-            pass1_ocr_results=ocr_result.get("results", []),
-            ocr_runner=run_ocr,
-        )
-
-        # 5. Fallback pass on un-sharpened normalized_card if core identity fields are still missing
-        # (Helps when CLAHE/unsharp masking amplifies guilloche or glare on imperfectly lit cards)
-        if not parsed_data.get("cnic") or not parsed_data.get("name"):
-            raw_ocr_result = run_ocr(normalized_card)
-            raw_results = raw_ocr_result.get("results", [])
-            if raw_results:
-                fallback_parsed = parse_cnic_fields(
-                    normalized_card=normalized_card,
-                    pass1_ocr_results=raw_results,
-                    ocr_runner=None,
-                )
-                for k, v in fallback_parsed.items():
-                    if v and not parsed_data.get(k):
-                        parsed_data[k] = v
-                if not ocr_result.get("results"):
-                    ocr_result = raw_ocr_result
-
-        extracted_keys = [
-            k for k in ("name", "fatherName", "cnic", "gender", "dateOfBirth", "dateOfIssue", "dateOfExpiry")
-            if parsed_data.get(k)
-        ]
-        if extracted_keys:
-            logger.info(
-                "CNIC scan completed: boxes=%d, extracted_fields=%s",
-                len(ocr_result.get("results", [])),
-                extracted_keys,
-            )
-        else:
-            logger.warning(
-                "CNIC scan extracted zero fields: image_shape=%s, boxes=%d, raw_texts=%s",
-                raw_img.shape,
-                len(ocr_result.get("results", [])),
-                ocr_result.get("text", [])[:10],
-            )
-
-        return {
-            "success": True,
-            "parsed": {
-                "name": parsed_data.get("name", ""),
-                "fatherName": parsed_data.get("fatherName", ""),
-                "gender": parsed_data.get("gender", ""),
-                "countryOfStay": parsed_data.get("countryOfStay", ""),
-                "cnic": parsed_data.get("cnic", ""),
-                "dateOfBirth": parsed_data.get("dateOfBirth", ""),
-                "dateOfIssue": parsed_data.get("dateOfIssue", ""),
-                "dateOfExpiry": parsed_data.get("dateOfExpiry", ""),
-                "cnicIdentification": parsed_data.get("cnicIdentification", ""),
-                # Aliases for backward compatibility
-                "fullName": parsed_data.get("fullName", parsed_data.get("name", "")),
-                "fatherHusbandName": parsed_data.get("fatherHusbandName", parsed_data.get("fatherName", "")),
-                "cnicNumber": parsed_data.get("cnicNumber", parsed_data.get("cnic", "")),
-            },
-            "text": ocr_result.get("text", []),
-            "results": ocr_result.get("results", []),
-            "details": ocr_result.get("details", []),
-        }
-
+    except InvalidImageError:
+        raise HTTPException(status_code=400, detail="Invalid image file or format.")
     except HTTPException:
         raise
     except Exception as e:
@@ -172,59 +170,21 @@ async def scan_dls(file: UploadFile = File(...)):
     Receive a Driving License Sindh image, normalize, preprocess,
     run OCR, parse DLS fields, and return structured 8-field result.
     """
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided.")
-
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type '{ext}'. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
-        )
+    request_started = time.perf_counter()
+    _validate_upload(file)
 
     try:
+        t = time.perf_counter()
         contents = await file.read()
-        nparr = np.frombuffer(contents, np.uint8)
-        raw_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        read_s = time.perf_counter() - t
 
-        if raw_img is None or raw_img.size == 0:
-            raise HTTPException(status_code=400, detail="Invalid image file or format.")
+        response, timings = await ocr_pool.submit("dls", contents)
+        return _respond(response, timings, request_started, read_s, len(contents))
 
-        # 1. Card normalization (perspective correction + standard working resolution 1000x630)
-        normalized_card = normalize_card_image(raw_img)
-
-        # 2. Contrast enhancement (CLAHE + unsharp mask)
-        enhanced_card = enhance_card_image(normalized_card)
-
-        # 3. Full-card OCR on preprocessed DLS card
-        ocr_result = run_ocr(enhanced_card)
-
-        # 4. DLS field parser
-        parsed_data = parse_dls_fields(
-            normalized_card=enhanced_card,
-            ocr_results=ocr_result.get("results", []),
-        )
-
-        return {
-            "success": True,
-            "parsed": {
-                "licenseNumber": parsed_data.get("licenseNumber", ""),
-                "fullName": parsed_data.get("fullName", ""),
-                "fatherHusbandName": parsed_data.get("fatherHusbandName", ""),
-                "dateOfBirth": parsed_data.get("dateOfBirth", ""),
-                "category": parsed_data.get("category", ""),
-                "issueDate": parsed_data.get("issueDate", ""),
-                "validUpto": parsed_data.get("validUpto", ""),
-                "licensingAuthority": parsed_data.get("licensingAuthority", ""),
-            },
-            "text": ocr_result.get("text", []),
-            "results": ocr_result.get("results", []),
-            "details": ocr_result.get("details", []),
-        }
-
+    except InvalidImageError:
+        raise HTTPException(status_code=400, detail="Invalid image file or format.")
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("DLS OCR processing failed")
         raise HTTPException(status_code=500, detail=f"DLS OCR processing failed: {str(e)}")
-

@@ -50,6 +50,8 @@ __pycache__/
 *$py.class
 backend/uploads/*
 !backend/uploads/.gitkeep
+/uploads/*
+!/uploads/.gitkeep
 .paddlex/
 official_models/
 

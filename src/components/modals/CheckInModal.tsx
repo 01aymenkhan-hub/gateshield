@@ -41,6 +41,7 @@ const EMPTY_VISIT_INFO: VisitInfoData = {
   meetName: '',
   department: '',
   departmentId: '',
+  deliverySource: '',
 };
 
 const EMPTY_CNIC_DATA: CnicData = {
@@ -72,8 +73,11 @@ const EMPTY_DLS_DATA: DlsData = {
 const EMPTY_VISITOR_DATA: VisitorStepData = {
   photoPreview: null,
   photoFile: null,
+  deliveryDocumentPreview: null,
+  deliveryDocumentFile: null,
   phoneNumber: '',
   visitorCardNo: '',
+  vehicleNo: '',
   hasBelongings: false,
   belongings: '',
 };
@@ -98,8 +102,10 @@ export default function CheckInModal({
 
   // Admin 3-step state (unchanged)
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
-  // Operator 6-step state (1: Category, 2: Visit Info, 3: Scan ID Card, 4: Review Scanned Details, 5: Capture Photo, 6: Registration Details)
+  // Operator step state (1: Category, 2: Visit Info / Delivery Source, 3: Scan ID Card, 4: Review Scanned Details, 5: Capture Image, 6: Registration Details)
   const [operatorStep, setOperatorStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
+  // Sub-step for Delivery Step 5 (Capture Document) between Capture Image and Phone/VC Details
+  const [isDeliveryDocStep, setIsDeliveryDocStep] = useState<boolean>(false);
 
   const [category, setCategory] = useState<string>(() =>
     isAdmin ? defaultCategory || 'VISITOR' : ''
@@ -117,6 +123,7 @@ export default function CheckInModal({
     if (isOpen && !isAdmin) {
       setCategory('');
       setOperatorStep(1);
+      setIsDeliveryDocStep(false);
     }
   }
 
@@ -494,10 +501,32 @@ export default function CheckInModal({
         photoUrl: visitorData.photoPreview,
         cnicImageData: cnicScannedImage || undefined,
         dlsImageData: dlsScannedImage || undefined,
-        hostName: visitInfo.meetName,
-        department: visitInfo.department,
+        deliveryDocImageData:
+          category === 'DELIVERY'
+            ? visitorData.deliveryDocumentPreview || undefined
+            : undefined,
+        deliverySource:
+          category === 'DELIVERY'
+            ? (visitInfo.deliverySource || visitInfo.meetName || '').trim()
+            : undefined,
+        company:
+          category === 'DELIVERY'
+            ? (visitInfo.deliverySource || visitInfo.meetName || '').trim()
+            : undefined,
+        hostName:
+          category === 'DELIVERY'
+            ? (visitInfo.deliverySource || visitInfo.meetName || '').trim()
+            : visitInfo.meetName,
+        department:
+          category === 'DELIVERY'
+            ? visitInfo.department || 'Delivery'
+            : visitInfo.department,
         departmentId: visitInfo.departmentId || undefined,
-        visitorCardNo: visitorData.visitorCardNo,
+        visitorCardNo: category === 'DELIVERY' ? undefined : visitorData.visitorCardNo,
+        vehicleNo:
+          category === 'DELIVERY'
+            ? (visitorData.vehicleNo || '').trim()
+            : undefined,
         belongings:
           visitorData.hasBelongings && visitorData.belongings?.trim()
             ? visitorData.belongings.trim()
@@ -597,6 +626,7 @@ export default function CheckInModal({
   const handleResetAll = () => {
     setCurrentStep(1);
     setOperatorStep(1);
+    setIsDeliveryDocStep(false);
     setCategory(isAdmin ? defaultCategory || 'VISITOR' : '');
     setVisitInfo(EMPTY_VISIT_INFO);
     setCnicFormData(EMPTY_CNIC_DATA);
@@ -620,7 +650,30 @@ export default function CheckInModal({
 
   if (!isOpen) return null;
 
+  const isDelivery = category === 'DELIVERY';
+
   const getOperatorStepTitle = (step: 1 | 2 | 3 | 4 | 5 | 6) => {
+    if (isDelivery && step >= 2) {
+      if (step === 2) {
+        return t('delivery_source_title', 'Delivery Source / Company Name');
+      }
+      if (step === 3) {
+        return t('scan_id_card_title', 'Scan ID Card');
+      }
+      if (step === 4) {
+        return t('information_form_title', 'Information Form');
+      }
+      if (step === 5 && !isDeliveryDocStep) {
+        return t('capture_image_title', 'Capture Image');
+      }
+      if (step === 5 && isDeliveryDocStep) {
+        return t('capture_document_title', 'Capture Document');
+      }
+      if (step === 6) {
+        return t('phone_and_vehicle_title', 'Phone Number & Vehicle Number');
+      }
+    }
+
     switch (step) {
       case 1:
         return t('select_category_title', 'Select Visitor Category');
@@ -635,6 +688,25 @@ export default function CheckInModal({
       case 6:
         return t('registration_details_title', 'Registration Details');
     }
+  };
+
+  const getOperatorStepProgressBadge = (step: 1 | 2 | 3 | 4 | 5 | 6): string => {
+    if (isDelivery && step >= 2) {
+      const deliveryStepNum =
+        step === 2
+          ? 1
+          : step === 3
+          ? 2
+          : step === 4
+          ? 3
+          : step === 5 && !isDeliveryDocStep
+          ? 4
+          : step === 5 && isDeliveryDocStep
+          ? 5
+          : 6;
+      return `${deliveryStepNum}/6`;
+    }
+    return `${step}/6`;
   };
 
   return (
@@ -695,7 +767,7 @@ export default function CheckInModal({
                     {getOperatorStepTitle(operatorStep)}
                   </h2>
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                    {t('step_progress_label', 'Step')} {operatorStep}/6
+                    {t('step_progress_label', 'Step')} {getOperatorStepProgressBadge(operatorStep)}
                   </span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -730,6 +802,7 @@ export default function CheckInModal({
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
               {currentStep === 1 && (
                 <VisitInfoStep
+                  category={category}
                   data={visitInfo}
                   onChange={setVisitInfo}
                   onNext={() => setCurrentStep(2)}
@@ -832,6 +905,7 @@ export default function CheckInModal({
               {currentStep === 3 && (
                 <div>
                   <VisitorStep
+                    category={category}
                     visitInfo={visitInfo}
                     documentType={documentType}
                     cnicData={cnicFormData}
@@ -1051,6 +1125,7 @@ export default function CheckInModal({
                       type="button"
                       onClick={() => {
                         playContinueSound();
+                        setIsDeliveryDocStep(false);
                         setOperatorStep(5);
                       }}
                       disabled={!isDocumentValid}
@@ -1060,16 +1135,21 @@ export default function CheckInModal({
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none'
                       }`}
                     >
-                      <span>{t('continue_btn', 'Continue')}</span>
+                      <span>
+                        {isDelivery
+                          ? t('next_btn', 'Next')
+                          : t('continue_btn', 'Continue')}
+                      </span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* STEP 5: CAPTURE VISITOR PHOTO */}
-              {operatorStep === 5 && (
+              {/* STEP 5: CAPTURE IMAGE (Optional for Delivery) & DELIVERY DOCUMENT CAPTURE (Required for Delivery) */}
+              {operatorStep === 5 && !isDeliveryDocStep && (
                 <VisitorStep
+                  category={category}
                   operatorMode="photo"
                   visitInfo={visitInfo}
                   documentType={documentType}
@@ -1078,7 +1158,32 @@ export default function CheckInModal({
                   visitorData={visitorData}
                   onChangeVisitorData={setVisitorData}
                   onBack={() => setOperatorStep(4)}
-                  onNextPhotoStep={() => setOperatorStep(6)}
+                  onNextPhotoStep={() => {
+                    if (isDelivery) {
+                      setIsDeliveryDocStep(true);
+                    } else {
+                      setOperatorStep(6);
+                    }
+                  }}
+                  onSubmit={handleFinalSubmit}
+                  submissionStatus={submissionStatus}
+                  submissionError={submissionError}
+                  onResetAll={handleResetAll}
+                />
+              )}
+
+              {operatorStep === 5 && isDelivery && isDeliveryDocStep && (
+                <VisitorStep
+                  category={category}
+                  operatorMode="delivery-document"
+                  visitInfo={visitInfo}
+                  documentType={documentType}
+                  cnicData={cnicFormData}
+                  dlsData={dlsFormData}
+                  visitorData={visitorData}
+                  onChangeVisitorData={setVisitorData}
+                  onBack={() => setIsDeliveryDocStep(false)}
+                  onNextDeliveryDocStep={() => setOperatorStep(6)}
                   onSubmit={handleFinalSubmit}
                   submissionStatus={submissionStatus}
                   submissionError={submissionError}
@@ -1089,6 +1194,7 @@ export default function CheckInModal({
               {/* STEP 6: REGISTRATION DETAILS (Phone, VC Number, Carrying Items & Final Submit) */}
               {operatorStep === 6 && (
                 <VisitorStep
+                  category={category}
                   operatorMode="details"
                   visitInfo={visitInfo}
                   documentType={documentType}
@@ -1096,7 +1202,14 @@ export default function CheckInModal({
                   dlsData={dlsFormData}
                   visitorData={visitorData}
                   onChangeVisitorData={setVisitorData}
-                  onBack={() => setOperatorStep(5)}
+                  onBack={() => {
+                    if (isDelivery) {
+                      setIsDeliveryDocStep(true);
+                      setOperatorStep(5);
+                    } else {
+                      setOperatorStep(5);
+                    }
+                  }}
                   onSubmit={handleFinalSubmit}
                   submissionStatus={submissionStatus}
                   submissionError={submissionError}

@@ -298,6 +298,8 @@ export default function ParcelManagementView({
       p.ownerName.toLowerCase().includes(q) ||
       p.ownerPhone.toLowerCase().includes(q) ||
       p.departmentName.toLowerCase().includes(q) ||
+      Boolean(p.senderName && p.senderName.toLowerCase().includes(q)) ||
+      Boolean(p.senderPhone && p.senderPhone.toLowerCase().includes(q)) ||
       p.senderPlatform.toLowerCase().includes(q) ||
       Boolean(p.receivingGateName && p.receivingGateName.toLowerCase().includes(q)) ||
       Boolean(p.deliveryGateName && p.deliveryGateName.toLowerCase().includes(q)) ||
@@ -738,6 +740,13 @@ export default function ParcelManagementView({
                         <Truck className="w-3.5 h-3.5 shrink-0" />
                         <span>{prc.senderPlatform}</span>
                       </span>
+                      {(prc.senderName || prc.senderPhone) && (
+                        <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300 break-words">
+                          <span className="font-semibold">{prc.senderName}</span>
+                          {prc.senderName && prc.senderPhone ? ' • ' : ''}
+                          {prc.senderPhone && <span className="font-mono">{prc.senderPhone}</span>}
+                        </p>
+                      )}
                     </div>
 
                     <div className="p-2 rounded-xl bg-white dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800">
@@ -927,6 +936,13 @@ export default function ParcelManagementView({
                         <Truck className="w-3.5 h-3.5" />
                         {prc.senderPlatform}
                       </span>
+                      {(prc.senderName || prc.senderPhone) && (
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">
+                          <span className="font-semibold">{prc.senderName}</span>
+                          {prc.senderName && prc.senderPhone ? ' • ' : ''}
+                          {prc.senderPhone && <span className="font-mono">{prc.senderPhone}</span>}
+                        </p>
+                      )}
                       {prc.notes && (
                         <p className="text-[11px] text-slate-400 italic mt-1 max-w-[180px] truncate">
                           {prc.notes}
@@ -1345,6 +1361,18 @@ export default function ParcelManagementView({
                     {confirmationModal.parcel.senderPlatform}
                   </span>
                 </div>
+                {(confirmationModal.parcel.senderName || confirmationModal.parcel.senderPhone) && (
+                  <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
+                    <span className="text-slate-500">Parcel Sender</span>
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      {confirmationModal.parcel.senderName}
+                      {confirmationModal.parcel.senderName && confirmationModal.parcel.senderPhone
+                        ? ' • '
+                        : ''}
+                      {confirmationModal.parcel.senderPhone}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
                   <span className="text-slate-500">Receiving Gate</span>
                   <span className="font-bold text-slate-900 dark:text-white">

@@ -20,8 +20,10 @@ A Python FastAPI backend powered by **PaddleOCR** for extracting text from Pakis
 backend/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py          # FastAPI application & endpoints (GET /, POST /scan-cnic)
-│   └── ocr_engine.py    # PaddleOCR singleton wrapper (supports PaddleOCR 3.x)
+│   ├── main.py          # FastAPI application & endpoints (GET /, POST /scan-cnic, POST /scan-dls)
+│   ├── ocr_engine.py    # Lazy per-process PaddleOCR wrapper (supports PaddleOCR 3.x) + stage timers
+│   ├── ocr_pipeline.py  # CNIC/DLS processing pipeline executed inside OCR workers
+│   └── ocr_worker.py    # OCR worker-process pool (FIFO, one job per worker)
 ├── uploads/             # Temporary folder for received image files (auto-cleaned)
 ├── venv/                # Python 3.12 virtual environment
 ├── create_test_cnic.py  # Utility to generate synthetic test CNIC image
@@ -169,4 +171,45 @@ curl -X POST "http://127.0.0.1:8000/scan-cnic" \
 # In a PowerShell terminal at the project root:
 cd "d:\Mehmood\cnic-ocr system\backend"
 & ".\venv\Scripts\python.exe" -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+> Run a **single** Uvicorn process (do not add `--workers`). OCR parallelism comes from the
+> dedicated OCR worker processes described below. Avoid `--reload` in production.
+
+---
+
+## 11. OCR Concurrency (Worker Processes)
+
+CPU-heavy OCR runs in dedicated worker processes so the FastAPI event loop is never blocked
+and several scans are processed in parallel:
+
+```text
+Request ─► FastAPI (async, 1 process) ─► FIFO queue ─► OCR worker 1 (own PaddleOCR)
+                                                    ├─► OCR worker 2 (own PaddleOCR)
+                                                    └─► OCR worker 3 (own PaddleOCR)
+```
+
+- `app/ocr_worker.py`: worker pool (spawned processes, FIFO, one job per worker, warm-up, crash recovery)
+- `app/ocr_pipeline.py`: the unchanged CNIC/DLS pipeline + per-stage timings
+- `app/ocr_engine.py`: lazy per-process PaddleOCR (same models/options) + detection/recognition timers
+
+| Environment variable | Default | Meaning |
+|---|---|---|
+| `OCR_WORKERS` | `3` | Number of OCR worker processes. `0` = run OCR in the API process (sequential, rollback mode). |
+| `OCR_CPU_THREADS` | `2` | Paddle CPU threads per worker. `OMP_NUM_THREADS` / `MKL_NUM_THREADS` / `OPENBLAS_NUM_THREADS` are set to the same value for workers; OpenCV uses 1 thread per worker. |
+| `OCR_TIMING_HEADER` | off | Benchmarking only: `1` adds an `X-OCR-Timing` response header. Keep off in production. |
+
+Each OCR request logs one internal timing line (`cnic-ocr.timing ocr_timing {...}`) with
+decode, preprocessing, detection, recognition, crop/fallback passes, queue wait and totals.
+Startup takes longer than before because every worker loads its own model and runs a warm-up
+inference; the service only reports ready once all workers are loaded.
+
+### Benchmark
+
+```powershell
+# terminal 1 (benchmark mode)
+$env:OCR_TIMING_HEADER="1"; & ".\venv\Scripts\python.exe" -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+# terminal 2
+& ".\venv\Scripts\python.exe" benchmark_ocr.py --url http://127.0.0.1:8000 --label server_3x2 --out results_server_3x2.json
+& ".\venv\Scripts\python.exe" benchmark_ocr.py --compare results_baseline.json results_server_3x2.json
 ```

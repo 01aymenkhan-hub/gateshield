@@ -6,22 +6,31 @@ interface VisitorPhotoCameraModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCapture: (file: File, previewUrl: string) => void;
+  mode?: "face" | "document";
 }
 
 export default function VisitorPhotoCameraModal({
   isOpen,
   onClose,
   onCapture,
+  mode = "face",
 }: VisitorPhotoCameraModalProps) {
+  const isDocMode = mode === "document";
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const [facingMode, setFacingMode] = useState<"user" | "environment">(
+    isDocMode ? "environment" : "user"
+  );
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<"live" | "review">("live");
   const [capturedPreview, setCapturedPreview] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
   const [isShutterActive, setIsShutterActive] = useState(false);
+
+  useEffect(() => {
+    setFacingMode(isDocMode ? "environment" : "user");
+  }, [isDocMode]);
 
   // Stop current camera stream
   const stopCameraStream = useCallback(() => {
@@ -95,50 +104,77 @@ export default function VisitorPhotoCameraModal({
 
     try {
       const canvas = document.createElement("canvas");
-      // Use square or 4:3 portrait aspect ratio for clean face photo
-      const size = Math.min(video.videoWidth, video.videoHeight);
-      canvas.width = 600;
-      canvas.height = 600;
       const ctx = canvas.getContext("2d");
 
       if (ctx) {
-        // Crop center square
-        const sx = (video.videoWidth - size) / 2;
-        const sy = (video.videoHeight - size) / 2;
+        if (isDocMode) {
+          // Capture rectangular document frame (max 1080px on longest side)
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+          const scale = Math.min(1, 1080 / Math.max(vw, vh));
+          canvas.width = Math.round(vw * scale);
+          canvas.height = Math.round(vh * scale);
+          ctx.drawImage(video, 0, 0, vw, vh, 0, 0, canvas.width, canvas.height);
 
-        // If front camera, mirror image for natural selfie feel
-        if (facingMode === "user") {
-          ctx.translate(600, 0);
-          ctx.scale(-1, 1);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const file = new File([blob], `delivery_doc_${Date.now()}.jpg`, {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                });
+                setCapturedFile(file);
+                setCapturedPreview(dataUrl);
+                setModalMode("review");
+              }
+            },
+            "image/jpeg",
+            0.9
+          );
+        } else {
+          // Use square aspect ratio for clean face photo
+          const size = Math.min(video.videoWidth, video.videoHeight);
+          canvas.width = 600;
+          canvas.height = 600;
+          // Crop center square
+          const sx = (video.videoWidth - size) / 2;
+          const sy = (video.videoHeight - size) / 2;
+
+          // If front camera, mirror image for natural selfie feel
+          if (facingMode === "user") {
+            ctx.translate(600, 0);
+            ctx.scale(-1, 1);
+          }
+
+          ctx.drawImage(video, sx, sy, size, size, 0, 0, 600, 600);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const file = new File([blob], `visitor_photo_${Date.now()}.jpg`, {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                });
+                const previewUrl = URL.createObjectURL(file);
+                setCapturedFile(file);
+                setCapturedPreview(previewUrl);
+                setModalMode("review");
+              }
+            },
+            "image/jpeg",
+            0.92
+          );
         }
-
-        ctx.drawImage(video, sx, sy, size, size, 0, 0, 600, 600);
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const file = new File([blob], `visitor_photo_${Date.now()}.jpg`, {
-                type: "image/jpeg",
-                lastModified: Date.now(),
-              });
-              const previewUrl = URL.createObjectURL(file);
-              setCapturedFile(file);
-              setCapturedPreview(previewUrl);
-              setModalMode("review");
-            }
-          },
-          "image/jpeg",
-          0.92
-        );
       }
     } catch (err) {
       console.error("Failed to capture visitor photo:", err);
     }
-  }, [facingMode]);
+  }, [facingMode, isDocMode]);
 
   // Retake from review screen
   const handleReviewRetake = () => {
-    if (capturedPreview) {
+    if (capturedPreview && capturedPreview.startsWith("blob:")) {
       URL.revokeObjectURL(capturedPreview);
     }
     setCapturedPreview(null);
@@ -174,7 +210,11 @@ export default function VisitorPhotoCameraModal({
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
             <span className="text-white text-sm font-semibold tracking-wide">
               {modalMode === "live"
-                ? "Capture Card Holder Photo"
+                ? isDocMode
+                  ? "Capture Delivery Document"
+                  : "Capture Card Holder Photo"
+                : isDocMode
+                ? "Review Delivery Document"
                 : "Review Photo"}
             </span>
           </div>
@@ -264,41 +304,71 @@ export default function VisitorPhotoCameraModal({
                 muted
                 autoPlay
                 className={`absolute inset-0 w-full h-full object-cover ${
-                  facingMode === "user" ? "scale-x-[-1]" : ""
+                  !isDocMode && facingMode === "user" ? "scale-x-[-1]" : ""
                 }`}
               />
 
-              {/* Portrait Oval Face Guide */}
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
-                <div
-                  className="relative w-64 h-80 rounded-[45%] ring-2 ring-white/90 shadow-2xl"
-                  style={{
-                    boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.6)",
-                  }}
-                >
-                  <div className="absolute inset-0 flex items-end justify-center pb-4 pointer-events-none">
-                    <span className="text-xs font-medium text-white/90 bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
-                      Align visitor face here
-                    </span>
+              {isDocMode ? (
+                /* Rectangular Document Frame Guide */
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-5">
+                  <div
+                    className="relative w-full max-w-[320px] aspect-[4/3] rounded-2xl ring-2 ring-white/90 shadow-2xl"
+                    style={{
+                      boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.55)",
+                    }}
+                  >
+                    <div className="absolute inset-0 flex items-end justify-center pb-3 pointer-events-none">
+                      <span className="text-xs font-medium text-white/90 bg-black/50 px-3 py-1 rounded-full backdrop-blur-xs text-center">
+                        Align delivery slip or document here
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* Portrait Oval Face Guide */
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
+                  <div
+                    className="relative w-64 h-80 rounded-[45%] ring-2 ring-white/90 shadow-2xl"
+                    style={{
+                      boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.6)",
+                    }}
+                  >
+                    <div className="absolute inset-0 flex items-end justify-center pb-4 pointer-events-none">
+                      <span className="text-xs font-medium text-white/90 bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
+                        Align visitor face here
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             /* Review Screen */
             <div className="w-full h-full flex flex-col items-center justify-center p-4">
-              <div className="relative w-64 h-64 rounded-2xl overflow-hidden border-2 border-white/50 shadow-2xl bg-black">
+              <div
+                className={`relative ${
+                  isDocMode ? "w-full max-w-[320px] aspect-[4/3]" : "w-64 h-64"
+                } rounded-2xl overflow-hidden border-2 border-white/50 shadow-2xl bg-black`}
+              >
                 {capturedPreview && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={capturedPreview}
-                    alt="Captured visitor face preview"
-                    className="w-full h-full object-cover"
+                    alt={
+                      isDocMode
+                        ? "Captured delivery document preview"
+                        : "Captured visitor face preview"
+                    }
+                    className={`w-full h-full ${
+                      isDocMode ? "object-contain" : "object-cover"
+                    }`}
                   />
                 )}
               </div>
               <p className="text-xs text-white/70 mt-3 text-center">
-                Ensure the visitor&apos;s face is clearly visible.
+                {isDocMode
+                  ? "Ensure the delivery document details are clearly readable."
+                  : "Ensure the visitor's face is clearly visible."}
               </p>
             </div>
           )}
@@ -333,7 +403,7 @@ export default function VisitorPhotoCameraModal({
                 onClick={handleReviewConfirm}
                 className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-semibold transition-all shadow-lg text-center flex items-center justify-center space-x-1.5 cursor-pointer"
               >
-                <span>✓ Use Photo</span>
+                <span>{isDocMode ? "✓ Use Document" : "✓ Use Photo"}</span>
               </button>
             </div>
           )}

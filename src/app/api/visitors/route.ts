@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { normalizeSearchValue, getCnicHyphenatedVariants } from '@/lib/searchUtils';
-import { sanitizeVisitsWithDbFlags } from '@/lib/personSanitizer';
+import { sanitizeVisitsWithDbFlags, formatVehicleNoForStorage } from '@/lib/personSanitizer';
 
 export async function GET(request: NextRequest) {
   try {
@@ -86,11 +86,16 @@ export async function GET(request: NextRequest) {
         { person: { company: { contains: query, mode: 'insensitive' } } },
       ];
 
-      if (normQ && normQ !== query.toLowerCase()) {
+      if (normQ) {
+        const formattedVeh = formatVehicleNoForStorage(query);
         orConditions.push(
           { visitNumber: { contains: normQ, mode: 'insensitive' } },
-          { visitorCardNo: { contains: normQ, mode: 'insensitive' } }
+          { visitorCardNo: { contains: normQ, mode: 'insensitive' } },
+          { vehicleNo: { contains: normQ, mode: 'insensitive' } }
         );
+        if (formattedVeh && formattedVeh.toLowerCase() !== query.toLowerCase()) {
+          orConditions.push({ vehicleNo: { contains: formattedVeh, mode: 'insensitive' } });
+        }
       }
 
       for (const variant of cnicVariants) {

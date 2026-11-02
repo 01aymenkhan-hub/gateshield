@@ -175,13 +175,17 @@ export default function VisitorBadgeModal({
                 </span>
               </div>
 
-              {/* Card Badge # */}
+              {/* Card Badge # / Vehicle No. */}
               <div>
                 <span className="text-[10px] uppercase font-extrabold text-slate-500 block">
-                  Visitor Card No.
+                  {String(person.category || '').toUpperCase() === 'DELIVERY'
+                    ? 'Vehicle Number'
+                    : 'Visitor Card No.'}
                 </span>
                 <span className="font-black text-slate-900 text-xs block font-mono mt-0.5">
-                  {visit.visitorCardNo || 'N/A'}
+                  {String(person.category || '').toUpperCase() === 'DELIVERY'
+                    ? visit.vehicleNo || visit.visitorCardNo || 'N/A'
+                    : visit.visitorCardNo || 'N/A'}
                 </span>
               </div>
 
