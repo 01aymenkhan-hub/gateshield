@@ -45,13 +45,21 @@ export default function VisitorPhotoCameraModal({
     stopCameraStream();
     setCameraError(null);
     try {
+      const videoConstraints: MediaTrackConstraints = isDocMode
+        ? {
+            facingMode: { ideal: facingMode },
+            width: { ideal: 1920 },
+            height: { ideal: 1440 },
+          }
+        : {
+            facingMode: { ideal: facingMode },
+            width: { ideal: 1280 },
+            height: { ideal: 960 },
+          };
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 960 },
-        },
+        video: videoConstraints,
       });
 
       streamRef.current = stream;
@@ -62,12 +70,12 @@ export default function VisitorPhotoCameraModal({
         };
       }
     } catch (err: unknown) {
-      console.error("Visitor face camera access error:", err);
+      console.error("Visitor camera access error:", err);
       setCameraError(
         "Unable to access camera. Please verify device permissions or use 'Upload Image'."
       );
     }
-  }, [facingMode, stopCameraStream]);
+  }, [facingMode, isDocMode, stopCameraStream]);
 
   // Lifecycle
   useEffect(() => {
@@ -108,15 +116,16 @@ export default function VisitorPhotoCameraModal({
 
       if (ctx) {
         if (isDocMode) {
-          // Capture rectangular document frame (max 1080px on longest side)
+          // Preserve full original captured image dimensions and proportions without cropping
           const vw = video.videoWidth;
           const vh = video.videoHeight;
-          const scale = Math.min(1, 1080 / Math.max(vw, vh));
-          canvas.width = Math.round(vw * scale);
-          canvas.height = Math.round(vh * scale);
-          ctx.drawImage(video, 0, 0, vw, vh, 0, 0, canvas.width, canvas.height);
+          canvas.width = vw;
+          canvas.height = vh;
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(video, 0, 0, vw, vh);
 
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
           canvas.toBlob(
             (blob) => {
               if (blob) {
@@ -130,7 +139,7 @@ export default function VisitorPhotoCameraModal({
               }
             },
             "image/jpeg",
-            0.9
+            0.92
           );
         } else {
           // Use square aspect ratio for clean face photo
@@ -303,29 +312,15 @@ export default function VisitorPhotoCameraModal({
                 playsInline
                 muted
                 autoPlay
-                className={`absolute inset-0 w-full h-full object-cover ${
+                className={`absolute inset-0 w-full h-full ${
+                  isDocMode ? "object-contain" : "object-cover"
+                } ${
                   !isDocMode && facingMode === "user" ? "scale-x-[-1]" : ""
                 }`}
               />
 
-              {isDocMode ? (
-                /* Rectangular Document Frame Guide */
-                <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-5">
-                  <div
-                    className="relative w-full max-w-[320px] aspect-[4/3] rounded-2xl ring-2 ring-white/90 shadow-2xl"
-                    style={{
-                      boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.55)",
-                    }}
-                  >
-                    <div className="absolute inset-0 flex items-end justify-center pb-3 pointer-events-none">
-                      <span className="text-xs font-medium text-white/90 bg-black/50 px-3 py-1 rounded-full backdrop-blur-xs text-center">
-                        Align delivery slip or document here
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* Portrait Oval Face Guide */
+              {!isDocMode && (
+                /* Portrait Oval Face Guide (Face Mode Only) */
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
                   <div
                     className="relative w-64 h-80 rounded-[45%] ring-2 ring-white/90 shadow-2xl"
@@ -344,27 +339,30 @@ export default function VisitorPhotoCameraModal({
             </>
           ) : (
             /* Review Screen */
-            <div className="w-full h-full flex flex-col items-center justify-center p-4">
-              <div
-                className={`relative ${
-                  isDocMode ? "w-full max-w-[320px] aspect-[4/3]" : "w-64 h-64"
-                } rounded-2xl overflow-hidden border-2 border-white/50 shadow-2xl bg-black`}
-              >
-                {capturedPreview && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={capturedPreview}
-                    alt={
-                      isDocMode
-                        ? "Captured delivery document preview"
-                        : "Captured visitor face preview"
-                    }
-                    className={`w-full h-full ${
-                      isDocMode ? "object-contain" : "object-cover"
-                    }`}
-                  />
-                )}
-              </div>
+            <div className="w-full h-full flex flex-col items-center justify-center p-3 sm:p-4 overflow-hidden">
+              {isDocMode ? (
+                <div className="relative flex items-center justify-center max-w-full max-h-[calc(100%-2rem)] rounded-xl overflow-hidden border border-white/30 shadow-2xl bg-black">
+                  {capturedPreview && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={capturedPreview}
+                      alt="Captured delivery document preview"
+                      className="block w-auto h-auto max-w-full max-h-[64vh] object-contain"
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="relative w-64 h-64 rounded-2xl overflow-hidden border-2 border-white/50 shadow-2xl bg-black">
+                  {capturedPreview && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={capturedPreview}
+                      alt="Captured visitor face preview"
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+              )}
               <p className="text-xs text-white/70 mt-3 text-center">
                 {isDocMode
                   ? "Ensure the delivery document details are clearly readable."
@@ -378,15 +376,46 @@ export default function VisitorPhotoCameraModal({
         <div className="relative z-20 p-5 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col items-center">
           {modalMode === "live" ? (
             <div className="w-full flex items-center justify-center">
-              <button
-                type="button"
-                onClick={handleShutterClick}
-                disabled={Boolean(cameraError)}
-                className="group relative flex items-center justify-center w-18 h-18 rounded-full border-4 border-white bg-white/20 active:scale-95 transition-transform shadow-lg cursor-pointer"
-                title="Take visitor photo"
-              >
-                <div className="w-14 h-14 rounded-full bg-white group-hover:scale-95 group-active:scale-90 transition-transform shadow-inner" />
-              </button>
+              {isDocMode ? (
+                <button
+                  type="button"
+                  onClick={handleShutterClick}
+                  disabled={Boolean(cameraError)}
+                  className="py-3.5 px-8 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm sm:text-base font-bold shadow-lg flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-50"
+                  title="Capture document"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  <span>Capture</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleShutterClick}
+                  disabled={Boolean(cameraError)}
+                  className="group relative flex items-center justify-center w-18 h-18 rounded-full border-4 border-white bg-white/20 active:scale-95 transition-transform shadow-lg cursor-pointer"
+                  title="Take visitor photo"
+                >
+                  <div className="w-14 h-14 rounded-full bg-white group-hover:scale-95 group-active:scale-90 transition-transform shadow-inner" />
+                </button>
+              )}
             </div>
           ) : (
             <div className="w-full max-w-xs flex items-center justify-between gap-3">
@@ -403,7 +432,7 @@ export default function VisitorPhotoCameraModal({
                 onClick={handleReviewConfirm}
                 className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-semibold transition-all shadow-lg text-center flex items-center justify-center space-x-1.5 cursor-pointer"
               >
-                <span>{isDocMode ? "✓ Use Document" : "✓ Use Photo"}</span>
+                <span>{isDocMode ? "Continue" : "✓ Use Photo"}</span>
               </button>
             </div>
           )}

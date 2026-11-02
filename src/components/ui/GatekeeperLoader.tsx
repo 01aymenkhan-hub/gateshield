@@ -46,15 +46,22 @@ function GateShieldAnimatedMark({ isDark, sizeClassName }: GateShieldAnimatedMar
   // Light mode icon fill: #334c91 (RGB 51, 76, 145)
   // Dark mode icon fill:  #ffffff (RGB 255, 255, 255)
   const gateFillColor = isDark ? '#ffffff' : '#334c91';
-  const edgeHighlightColor = isDark ? '#60a5fa' : '#3b82f6';
-  const scanBodyColor = isDark ? '#3b82f6' : '#2563eb';
-  const scanCoreColor = isDark ? '#93c5fd' : '#60a5fa';
+  const edgeHighlightColor = isDark ? '#38bdf8' : '#0ea5e9';
+  const baseOutlineGlowColor = isDark ? '#0ea5e9' : '#0284c7';
+  const baseOutlineStrokeColor = isDark ? '#60a5fa' : '#38bdf8';
+  const tailFarColor = isDark ? '#2563eb' : '#0369a1';
+  const tailMidColor = isDark ? '#3b82f6' : '#0284c7';
+  const scanBodyColor = isDark ? '#38bdf8' : '#0ea5e9';
+  const scanHeadGlowColor = isDark ? '#22d3ee' : '#06b6d4';
+  const scanCoreColor = isDark ? '#e0f2fe' : '#bae6fd';
 
   const clipDoorwayId = `gs-doorway-clip-${uid}`;
   const clipThresholdId = `gs-threshold-clip-${uid}`;
   const lightGradId = `gs-access-grad-${uid}`;
   const entrancePulseGradId = `gs-entrance-pulse-${uid}`;
+  const baseOutlineFilterId = `gs-base-outline-glow-${uid}`;
   const scanHaloFilterId = `gs-scan-halo-${uid}`;
+  const headGlowFilterId = `gs-head-glow-${uid}`;
 
   // Exact measured outer hexagonal building perimeter in the 576x576 asset coordinate space
   const outerPerimeterPath =
@@ -89,15 +96,41 @@ function GateShieldAnimatedMark({ isDark, sizeClassName }: GateShieldAnimatedMar
         aria-hidden="true"
       >
         <defs>
-          {/* Localized soft halo filter applied ONLY to the moving perimeter scan segment */}
+          {/* Continuous soft ambient glow around the full shield outline */}
+          <filter
+            id={baseOutlineFilterId}
+            x="-15%"
+            y="-15%"
+            width="130%"
+            height="130%"
+          >
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4.5" />
+          </filter>
+
+          {/* Localized soft halo filter applied to the moving perimeter glow trail */}
           <filter
             id={scanHaloFilterId}
-            x="-12%"
-            y="-12%"
-            width="124%"
-            height="124%"
+            x="-18%"
+            y="-18%"
+            width="136%"
+            height="136%"
           >
-            <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="6.5" />
+          </filter>
+
+          {/* Crisp bloom filter for the leading cyan/blue highlight head */}
+          <filter
+            id={headGlowFilterId}
+            x="-18%"
+            y="-18%"
+            width="136%"
+            height="136%"
+          >
+            <feGaussianBlur in="SourceGraphic" stdDeviation="3.2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
           </filter>
 
           {/* Clips strictly to the inner doorway corridor between the left jamb (x=322) and right jamb (x=398) */}
@@ -120,8 +153,8 @@ function GateShieldAnimatedMark({ isDark, sizeClassName }: GateShieldAnimatedMar
 
           {/* Restrained brightness pulse near the gate entrance when the perimeter scan reaches the doorway */}
           <radialGradient id={entrancePulseGradId} cx="356" cy="426" r="56" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor={isDark ? '#60a5fa' : '#3b82f6'} stopOpacity={isDark ? '0.42' : '0.32'} />
-            <stop offset="65%" stopColor="#3b82f6" stopOpacity="0.12" />
+            <stop offset="0%" stopColor={isDark ? '#38bdf8' : '#0ea5e9'} stopOpacity={isDark ? '0.45' : '0.35'} />
+            <stop offset="65%" stopColor="#3b82f6" stopOpacity="0.14" />
             <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
           </radialGradient>
         </defs>
@@ -167,45 +200,149 @@ function GateShieldAnimatedMark({ isDark, sizeClassName }: GateShieldAnimatedMar
           </g>
         </g>
 
-        {/* 4. Flowing Outer Perimeter Scanning Glow (tracks the exact hexagonal building outline) */}
-        {/* 4a. Soft, limited halo only around the moving scan segment */}
+        {/* 4. Softly Illuminated Base Shield Outline (keeps the entire shield perimeter gently lit at all times) */}
         <path
           d={outerPerimeterPath}
-          pathLength={1000}
           fill="none"
-          stroke={scanBodyColor}
-          strokeWidth="15"
+          stroke={baseOutlineGlowColor}
+          strokeWidth="16"
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeDasharray="165 835"
-          strokeOpacity={isDark ? '0.38' : '0.3'}
-          filter={`url(#${scanHaloFilterId})`}
-          className="gs-perimeter-scan-line"
+          strokeOpacity={isDark ? '0.32' : '0.28'}
+          filter={`url(#${baseOutlineFilterId})`}
+          className="gs-outline-base-glow"
         />
-        {/* 4b. Smooth flowing scan body */}
+        <path
+          d={outerPerimeterPath}
+          fill="none"
+          stroke={baseOutlineStrokeColor}
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeOpacity={isDark ? '0.45' : '0.42'}
+          className="gs-outline-base-line"
+        />
+
+        {/* 5. Continuous Circulating Shield Outline Glow (Leading Highlight + Smooth Fading Trail) */}
+        {/* 5a. Wide ambient blue/cyan bloom following the moving light */}
         <path
           d={outerPerimeterPath}
           pathLength={1000}
           fill="none"
           stroke={scanBodyColor}
-          strokeWidth="8"
+          strokeWidth="22"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="220 780"
+          strokeOpacity={isDark ? '0.52' : '0.44'}
+          filter={`url(#${scanHaloFilterId})`}
+          style={
+            {
+              '--gs-dash-start': '980',
+              '--gs-dash-end': '-20',
+            } as React.CSSProperties
+          }
+          className="gs-perimeter-scan-line"
+        />
+
+        {/* 5b. Far tapering tail behind the moving light */}
+        <path
+          d={outerPerimeterPath}
+          pathLength={1000}
+          fill="none"
+          stroke={tailFarColor}
+          strokeWidth="7.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="280 720"
+          strokeOpacity={isDark ? '0.24' : '0.22'}
+          style={
+            {
+              '--gs-dash-start': '1040',
+              '--gs-dash-end': '40',
+            } as React.CSSProperties
+          }
+          className="gs-perimeter-scan-line"
+        />
+
+        {/* 5c. Mid fading trail */}
+        <path
+          d={outerPerimeterPath}
+          pathLength={1000}
+          fill="none"
+          stroke={tailMidColor}
+          strokeWidth="9.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="195 805"
+          strokeOpacity={isDark ? '0.46' : '0.42'}
+          style={
+            {
+              '--gs-dash-start': '955',
+              '--gs-dash-end': '-45',
+            } as React.CSSProperties
+          }
+          className="gs-perimeter-scan-line"
+        />
+
+        {/* 5d. Rich cyan-blue near-head body */}
+        <path
+          d={outerPerimeterPath}
+          pathLength={1000}
+          fill="none"
+          stroke={scanBodyColor}
+          strokeWidth="11.5"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeDasharray="115 885"
-          strokeOpacity={isDark ? '0.78' : '0.72'}
+          strokeOpacity={isDark ? '0.82' : '0.78'}
+          style={
+            {
+              '--gs-dash-start': '875',
+              '--gs-dash-end': '-125',
+            } as React.CSSProperties
+          }
           className="gs-perimeter-scan-line"
         />
-        {/* 4c. Thin, sharp leading scan highlight */}
+
+        {/* 5e. Bright glowing cyan highlight head */}
+        <path
+          d={outerPerimeterPath}
+          pathLength={1000}
+          fill="none"
+          stroke={scanHeadGlowColor}
+          strokeWidth="13"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="52 948"
+          strokeOpacity="0.96"
+          filter={`url(#${headGlowFilterId})`}
+          style={
+            {
+              '--gs-dash-start': '812',
+              '--gs-dash-end': '-188',
+            } as React.CSSProperties
+          }
+          className="gs-perimeter-scan-line"
+        />
+
+        {/* 5f. Crisp ice-cyan core tip at the very front of the traveling light */}
         <path
           d={outerPerimeterPath}
           pathLength={1000}
           fill="none"
           stroke={scanCoreColor}
-          strokeWidth="5"
+          strokeWidth="6.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeDasharray="55 945"
-          strokeOpacity="0.95"
+          strokeDasharray="24 976"
+          strokeOpacity="1"
+          style={
+            {
+              '--gs-dash-start': '784',
+              '--gs-dash-end': '-216',
+            } as React.CSSProperties
+          }
           className="gs-perimeter-scan-line"
         />
       </svg>

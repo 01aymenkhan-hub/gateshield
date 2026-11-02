@@ -142,16 +142,16 @@ body {
 
 /*
  * 0. Continuous clockwise perimeter scan around the outer hexagonal building outline:
- *    Uses SVG pathLength="1000" so 1000 -> 0 loops with zero jump or seam.
- *    Starts at top peak (287.5, 12) and reaches the bottom-right gate entrance
- *    at ~35%..52% of the cycle, synchronized with the gate opening.
+ *    Uses SVG pathLength="1000" and per-layer --gs-dash-start / --gs-dash-end offsets
+ *    (differing by exactly 1000) so the multi-layer comet head and fading trail loop
+ *    with zero jump or seam.
  */
 @keyframes gs-perimeter-scan {
   0% {
-    stroke-dashoffset: 1000;
+    stroke-dashoffset: var(--gs-dash-start, 1000);
   }
   100% {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: var(--gs-dash-end, 0);
   }
 }
 
@@ -292,8 +292,19 @@ body {
   .gs-logo-stationary-base {
     clip-path: none !important;
   }
-  .gs-gate-overlay-svg {
+  .gs-perimeter-scan-line,
+  .gs-gate-leaf,
+  .gs-access-light,
+  .gs-gate-edge,
+  .gs-entrance-glow {
+    animation: none !important;
     display: none !important;
+  }
+  .gs-outline-base-glow {
+    stroke-opacity: 0.45 !important;
+  }
+  .gs-outline-base-line {
+    stroke-opacity: 0.65 !important;
   }
 }
 

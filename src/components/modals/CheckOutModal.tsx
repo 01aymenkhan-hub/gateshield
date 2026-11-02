@@ -242,13 +242,15 @@ export default function CheckOutModal({
     setIsOutgoingCameraOpen(false);
     setDeliveryCheckoutError(null);
     let finalPreview = previewUrl;
-    try {
-      const compressed = await compressIdentityImageFile(file, 1080, 1080, 0.88);
-      if (compressed.ok) {
-        finalPreview = compressed.dataUrl;
+    if (!previewUrl.startsWith('data:image/')) {
+      try {
+        const compressed = await compressIdentityImageFile(file, 2400, 2400, 0.92);
+        if (compressed.ok) {
+          finalPreview = compressed.dataUrl;
+        }
+      } catch {
+        // Fallback to previewUrl
       }
-    } catch {
-      // Fallback to previewUrl
     }
     setOutgoingDocPreview(finalPreview);
   };
@@ -261,7 +263,7 @@ export default function CheckOutModal({
     setDeliveryCheckoutError(null);
     let finalPreview = URL.createObjectURL(file);
     try {
-      const compressed = await compressIdentityImageFile(file, 1080, 1080, 0.88);
+      const compressed = await compressIdentityImageFile(file, 2400, 2400, 0.92);
       if (compressed.ok) {
         finalPreview = compressed.dataUrl;
       }
@@ -1153,12 +1155,12 @@ export default function CheckOutModal({
                   </div>
                 ) : (
                   <div className="p-3.5 rounded-2xl border-2 border-emerald-200 dark:border-emerald-800/70 bg-emerald-50/30 dark:bg-slate-800/60 space-y-3">
-                    <div className="relative w-full h-44 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-900 flex items-center justify-center">
+                    <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-900 flex items-center justify-center">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={outgoingDocPreview}
                         alt="Outgoing Delivery Document Preview"
-                        className="w-full h-full object-contain"
+                        className="block w-auto h-auto max-w-full max-h-64 object-contain"
                       />
                     </div>
                     <div className="flex items-center justify-between gap-2">

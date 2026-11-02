@@ -207,13 +207,15 @@ export default function VisitorStep({
       playSelectSound();
     }
     let finalPreview = previewUrl;
-    try {
-      const compressed = await compressIdentityImageFile(file, 1080, 1080, 0.88);
-      if (compressed.ok) {
-        finalPreview = compressed.dataUrl;
+    if (!previewUrl.startsWith("data:image/")) {
+      try {
+        const compressed = await compressIdentityImageFile(file, 2400, 2400, 0.92);
+        if (compressed.ok) {
+          finalPreview = compressed.dataUrl;
+        }
+      } catch {
+        // Fallback to previewUrl
       }
-    } catch {
-      // Fallback to previewUrl
     }
     onChangeVisitorData({
       ...visitorData,
@@ -231,7 +233,7 @@ export default function VisitorStep({
     }
     let finalPreview = URL.createObjectURL(file);
     try {
-      const compressed = await compressIdentityImageFile(file, 1080, 1080, 0.88);
+      const compressed = await compressIdentityImageFile(file, 2400, 2400, 0.92);
       if (compressed.ok) {
         finalPreview = compressed.dataUrl;
       }
@@ -584,12 +586,12 @@ export default function VisitorStep({
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row items-center gap-5 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
-                <div className="relative w-44 h-32 rounded-xl overflow-hidden shadow-xs border-2 border-white dark:border-slate-700 bg-slate-900 shrink-0">
+                <div className="relative rounded-xl overflow-hidden shadow-xs border-2 border-white dark:border-slate-700 bg-slate-900 shrink-0 flex items-center justify-center max-w-full sm:max-w-[240px]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={visitorData.deliveryDocumentPreview}
                     alt="Delivery Document"
-                    className="w-full h-full object-contain"
+                    className="block w-auto h-auto max-w-full max-h-56 object-contain"
                   />
                 </div>
 
@@ -1280,12 +1282,12 @@ export default function VisitorStep({
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-emerald-50/40 dark:bg-slate-800/60 rounded-2xl border-2 border-emerald-200 dark:border-emerald-800/70">
-              <div className="relative w-44 h-32 sm:w-48 sm:h-36 rounded-2xl overflow-hidden shadow-sm border-2 border-white dark:border-slate-700 bg-slate-900 shrink-0">
+              <div className="relative rounded-2xl overflow-hidden shadow-sm border-2 border-white dark:border-slate-700 bg-slate-900 shrink-0 flex items-center justify-center max-w-full sm:max-w-[260px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={visitorData.deliveryDocumentPreview}
                   alt="Delivery Document Preview"
-                  className="w-full h-full object-contain"
+                  className="block w-auto h-auto max-w-full max-h-60 object-contain"
                 />
               </div>
 
