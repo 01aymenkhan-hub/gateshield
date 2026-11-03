@@ -269,7 +269,7 @@ function buildEmailWrapper(title: string, badgeText: string, badgeColor: string,
       <td align="center">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:580px;background-color:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(15,23,42,0.06);">
           <tr>
-            <td style="background:linear-gradient(135deg,#1d4ed8,#3730a3);padding:24px 28px;color:#ffffff;">
+            <td style="background:linear-gradient(135deg,#354F96,#2b417d);padding:24px 28px;color:#ffffff;">
               <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;opacity:0.85;">GateShield Visitor &amp; Access Control</div>
               <div style="font-size:20px;font-weight:800;margin-top:6px;">${escapeHtml(title)}</div>
               <div style="margin-top:10px;">
@@ -286,7 +286,7 @@ function buildEmailWrapper(title: string, badgeText: string, badgeColor: string,
           </tr>
           <tr>
             <td style="padding:16px 28px;background-color:#f8fafc;border-top:1px solid #e2e8f0;font-size:12px;color:#64748b;">
-              Automated notification from GateShield Security System &bull; <a href="${escapeHtml(appUrl)}" style="color:#2563eb;text-decoration:none;">${escapeHtml(appUrl)}</a>
+              Automated notification from GateShield Security System &bull; <a href="${escapeHtml(appUrl)}" style="color:#354F96;text-decoration:none;">${escapeHtml(appUrl)}</a>
             </td>
           </tr>
         </table>
@@ -324,7 +324,7 @@ export async function sendEmployeeRegistrationConfirmationEmail(employee: {
     </table>
     <p>You will receive another email as soon as an administrator reviews your request. You can also check your live approval status at any time on the Employee Portal:</p>
     <p style="margin:22px 0;">
-      <a href="${escapeHtml(portalUrl)}" style="display:inline-block;background-color:#2563eb;color:#ffffff;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px;">Check Status on Employee Portal</a>
+      <a href="${escapeHtml(portalUrl)}" style="display:inline-block;background-color:#354F96;color:#ffffff;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px;">Check Status on Employee Portal</a>
     </p>
   `;
 
@@ -405,7 +405,7 @@ export async function sendAdminNewEmployeeRequestEmail(employee: {
       <tr><td style="padding:4px 0;color:#64748b;">Requested At:</td><td style="padding:4px 0;font-weight:600;color:#0f172a;">${escapeHtml(formattedTime)}</td></tr>
     </table>
     <p style="margin:22px 0;">
-      <a href="${escapeHtml(adminEmployeesUrl)}" style="display:inline-block;background-color:#2563eb;color:#ffffff;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px;">Review in Admin Panel</a>
+      <a href="${escapeHtml(adminEmployeesUrl)}" style="display:inline-block;background-color:#354F96;color:#ffffff;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px;">Review in Admin Panel</a>
     </p>
   `;
 
@@ -428,7 +428,7 @@ export async function sendAdminNewEmployeeRequestEmail(employee: {
     subject,
     entityId: employee.id,
     dedupeKey: `admin_emp_req_${employee.id}`,
-    html: buildEmailWrapper('New Employee Registration Request', 'ACTION REQUIRED', '#2563eb', bodyHtml),
+    html: buildEmailWrapper('New Employee Registration Request', 'ACTION REQUIRED', '#354F96', bodyHtml),
     text,
   });
 }

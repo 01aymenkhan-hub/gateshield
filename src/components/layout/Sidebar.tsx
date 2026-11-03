@@ -76,59 +76,9 @@ export default function Sidebar() {
     closeMobileSidebar,
     isDesktopCollapsed,
     toggleDesktopSidebar,
+    pendingEmployeeCount,
+    pendingOperatorCount,
   } = useLayout();
-
-  const [pendingEmployeeCount, setPendingEmployeeCount] = React.useState<number>(0);
-  const [pendingOperatorCount, setPendingOperatorCount] = React.useState<number>(0);
-  const badgeReqInFlightRef = React.useRef(false);
-
-  const fetchPendingCounts = React.useCallback(async () => {
-    if (user?.role !== 'ADMIN' || badgeReqInFlightRef.current) return;
-    badgeReqInFlightRef.current = true;
-    try {
-      const [empRes, opRes] = await Promise.all([
-        fetch('/api/admin/employees?summaryOnly=true', { cache: 'no-store' }),
-        fetch('/api/admin/operators?summaryOnly=true', { cache: 'no-store' }),
-      ]);
-      if (empRes.ok) {
-        const data = await empRes.json();
-        if (typeof data.pendingCount === 'number') {
-          setPendingEmployeeCount(data.pendingCount);
-        }
-      }
-      if (opRes.ok) {
-        const opData = await opRes.json();
-        if (typeof opData.pendingCount === 'number') {
-          setPendingOperatorCount(opData.pendingCount);
-        }
-      }
-    } catch {
-      // Ignore transient errors
-    } finally {
-      badgeReqInFlightRef.current = false;
-    }
-  }, [user?.role]);
-
-  React.useEffect(() => {
-    if (user?.role !== 'ADMIN') return;
-    const initTimer = setTimeout(() => {
-      void fetchPendingCounts();
-    }, 0);
-    const interval = setInterval(() => {
-      void fetchPendingCounts();
-    }, 6000);
-    const handleImmediateRefresh = () => {
-      void fetchPendingCounts();
-    };
-    window.addEventListener('gk:refresh-employee-badge', handleImmediateRefresh);
-    window.addEventListener('gk:refresh-operator-badge', handleImmediateRefresh);
-    return () => {
-      clearTimeout(initTimer);
-      clearInterval(interval);
-      window.removeEventListener('gk:refresh-employee-badge', handleImmediateRefresh);
-      window.removeEventListener('gk:refresh-operator-badge', handleImmediateRefresh);
-    };
-  }, [user?.role, fetchPendingCounts]);
 
   const currentParcelTab = searchParams?.get('tab') || 'expected';
 

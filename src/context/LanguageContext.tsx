@@ -971,6 +971,50 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
     en: 'Information Form',
     ur: 'معلومات کا فارم',
   },
+  admin_qa_employee_requests: {
+    en: 'Employee Requests',
+    ur: 'ملازمین کی درخواستیں',
+  },
+  admin_qa_employee_requests_desc: {
+    en: 'Review & approve employee registrations',
+    ur: 'ملازمین کی رجسٹریشن درخواستوں کی منظوری',
+  },
+  admin_qa_operator_requests: {
+    en: 'Operator Requests',
+    ur: 'آپریٹر کی درخواستیں',
+  },
+  admin_qa_operator_requests_desc: {
+    en: 'Approve operators & assign gate access',
+    ur: 'آپریٹر رجسٹریشن اور گیٹ رسائی کی منظوری',
+  },
+  admin_qa_departments: {
+    en: 'Departments',
+    ur: 'شعبہ جات (Departments)',
+  },
+  admin_qa_departments_desc: {
+    en: 'Manage departments & HOD contacts',
+    ur: 'شعبہ جات اور سربراہان کی تفصیلات',
+  },
+  admin_qa_invite_vip: {
+    en: 'Invite VIP Guest',
+    ur: 'وی آئی پی مہمان مدعو کریں',
+  },
+  admin_qa_invite_vip_desc: {
+    en: 'Register VIP arrival & vehicle pass',
+    ur: 'وی آئی پی مہمان کی آمد اور گاڑی رجسٹر کریں',
+  },
+  admin_qa_pending_badge: {
+    en: 'Pending',
+    ur: 'زیر التواء',
+  },
+  admin_qa_no_pending: {
+    en: 'No Pending',
+    ur: 'کوئی زیر التواء نہیں',
+  },
+  admin_profile_label: {
+    en: 'Admin Profile & Access',
+    ur: 'ایڈمن پروفائل اور رسائی',
+  },
 };
 
 const LanguageContext = createContext<LanguageContextType>({

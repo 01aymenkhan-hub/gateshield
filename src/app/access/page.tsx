@@ -43,7 +43,9 @@ export default function AccessManagementPage() {
   const { user: currentUser } = useAuth();
   const searchParams = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('operators');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    searchParams?.get('tab') === 'requests' ? 'requests' : 'operators'
+  );
   const [users, setUsers] = useState<any[]>([]);
   const [operatorRequests, setOperatorRequests] = useState<any[]>([]);
   const [pendingCount, setPendingCount] = useState(0);

@@ -32,7 +32,9 @@ interface GateOption {
 
 interface VipGuestManagementViewProps {
   isModal?: boolean;
+  onlyFormModal?: boolean;
   onCloseModal?: () => void;
+  onSuccessSave?: (message: string) => void;
 }
 
 function formatCnicInput(raw: string): string {
@@ -61,7 +63,9 @@ function toDateTimeLocalValue(dt: Date | string): string {
 
 export default function VipGuestManagementView({
   isModal = false,
+  onlyFormModal = false,
   onCloseModal,
+  onSuccessSave,
 }: VipGuestManagementViewProps) {
   const { user } = useAuth();
   const { language, t } = useLanguage();
@@ -83,7 +87,7 @@ export default function VipGuestManagementView({
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   // Admin Add / Edit VIP Guest Modal state
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(onlyFormModal);
   const [editingVip, setEditingVip] = useState<VipGuestRow | null>(null);
   const [vipName, setVipName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -123,12 +127,16 @@ export default function VipGuestManagementView({
   }, []);
 
   useEffect(() => {
+    if (onlyFormModal) {
+      setLoading(false);
+      return;
+    }
     void fetchVipGuests();
     const interval = setInterval(() => {
       void fetchVipGuests();
     }, 5000);
     return () => clearInterval(interval);
-  }, [fetchVipGuests]);
+  }, [fetchVipGuests, onlyFormModal]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -228,13 +236,21 @@ export default function VipGuestManagementView({
         return;
       }
 
-      setIsFormModalOpen(false);
-      setActionSuccess(
+      const successMsg =
         data.message ||
-          (isUrdu
-            ? `وی آئی پی مہمان ${vipName.trim()} محفوظ کر دیا گیا۔`
-            : `VIP Guest ${vipName.trim()} saved and notified to all Operator gates.`)
-      );
+        (isUrdu
+          ? `وی آئی پی مہمان ${vipName.trim()} محفوظ کر دیا گیا۔`
+          : `VIP Guest ${vipName.trim()} saved and notified to all Operator gates.`);
+
+      setIsFormModalOpen(false);
+      setActionSuccess(successMsg);
+      if (onSuccessSave) {
+        onSuccessSave(successMsg);
+      }
+      if (onlyFormModal) {
+        onCloseModal?.();
+        return;
+      }
       await fetchVipGuests();
     } catch {
       setFormError(
@@ -331,7 +347,9 @@ export default function VipGuestManagementView({
   };
 
   return (
-    <div dir="ltr" className="space-y-4">
+    <div dir="ltr" className={onlyFormModal ? '' : 'space-y-4'}>
+      {!onlyFormModal && (
+        <>
       {/* Top Header — Clean Heading: VIP Guest List (No unnecessary explanatory subtext) */}
       <div className="rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-xs flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -762,6 +780,8 @@ export default function VipGuestManagementView({
           ))}
         </div>
       )}
+        </>
+      )}
 
       {/* ================================================================= */}
       {/* ADMIN-ONLY ADD / EDIT VIP GUEST MODAL (Standard GateShield Blue)  */}
@@ -790,7 +810,10 @@ export default function VipGuestManagementView({
               </div>
               <button
                 type="button"
-                onClick={() => setIsFormModalOpen(false)}
+                onClick={() => {
+                  setIsFormModalOpen(false);
+                  if (onlyFormModal) onCloseModal?.();
+                }}
                 className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white cursor-pointer shrink-0"
               >
                 <X className="w-4 h-4" />
@@ -974,7 +997,10 @@ export default function VipGuestManagementView({
               <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setIsFormModalOpen(false)}
+                  onClick={() => {
+                    setIsFormModalOpen(false);
+                    if (onlyFormModal) onCloseModal?.();
+                  }}
                   className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer"
                 >
                   {t('cancel_btn', 'Cancel')}

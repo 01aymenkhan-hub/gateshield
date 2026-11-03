@@ -12,11 +12,30 @@
   --muted-foreground: #64748b;
   --sidebar-bg: #ffffff;
   --sidebar-border: #e2e8f0;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
   --border: #e2e8f0;
+
+  /* GateShield Official Primary Brand Color Palette (#354F96) */
+  --brand-primary: #354F96;
+  --brand-primary-50: #f0f3fa;
+  --brand-primary-100: #dee5f5;
+  --brand-primary-200: #c1cfec;
+  --brand-primary-300: #96b0df;
+  --brand-primary-400: #698bd0;
+  --brand-primary-500: #4666b4;
+  --brand-primary-600: #354F96;
+  --brand-primary-700: #2b417d;
+  --brand-primary-800: #223466;
+  --brand-primary-900: #1b2952;
+  --brand-primary-950: #111a36;
+
+  --accent: var(--brand-primary-600);
+  --accent-hover: var(--brand-primary-700);
+  --primary: var(--brand-primary-600);
+  --primary-hover: var(--brand-primary-700);
+  --primary-active: var(--brand-primary-800);
+  --primary-focus: var(--brand-primary-500);
+  --primary-subtle: var(--brand-primary-50);
+  --primary-foreground: #ffffff;
 }
 
 .dark {
@@ -29,11 +48,16 @@
   --muted-foreground: #94a3b8;
   --sidebar-bg: #0c121e;
   --sidebar-border: #1e293b;
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
   --border: #1e293b;
+
+  --accent: var(--brand-primary-400);
+  --accent-hover: var(--brand-primary-300);
+  --primary: var(--brand-primary-600);
+  --primary-hover: var(--brand-primary-500);
+  --primary-active: var(--brand-primary-700);
+  --primary-focus: var(--brand-primary-400);
+  --primary-subtle: var(--brand-primary-950);
+  --primary-foreground: #ffffff;
 }
 
 @theme inline {
@@ -48,8 +72,51 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-accent: var(--accent);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-focus: var(--primary-focus);
+  --color-primary-subtle: var(--primary-subtle);
   --color-primary-foreground: var(--primary-foreground);
   --color-border: var(--border);
+
+  /* Centralized GateShield Primary Brand Scale (#354F96) */
+  --color-brand-50: var(--brand-primary-50);
+  --color-brand-100: var(--brand-primary-100);
+  --color-brand-200: var(--brand-primary-200);
+  --color-brand-300: var(--brand-primary-300);
+  --color-brand-400: var(--brand-primary-400);
+  --color-brand-500: var(--brand-primary-500);
+  --color-brand-600: var(--brand-primary-600);
+  --color-brand-700: var(--brand-primary-700);
+  --color-brand-800: var(--brand-primary-800);
+  --color-brand-900: var(--brand-primary-900);
+  --color-brand-950: var(--brand-primary-950);
+
+  /* Map primary blue/indigo UI utility tokens to the centralized #354F96 brand scale */
+  --color-blue-50: var(--brand-primary-50);
+  --color-blue-100: var(--brand-primary-100);
+  --color-blue-200: var(--brand-primary-200);
+  --color-blue-300: var(--brand-primary-300);
+  --color-blue-400: var(--brand-primary-400);
+  --color-blue-500: var(--brand-primary-500);
+  --color-blue-600: var(--brand-primary-600);
+  --color-blue-700: var(--brand-primary-700);
+  --color-blue-800: var(--brand-primary-800);
+  --color-blue-900: var(--brand-primary-900);
+  --color-blue-950: var(--brand-primary-950);
+
+  --color-indigo-50: var(--brand-primary-50);
+  --color-indigo-100: var(--brand-primary-100);
+  --color-indigo-200: var(--brand-primary-200);
+  --color-indigo-300: var(--brand-primary-300);
+  --color-indigo-400: var(--brand-primary-400);
+  --color-indigo-500: var(--brand-primary-500);
+  --color-indigo-600: var(--brand-primary-600);
+  --color-indigo-700: var(--brand-primary-700);
+  --color-indigo-800: var(--brand-primary-800);
+  --color-indigo-900: var(--brand-primary-900);
+  --color-indigo-950: var(--brand-primary-950);
+
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -108,19 +175,19 @@ body {
 
 @keyframes gk-subtle-wave-blue {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.35), 0 0 0 0 rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 0 rgba(53, 79, 150, 0.35), 0 0 0 0 rgba(53, 79, 150, 0.15);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.12), 0 0 0 16px rgba(37, 99, 235, 0);
+    box-shadow: 0 0 0 8px rgba(53, 79, 150, 0.12), 0 0 0 16px rgba(53, 79, 150, 0);
   }
 }
 
 @keyframes gk-vc-card-wave-glow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.32), 0 0 0 0 rgba(16, 185, 129, 0.14);
+    box-shadow: 0 0 0 0 rgba(53, 79, 150, 0.32), 0 0 0 0 rgba(16, 185, 129, 0.14);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.12), 0 0 0 12px rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 6px rgba(53, 79, 150, 0.12), 0 0 0 12px rgba(16, 185, 129, 0);
   }
 }
 
