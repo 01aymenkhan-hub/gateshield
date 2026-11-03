@@ -736,7 +736,7 @@ export default function CheckInModal({
                   <button
                     type="button"
                     onClick={() => setIsUnexpectedParcelOpen(true)}
-                    className="text-xs font-extrabold px-2.5 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white cursor-pointer inline-flex items-center gap-1"
+                    className="text-xs font-extrabold px-2.5 py-0.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white cursor-pointer inline-flex items-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5 shrink-0" />
                     <span>Register Parcel</span>

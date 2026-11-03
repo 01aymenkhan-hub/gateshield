@@ -1116,7 +1116,7 @@ export default function EmployeePortalPage() {
                     <button
                       type="submit"
                       disabled={authSubmitting}
-                      className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+                      className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer"
                     >
                       {authSubmitting
                         ? 'Signing in...'
@@ -1253,7 +1253,7 @@ export default function EmployeePortalPage() {
                     <button
                       type="submit"
                       disabled={authSubmitting}
-                      className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-emerald-500/20 transition-all cursor-pointer mt-2"
+                      className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer mt-2"
                     >
                       {authSubmitting
                         ? 'Submitting Request...'
@@ -1728,7 +1728,7 @@ export default function EmployeePortalPage() {
                             <button
                               type="submit"
                               disabled={inviteSubmitting}
-                              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                             >
                               <UserPlus className="w-4 h-4" />
                               <span>
@@ -2203,7 +2203,7 @@ export default function EmployeePortalPage() {
                             <button
                               type="submit"
                               disabled={parcelSubmitting}
-                              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                             >
                               <Package className="w-4 h-4" />
                               <span>
@@ -2663,7 +2663,7 @@ export default function EmployeePortalPage() {
                     required
                     value={reinviteGuestName}
                     onChange={(e) => setReinviteGuestName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -2676,7 +2676,7 @@ export default function EmployeePortalPage() {
                     required
                     value={reinvitePhone}
                     onChange={(e) => setReinvitePhone(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -2692,7 +2692,7 @@ export default function EmployeePortalPage() {
                     min={getTodayDateString()}
                     value={reinviteDate}
                     onChange={(e) => setReinviteDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -2703,7 +2703,7 @@ export default function EmployeePortalPage() {
                   <select
                     value={reinviteTime}
                     onChange={(e) => setReinviteTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {ESTIMATED_ARRIVAL_SLOTS.map((slot) => (
                       <option key={slot} value={slot}>
@@ -2724,7 +2724,7 @@ export default function EmployeePortalPage() {
                     value={reinviteCnic}
                     onChange={(e) => setReinviteCnic(formatCnicInput(e.target.value))}
                     placeholder="35202-1234567-1"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -2737,7 +2737,7 @@ export default function EmployeePortalPage() {
                     value={reinviteAlongWith}
                     onChange={(e) => setReinviteAlongWith(e.target.value)}
                     placeholder={t('along_with_placeholder', 'Accompanying persons or count')}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -2753,7 +2753,7 @@ export default function EmployeePortalPage() {
                 <button
                   type="submit"
                   disabled={reinviteSubmitting}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-extrabold shadow-md cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-xs font-extrabold shadow-md shadow-blue-500/20 cursor-pointer"
                 >
                   {reinviteSubmitting
                     ? isUrdu

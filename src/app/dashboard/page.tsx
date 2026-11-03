@@ -297,7 +297,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setIsInviteVipFormOpen(true)}
-                className="col-span-2 sm:col-span-1 w-full sm:w-auto sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold shadow-md transition-all cursor-pointer min-h-[42px] whitespace-nowrap"
+                className="col-span-2 sm:col-span-1 w-full sm:w-auto sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 active:bg-blue-100 text-xs font-extrabold shadow-md transition-all cursor-pointer min-h-[42px] whitespace-nowrap"
               >
                 <Crown className="w-4 h-4 shrink-0" />
                 <span>{t('admin_qa_invite_vip', 'Invite VIP Guest')}</span>
@@ -1178,7 +1178,7 @@ export default function DashboardPage() {
                       gateId: currentGate?.id,
                     })
                   }
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm shadow-emerald-600/20 shrink-0"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm shadow-blue-600/20 shrink-0"
                   title="View all visitors currently inside in full-screen modal"
                 >
                   <IconCurrentlyInside className="w-5 h-5 shrink-0" />

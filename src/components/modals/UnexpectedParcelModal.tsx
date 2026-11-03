@@ -493,7 +493,7 @@ export default function UnexpectedParcelModal({
                   resetForm();
                   onClose();
                 }}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-extrabold shadow-md cursor-pointer"
               >
                 {t('close', 'Close')}
               </button>

@@ -43,7 +43,7 @@ export default function AuditLogsPage() {
         <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/20">
+            <div className="p-3 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>

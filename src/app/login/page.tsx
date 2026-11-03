@@ -758,7 +758,7 @@ export default function OperatorLoginPage() {
                       setLoginTab('email');
                       setScreenMode('login');
                     }}
-                    className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md transition-all cursor-pointer"
+                    className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-xs font-extrabold shadow-md transition-all cursor-pointer"
                   >
                     <span dir="auto">
                       {language === 'ur'

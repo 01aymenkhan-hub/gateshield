@@ -2,7 +2,23 @@
 @custom-variant dark (&:where(.dark, .dark *));
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+@font-face {
+  font-family: 'Jameel Noori Nastaleeq Regular';
+  src:
+    local('Jameel Noori Nastaleeq Regular'),
+    local('Jameel Noori Nastaleeq'),
+    url('/fonts/JameelNooriNastaleeq-Regular.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 108%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200F, U+202A-202E;
+}
+
 :root {
+  --font-en: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-ur: 'Inter', 'Jameel Noori Nastaleeq Regular', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-active-sans: var(--font-en);
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
@@ -117,14 +133,23 @@
   --color-indigo-900: var(--brand-primary-900);
   --color-indigo-950: var(--brand-primary-950);
 
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-active-sans);
+  --font-urdu: var(--font-ur);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+html[lang="en"] {
+  --font-active-sans: var(--font-en);
+}
+
+html[lang="ur"] {
+  --font-active-sans: var(--font-ur);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-active-sans);
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   letter-spacing: -0.011em;
   transition: background-color 0.15s ease, color 0.15s ease;
@@ -379,11 +404,25 @@ body {
 /* Bilingual (Urdu / English) Fixed-Layout & Natural Text Direction Rules     */
 /* ========================================================================== */
 /*
- * Core principle: Structural layout (`dir="ltr"`) stays identical in both
- * languages so logos, buttons, navigation, sidebars, cards, and grids never
- * flip or swap positions. Only text rendering direction and text alignment
- * adapt when Urdu (`html[lang="ur"]`) is active.
+ * Core principle: Structural layout (`dir="ltr"`), element dimensions, line
+ * heights, and spacing stay identical in both languages so switching between
+ * English and Urdu causes zero layout fluctuation. Only main headings are
+ * slightly enlarged in Urdu.
  */
+:root {
+  --ur-heading-main: clamp(1.55rem, 2vw, 1.85rem);
+  --ur-heading-section: clamp(1.15rem, 1.4vw, 1.3rem);
+  --ur-heading-card: clamp(1.05rem, 1.2vw, 1.15rem);
+}
+
+html[lang="ur"],
+html[lang="ur"] body {
+  font-family: var(--font-ur);
+  font-feature-settings: "liga" 1, "clig" 1, "calt" 1, "kern" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis-weight: none;
+}
+
 html[lang="ur"] h1,
 html[lang="ur"] h2,
 html[lang="ur"] h3,
@@ -397,9 +436,37 @@ html[lang="ur"] th,
 html[lang="ur"] td,
 html[lang="ur"] li,
 html[lang="ur"] option,
+html[lang="ur"] optgroup,
+html[lang="ur"] select,
 html[lang="ur"] button,
+html[lang="ur"] input:not(.font-mono),
+html[lang="ur"] textarea:not(.font-mono),
 html[lang="ur"] a {
+  font-family: var(--font-ur);
+  font-feature-settings: "liga" 1, "clig" 1, "calt" 1, "kern" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis-weight: none;
+  letter-spacing: normal;
   unicode-bidi: plaintext;
+}
+
+/* Slightly enlarge only Main Headings in Urdu */
+html[lang="ur"] h1 {
+  font-size: var(--ur-heading-main);
+}
+
+html[lang="ur"] h2 {
+  font-size: var(--ur-heading-section);
+}
+
+html[lang="ur"] h3 {
+  font-size: var(--ur-heading-card);
+}
+
+html[lang="ur"] input::placeholder,
+html[lang="ur"] textarea::placeholder {
+  font-family: var(--font-ur);
+  letter-spacing: normal;
 }
 
 html[lang="ur"] label:not(.text-center),
@@ -409,6 +476,7 @@ html[lang="ur"] .text-start {
 
 html[lang="ur"]
   input:not([type="email"]):not([type="password"]):not([type="tel"]):not([type="url"]):not([type="number"]):not([type="date"]):not([type="time"]):not([type="datetime-local"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.font-mono):not(.text-center),
+html[lang="ur"] select:not(.font-mono):not(.text-center),
 html[lang="ur"] textarea:not(.text-center) {
   unicode-bidi: plaintext;
   text-align: right;

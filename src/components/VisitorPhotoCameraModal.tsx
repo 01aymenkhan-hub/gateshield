@@ -430,7 +430,7 @@ export default function VisitorPhotoCameraModal({
               <button
                 type="button"
                 onClick={handleReviewConfirm}
-                className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-semibold transition-all shadow-lg text-center flex items-center justify-center space-x-1.5 cursor-pointer"
+                className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white text-sm font-semibold transition-all shadow-lg text-center flex items-center justify-center space-x-1.5 cursor-pointer"
               >
                 <span>{isDocMode ? "Continue" : "✓ Use Photo"}</span>
               </button>

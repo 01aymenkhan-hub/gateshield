@@ -437,7 +437,7 @@ export default function AdminEmployeesPage() {
                 <button
                   type="button"
                   onClick={openAddEmployeeModal}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-emerald-950/20 flex items-center gap-1.5 cursor-pointer transition-all"
+                  className="px-4 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 active:bg-blue-100 text-xs font-extrabold shadow-lg shadow-blue-950/20 flex items-center gap-1.5 cursor-pointer transition-all"
                 >
                   <Plus className="w-4 h-4 shrink-0" />
                   <span>Add Employee</span>
@@ -1062,7 +1062,7 @@ export default function AdminEmployeesPage() {
                   <button
                     type="submit"
                     disabled={addSubmitting}
-                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-extrabold shadow-md cursor-pointer flex items-center gap-1.5"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white font-extrabold shadow-md shadow-blue-500/20 cursor-pointer flex items-center gap-1.5"
                   >
                     <UserPlus className="w-3.5 h-3.5" />
                     <span>{addSubmitting ? 'Creating Employee...' : 'Create Employee Account'}</span>

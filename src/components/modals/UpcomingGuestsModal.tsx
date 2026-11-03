@@ -560,7 +560,7 @@ export default function UpcomingGuestsModal({
                       cardCheckStatus === 'unavailable' ||
                       (user?.role === 'OPERATOR' && !operatorAssignedGate)
                     }
-                    className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs sm:text-sm font-extrabold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                    className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-xs sm:text-sm font-extrabold shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
                   >
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span className="truncate">
