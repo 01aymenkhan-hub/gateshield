@@ -7,8 +7,10 @@ assert.equal(process.env.EMAIL_ENABLED,'false','Synthetic tests must not send em
 const marker='ResetTest'+crypto.randomBytes(6).toString('hex'),users=[],requestIds=[],rows=[];
 const password=crypto.randomBytes(24).toString('hex'),newPassword=crypto.randomBytes(24).toString('hex');
 const jar=()=>new Map();
+const clientIps=new WeakMap();let clientNumber=0;
 async function call(route,body,cookies=jar(),method=body?'POST':'GET') {
- const res=await fetch(base+route,{method,headers:{Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),'Content-Type':'application/json','X-Forwarded-For':'127.0.0.1'},...(body?{body:JSON.stringify(body)}:{})});
+ if(!clientIps.has(cookies))clientIps.set(cookies,'127.88.0.'+(++clientNumber));
+ const res=await fetch(base+route,{method,headers:{Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),'Content-Type':'application/json','X-Forwarded-For':clientIps.get(cookies)},...(body?{body:JSON.stringify(body)}:{})});
  for(const c of res.headers.getSetCookie()){const [name,...value]=c.split(';')[0].split('=');cookies.set(name,value.join('='));}
  return {status:res.status,body:await res.json(),cookies};
 }
@@ -18,7 +20,7 @@ async function request(user,cookies=jar()) {const r=await call('/api/auth/passwo
 async function state(cookies){return call('/api/auth/password-reset/status',null,cookies);}
 async function review(id,action,cookies){return call('/api/admin/password-resets/'+id,{action,rejectionReason:'Synthetic test rejection'},cookies,'PATCH');}
 (async()=>{
- for(const role of ['ADMIN','OPERATOR','EMPLOYEE'])users.push(await prisma.user.create({data:{email:marker+role+'@example.invalid',name:marker+role,passwordHash:await hash(password,10),role,active:true,approvalStatus:'APPROVED'}}));
+ for(const role of ['ADMIN','OPERATOR','EMPLOYEE'])users.push(await prisma.user.create({data:{email:(marker+role+'@example.invalid').toLowerCase(),name:marker+role,passwordHash:await hash(password,10),role,active:true,approvalStatus:'APPROVED'}}));
  const [admin,operator,employee]=users,adminJar=jar(),opJar=jar(),empJar=jar();
  assert.equal((await login(admin,adminJar)).status,200);assert.equal((await login(operator,opJar)).status,200);assert.equal((await login(employee,empJar)).status,200);
  check('All three role logins succeed',true);
@@ -59,15 +61,15 @@ async function review(id,action,cookies){return call('/api/admin/password-resets
  check('Previous admin session revoked',(await call('/api/auth/me',null,adminJar)).status===401);
  const unknown=jar();const unknownRes=await call('/api/auth/password-reset/request',{email:marker+'missing@example.invalid'},unknown);
  check('Unknown account returns generic pending response',unknownRes.status===200&&unknownRes.body.status==='PENDING'&&!(await state(unknown)).body.canResetPassword);
- for(let i=0;i<6;i++)await call('/api/auth/password-reset/request',{email:marker+'missing@example.invalid'});
- check('Reset rate limit enforced',(await call('/api/auth/password-reset/request',{email:marker+'missing@example.invalid'})).status===429);
+ for(let i=0;i<5;i++)await call('/api/auth/password-reset/request',{email:marker+'missing@example.invalid'},unknown);
+ check('Reset rate limit enforced',(await call('/api/auth/password-reset/request',{email:marker+'missing@example.invalid'},unknown)).status===429);
  console.log(JSON.stringify({passed:true,checks:rows.length}));
  if(process.env.RESET_EVIDENCE_FILE)fs.writeFileSync(process.env.RESET_EVIDENCE_FILE,JSON.stringify({base,rows,passed:true},null,2));
 })().catch(e=>{console.error(e.stack);process.exitCode=1;}).finally(async()=>{
  const ids=users.map(u=>u.id);
  await prisma.appNotification.deleteMany({where:{OR:[{recipientUserId:{in:ids}},{message:{contains:marker}}]}});
  await prisma.auditLog.deleteMany({where:{OR:[{performedById:{in:ids}},{entityId:{in:requestIds}}]}});
- await prisma.emailOutbox.deleteMany({where:{recipientEmail:{contains:marker}}});
+ await prisma.emailOutbox.deleteMany({where:{OR:[{recipientEmail:{contains:marker.toLowerCase()}},{entityId:{in:requestIds}}]}});
  await prisma.user.deleteMany({where:{id:{in:ids}}});
  await prisma.$disconnect();console.log('Synthetic reset accounts removed.');
 });
