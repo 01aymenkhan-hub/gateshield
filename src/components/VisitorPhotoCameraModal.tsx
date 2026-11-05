@@ -18,6 +18,15 @@ export default function VisitorPhotoCameraModal({
   const isDocMode = mode === "document";
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const cameraGenerationRef = useRef(0);
+
+  const attachVideo = useCallback((node: HTMLVideoElement | null) => {
+    videoRef.current = node;
+    if (node && streamRef.current) {
+      node.srcObject = streamRef.current;
+      node.onloadedmetadata = () => { node.play().catch(() => {}); };
+    }
+  }, []);
 
   const [facingMode, setFacingMode] = useState<"user" | "environment">(
     isDocMode ? "environment" : "user"
@@ -34,15 +43,18 @@ export default function VisitorPhotoCameraModal({
 
   // Stop current camera stream
   const stopCameraStream = useCallback(() => {
+    cameraGenerationRef.current += 1;
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
   // Start camera with current facingMode
   const startCamera = useCallback(async () => {
     stopCameraStream();
+    const generation = cameraGenerationRef.current;
     setCameraError(null);
     try {
       const videoConstraints: MediaTrackConstraints = isDocMode
@@ -62,20 +74,20 @@ export default function VisitorPhotoCameraModal({
         video: videoConstraints,
       });
 
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(console.error);
-        };
+      if (generation !== cameraGenerationRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
       }
+      streamRef.current = stream;
+      attachVideo(videoRef.current);
     } catch (err: unknown) {
+      if (generation !== cameraGenerationRef.current) return;
       console.error("Visitor camera access error:", err);
       setCameraError(
         "Unable to access camera. Please verify device permissions or use 'Upload Image'."
       );
     }
-  }, [facingMode, isDocMode, stopCameraStream]);
+  }, [facingMode, isDocMode, stopCameraStream, attachVideo]);
 
   // Lifecycle
   useEffect(() => {
@@ -106,6 +118,7 @@ export default function VisitorPhotoCameraModal({
   const handleShutterClick = useCallback(() => {
     const video = videoRef.current;
     if (!video || video.videoWidth === 0 || video.videoHeight === 0) return;
+    const generation = cameraGenerationRef.current;
 
     setIsShutterActive(true);
     setTimeout(() => setIsShutterActive(false), 150);
@@ -128,7 +141,7 @@ export default function VisitorPhotoCameraModal({
           const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
           canvas.toBlob(
             (blob) => {
-              if (blob) {
+              if (blob && generation === cameraGenerationRef.current) {
                 const file = new File([blob], `delivery_doc_${Date.now()}.jpg`, {
                   type: "image/jpeg",
                   lastModified: Date.now(),
@@ -136,6 +149,7 @@ export default function VisitorPhotoCameraModal({
                 setCapturedFile(file);
                 setCapturedPreview(dataUrl);
                 setModalMode("review");
+                stopCameraStream();
               }
             },
             "image/jpeg",
@@ -160,7 +174,7 @@ export default function VisitorPhotoCameraModal({
 
           canvas.toBlob(
             (blob) => {
-              if (blob) {
+              if (blob && generation === cameraGenerationRef.current) {
                 const file = new File([blob], `visitor_photo_${Date.now()}.jpg`, {
                   type: "image/jpeg",
                   lastModified: Date.now(),
@@ -169,6 +183,7 @@ export default function VisitorPhotoCameraModal({
                 setCapturedFile(file);
                 setCapturedPreview(previewUrl);
                 setModalMode("review");
+                stopCameraStream();
               }
             },
             "image/jpeg",
@@ -179,7 +194,7 @@ export default function VisitorPhotoCameraModal({
     } catch (err) {
       console.error("Failed to capture visitor photo:", err);
     }
-  }, [facingMode, isDocMode]);
+  }, [facingMode, isDocMode, stopCameraStream]);
 
   // Retake from review screen
   const handleReviewRetake = () => {
@@ -308,7 +323,7 @@ export default function VisitorPhotoCameraModal({
           ) : modalMode === "live" ? (
             <>
               <video
-                ref={videoRef}
+                ref={attachVideo}
                 playsInline
                 muted
                 autoPlay

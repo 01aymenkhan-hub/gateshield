@@ -23,8 +23,8 @@ import GatekeeperLoader from '../ui/GatekeeperLoader';
 import { CnicData, ScanStatus } from '../../types/cnic';
 import { DlsData, DocumentType } from '../../types/dls';
 import { VisitInfoData, VisitorStepData, SubmissionStatus } from '../../types/visitor';
-import { scanCnicReal, scanCnicMock, RawOcrResponse } from '../../services/cnicApi';
-import { scanDlsReal, scanDlsMock, RawDlsResponse } from '../../services/dlsApi';
+import { scanCnicReal, OcrApiError, RawOcrResponse } from '../../services/cnicApi';
+import { scanDlsReal, RawDlsResponse } from '../../services/dlsApi';
 import { parseCnicOcr } from '../../utils/cnicParser';
 import { compressIdentityImageFile } from '../../utils/documentImageCompression';
 import {
@@ -136,6 +136,8 @@ export default function CheckInModal({
   // CNIC Form State & Scanned Image State
   const [cnicFormData, setCnicFormData] = useState<CnicData>(EMPTY_CNIC_DATA);
   const [cnicScanStatus, setCnicScanStatus] = useState<ScanStatus>('idle');
+  const [cnicNeedsReview, setCnicNeedsReview] = useState(false);
+  const [cnicScanWarnings, setCnicScanWarnings] = useState<string[]>([]);
   const [, setRawCnicOcrResult] = useState<RawOcrResponse | null>(null);
   const [cnicScannedImage, setCnicScannedImage] = useState<string | null>(null);
   const [cnicImageCaptureError, setCnicImageCaptureError] = useState<string | null>(null);
@@ -143,6 +145,7 @@ export default function CheckInModal({
   // DLS Form State & Scanned Image State
   const [dlsFormData, setDlsFormData] = useState<DlsData>(EMPTY_DLS_DATA);
   const [dlsScanStatus, setDlsScanStatus] = useState<ScanStatus>('idle');
+  const [dlsNeedsReview, setDlsNeedsReview] = useState(false);
   const [, setRawDlsOcrResult] = useState<RawDlsResponse | null>(null);
   const [dlsScannedImage, setDlsScannedImage] = useState<string | null>(null);
   const [dlsImageCaptureError, setDlsImageCaptureError] = useState<string | null>(null);
@@ -164,10 +167,12 @@ export default function CheckInModal({
       case 'scanning':
         return 'Analyzing CNIC with OCR...';
       case 'success':
-        return 'CNIC scanned successfully! Fields populated.';
+        return cnicNeedsReview
+          ? 'CNIC scanned. Verify flagged details and complete any missing names.'
+          : 'CNIC scanned successfully! Fields populated.';
       case 'error':
         return scanErrorReason === 'service_error'
-          ? 'Unable to connect to the OCR service on port 8000. Please verify the backend is running or try again.'
+          ? 'The scanning service is busy or unavailable. Please try again shortly.'
           : 'Could not extract readable CNIC details from this image. Please try another photo or enter details manually.';
       default:
         return '';
@@ -182,7 +187,7 @@ export default function CheckInModal({
         return 'Driving License scanned successfully! Fields populated.';
       case 'error':
         return scanErrorReason === 'service_error'
-          ? 'Unable to connect to the OCR service on port 8000. Please verify the backend is running or try again.'
+          ? 'The scanning service is busy or unavailable. Please try again shortly.'
           : 'Could not extract readable Driving License details from this image. Please try another photo or enter details manually.';
       default:
         return '';
@@ -192,6 +197,8 @@ export default function CheckInModal({
   const handleCnicScan = useCallback(
     async (file: File) => {
       setCnicScanStatus('scanning');
+      setCnicNeedsReview(false);
+      setCnicScanWarnings([]);
       setScanErrorReason(null);
       setCnicImageCaptureError(null);
 
@@ -213,7 +220,9 @@ export default function CheckInModal({
 
         setRawCnicOcrResult(result);
         const rawItems = result.results || result.details || [];
-        const fallbackParsed = parseCnicOcr(rawItems);
+        // The new backend validates fields and deliberately leaves uncertain
+        // identity data empty. Legacy client heuristics must not fill it back.
+        const fallbackParsed = parseCnicOcr(result.quality ? [] : rawItems);
         const backendParsed: Partial<CnicData> = result.parsed || {};
 
         // Merge backend region parser with frontend label-relative parser so no detected field is lost
@@ -240,6 +249,8 @@ export default function CheckInModal({
         }
 
         const structuredData: CnicData = {
+          nameUrdu: backendParsed.nameUrdu,
+          fatherNameUrdu: backendParsed.fatherNameUrdu,
           name: mergedName,
           fullName: mergedName,
           fatherName: mergedFather,
@@ -285,6 +296,8 @@ export default function CheckInModal({
         }
 
         setCnicFormData(structuredData);
+        setCnicNeedsReview(Boolean(result.quality?.needsReview));
+        setCnicScanWarnings(result.quality?.warnings || []);
         setCnicScanStatus('success');
         if (!isAdmin) {
           playContinueSound();
@@ -292,7 +305,7 @@ export default function CheckInModal({
         }
       } catch (err) {
         console.error('[GateShield OCR] CNIC scan failed with service/runtime error:', err);
-        setScanErrorReason('service_error');
+        setScanErrorReason(err instanceof OcrApiError && err.status < 500 ? 'unreadable' : 'service_error');
 
         const compressedImg = await compressionPromise;
         if (compressedImg.ok) {
@@ -302,17 +315,8 @@ export default function CheckInModal({
           setCnicImageCaptureError(compressedImg.error);
         }
 
-        if (isAdmin) {
-          try {
-            const mockResult = await scanCnicMock(file);
-            setCnicFormData(mockResult);
-            setCnicScanStatus('success');
-          } catch {
-            setCnicScanStatus('error');
-          }
-        } else {
-          setCnicScanStatus('error');
-        }
+        setCnicFormData(EMPTY_CNIC_DATA);
+        setCnicScanStatus('error');
       }
     },
     [isAdmin]
@@ -321,6 +325,7 @@ export default function CheckInModal({
   const handleDlsScan = useCallback(
     async (file: File) => {
       setDlsScanStatus('scanning');
+      setDlsNeedsReview(false);
       setScanErrorReason(null);
       setDlsImageCaptureError(null);
 
@@ -368,6 +373,7 @@ export default function CheckInModal({
         }
 
         setDlsFormData(structuredData);
+        setDlsNeedsReview(Boolean(result.quality?.needsReview));
         setDlsScanStatus('success');
         if (!isAdmin) {
           playContinueSound();
@@ -375,7 +381,7 @@ export default function CheckInModal({
         }
       } catch (err) {
         console.error('[GateShield OCR] DLS scan failed with service/runtime error:', err);
-        setScanErrorReason('service_error');
+        setScanErrorReason(err instanceof OcrApiError && err.status < 500 ? 'unreadable' : 'service_error');
 
         const compressedImg = await compressionPromise;
         if (compressedImg.ok) {
@@ -385,17 +391,8 @@ export default function CheckInModal({
           setDlsImageCaptureError(compressedImg.error);
         }
 
-        if (isAdmin) {
-          try {
-            const mockResult = await scanDlsMock(file);
-            setDlsFormData(mockResult);
-            setDlsScanStatus('success');
-          } catch {
-            setDlsScanStatus('error');
-          }
-        } else {
-          setDlsScanStatus('error');
-        }
+        setDlsFormData(EMPTY_DLS_DATA);
+        setDlsScanStatus('error');
       }
     },
     [isAdmin]
@@ -631,10 +628,13 @@ export default function CheckInModal({
     setVisitInfo(EMPTY_VISIT_INFO);
     setCnicFormData(EMPTY_CNIC_DATA);
     setCnicScanStatus('idle');
+    setCnicNeedsReview(false);
+    setCnicScanWarnings([]);
     setCnicScannedImage(null);
     setCnicImageCaptureError(null);
     setDlsFormData(EMPTY_DLS_DATA);
     setDlsScanStatus('idle');
+    setDlsNeedsReview(false);
     setDlsScannedImage(null);
     setDlsImageCaptureError(null);
     setVisitorData(EMPTY_VISITOR_DATA);
@@ -800,6 +800,14 @@ export default function CheckInModal({
           {isAdmin ? (
             /* ── ORIGINAL ADMIN 3-STEP BODY (100% UNCHANGED) ── */
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {currentStep === 2 && (documentType === 'cnic' ? cnicNeedsReview : dlsNeedsReview) && (
+                <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  {isUr ? 'کچھ تفصیلات کی تصدیق ضروری ہے۔ نام، نمبر اور تاریخیں اصل کارڈ سے ملا کر درست کریں۔' : 'Some details need review. Check names, numbers and dates against the original card and complete any missing fields.'}
+                  {documentType === 'cnic' && cnicScanWarnings.map((warning, index) => (
+                    <span key={index} className="mt-1 block">{warning}</span>
+                  ))}
+                </p>
+              )}
               {currentStep === 1 && (
                 <VisitInfoStep
                   category={category}
@@ -924,6 +932,14 @@ export default function CheckInModal({
           ) : (
             /* ── OPERATOR 6-STEP MOBILE-FIRST REGISTRATION FLOW ── */
             <div className="p-3.5 sm:p-5 overflow-y-auto flex-1 space-y-4">
+              {operatorStep === 4 && (documentType === 'cnic' ? cnicNeedsReview : dlsNeedsReview) && (
+                <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  {isUr ? 'کچھ تفصیلات کی تصدیق ضروری ہے۔ نام، نمبر اور تاریخیں اصل کارڈ سے ملا کر درست کریں۔' : 'Some details need review. Check names, numbers and dates against the original card and complete any missing fields.'}
+                  {documentType === 'cnic' && cnicScanWarnings.map((warning, index) => (
+                    <span key={index} className="mt-1 block">{warning}</span>
+                  ))}
+                </p>
+              )}
               {/* STEP 1: SELECT VISITOR CATEGORY (Auto-advances to Step 2, or opens Unexpected Parcel Registration if Parcel is selected) */}
               {operatorStep === 1 && (
                 <VisitInfoStep

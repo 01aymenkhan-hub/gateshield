@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/layout/AppLayout';
 import AdminGuard from '@/components/auth/AdminGuard';
@@ -65,7 +65,7 @@ interface SharedCredentialsData {
   qrCard?: OperatorQrCardData | null;
 }
 
-export default function AccessManagementPage() {
+function AccessManagementContent() {
   const { user: currentUser } = useAuth();
   const searchParams = useSearchParams();
 
@@ -2027,5 +2027,13 @@ export default function AccessManagementPage() {
         />
       </AdminGuard>
     </AppLayout>
+  );
+}
+
+export default function AccessManagementPage() {
+  return (
+    <Suspense fallback={<div role="status">Loading access management...</div>}>
+      <AccessManagementContent />
+    </Suspense>
   );
 }

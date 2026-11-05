@@ -1,215 +1,125 @@
-"""
-OCR Engine — PaddleOCR wrapper
-
-Initializes PaddleOCR once per process and exposes a clean `run_ocr()` function
-that accepts either an image file path (str) or an in-memory numpy array.
-
-Optimizations:
-- Disables slow doc unwarping and doc orientation classify (cuts CPU latency dramatically).
-- Supports PaddleOCR 3.x and 2.x return schemas.
-
-Concurrency notes:
-- The model is created lazily on first use (or explicitly via `get_ocr()`), so the
-  FastAPI API process does not load PaddleOCR when OCR runs in dedicated worker
-  processes. Each worker process owns exactly one PaddleOCR instance; a single
-  instance is never shared across processes or concurrent threads.
-- Model, language, and pipeline options are identical to the original singleton.
-  The only optional addition is `cpu_threads`, applied when the
-  `OCR_CPU_THREADS` environment variable is set (PaddleOCR's default is used otherwise).
-- Lightweight, non-invasive timing proxies record text detection and text
-  recognition durations without altering their inputs or outputs.
-"""
-
+"""Pinned FP32 OCR models, loaded once per worker. No tiny-model shortcuts."""
 from __future__ import annotations
 
-import logging
 import os
 import threading
-import time
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 
-logger = logging.getLogger("cnic-ocr.engine")
-
-# ---------------------------------------------------------------------------
-# Per-process stage timing (detection / recognition / OCR call counters)
-# ---------------------------------------------------------------------------
-_timings_local = threading.local()
+_init_lock = threading.RLock()
+_ocr: Any = None
+_urdu_recognizer: Any = None
+_orientation: Any = None
 
 
-def _timings() -> dict[str, float]:
-    data = getattr(_timings_local, "data", None)
-    if data is None:
-        data = {}
-        _timings_local.data = data
-    return data
+def engine_settings() -> dict[str, Any]:
+    engine = os.getenv("OCR_ENGINE", "onnxruntime")
+    if engine not in {"onnxruntime", "paddle"}:
+        raise ValueError("OCR_ENGINE must be onnxruntime or paddle")
+    threads = int(os.getenv("OCR_CPU_THREADS", str(min(4, os.cpu_count() or 1))))
+    if not 1 <= threads <= 64:
+        raise ValueError("OCR_CPU_THREADS must be between 1 and 64")
+    settings: dict[str, Any] = {
+        "engine": engine, "device": "cpu",
+        "text_detection_model_name": "PP-OCRv6_medium_det",
+        "text_recognition_model_name": "PP-OCRv6_medium_rec",
+        "use_doc_orientation_classify": False,
+        "use_doc_unwarping": False, "use_textline_orientation": False,
+    }
+    if engine == "onnxruntime":
+        settings["engine_config"] = {
+            "intra_op_num_threads": threads, "inter_op_num_threads": 1,
+            "log_severity_level": 3,
+        }
+    else:
+        settings.update(cpu_threads=threads, enable_mkldnn=True)
+    for name in ("text_detection_model_dir", "text_recognition_model_dir"):
+        if value := os.getenv("OCR_" + name.upper()):
+            settings[name] = value
+    return settings
 
 
-def _add_timing(key: str, seconds: float) -> None:
-    data = _timings()
-    data[key] = data.get(key, 0.0) + seconds
-
-
-def reset_stage_timings() -> None:
-    """Clear detection/recognition/OCR-call timings for the current thread."""
-    _timings_local.data = {}
-
-
-def get_stage_timings() -> dict[str, float]:
-    """Return a copy of detection/recognition/OCR-call timings for the current thread."""
-    return dict(_timings())
-
-
-class _TimedPredictor:
-    """
-    Transparent proxy around a PaddleX predictor.
-
-    The OCR pipeline calls predictors as `predictor(inputs, **kwargs)` and consumes
-    the returned generator. This proxy consumes that generator inside a timer and
-    yields exactly the same results, so OCR behaviour and output are unchanged.
-    All other attribute access is delegated to the wrapped predictor.
-    """
-
-    def __init__(self, inner: Any, timing_key: str):
-        object.__setattr__(self, "_inner", inner)
-        object.__setattr__(self, "_timing_key", timing_key)
-
-    def __call__(self, *args: Any, **kwargs: Any):
-        start = time.perf_counter()
-        results = list(self._inner(*args, **kwargs))
-        _add_timing(self._timing_key, time.perf_counter() - start)
-        return iter(results)
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._inner, name)
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        setattr(self._inner, name, value)
-
-
-def _install_timing_proxies(ocr_instance: Any) -> None:
-    """Wrap text detection/recognition predictors with timing proxies (best effort)."""
-    try:
-        wrapper = getattr(ocr_instance, "paddlex_pipeline", None)
-        inner = getattr(wrapper, "_pipeline", None)
-        if inner is None:
-            logger.info("OCR stage timing proxies not installed (pipeline internals unavailable).")
-            return
-        for attr, key in (("text_det_model", "detection_s"), ("text_rec_model", "recognition_s")):
-            predictor = getattr(inner, attr, None)
-            if predictor is not None and not isinstance(predictor, _TimedPredictor):
-                setattr(inner, attr, _TimedPredictor(predictor, key))
-    except Exception as exc:  # pragma: no cover - timing must never break OCR
-        logger.warning("Could not install OCR stage timing proxies: %s", exc)
-
-
-# ---------------------------------------------------------------------------
-# Initialise PaddleOCR (lazy per-process singleton)
-# ---------------------------------------------------------------------------
-_ocr = None
-_ocr_lock = threading.Lock()
-
-
-def get_ocr():
-    """Create (once per process) and return the PaddleOCR instance."""
+def get_engine() -> Any:
     global _ocr
-    if _ocr is None:
-        with _ocr_lock:
-            if _ocr is None:
-                from paddleocr import PaddleOCR
-
-                kwargs: dict[str, Any] = dict(
-                    use_doc_orientation_classify=False,
-                    use_doc_unwarping=False,
-                    use_textline_orientation=False,
-                    lang="en",
-                    device="cpu",
-                )
-                cpu_threads = os.environ.get("OCR_CPU_THREADS", "").strip()
-                if cpu_threads.isdigit() and int(cpu_threads) > 0:
-                    kwargs["cpu_threads"] = int(cpu_threads)
-
-                instance = PaddleOCR(**kwargs)
-                _install_timing_proxies(instance)
-                _ocr = instance
-                logger.info(
-                    "PaddleOCR initialised in pid=%s (cpu_threads=%s)",
-                    os.getpid(),
-                    kwargs.get("cpu_threads", "default"),
-                )
+    with _init_lock:
+        if _ocr is None:
+            from paddleocr import PaddleOCR
+            _ocr = PaddleOCR(**engine_settings())
     return _ocr
 
 
-def run_ocr(image_input: Union[str, np.ndarray]) -> dict[str, Any]:
-    """
-    Run PaddleOCR on the given image path or numpy ndarray.
-
-    Parameters
-    ----------
-    image_input : str or np.ndarray
-        Absolute path to an image file or a BGR numpy array.
-
-    Returns
-    -------
-    dict with keys:
-        success : bool
-        text    : list[str]          – plain detected text lines
-        results : list[dict]         – text + confidence + bounding box
-        details : list[dict]         – alias of results
-    """
-    ocr = get_ocr()
-    call_start = time.perf_counter()
-    result = ocr.ocr(image_input)
-    _add_timing("ocr_calls_s", time.perf_counter() - call_start)
-    _add_timing("ocr_call_count", 1)
-
-    text_lines: list[str] = []
+def normalize_results(result: Any) -> dict[str, Any]:
+    """Preserve the existing JSON contract without duplicate inference."""
     details: list[dict[str, Any]] = []
+    if result:
+        item = result[0]
+        if isinstance(item, dict):
+            texts = item.get("rec_texts", [])
+            scores = item.get("rec_scores", [])
+            polygons = item.get("rec_polys", item.get("dt_polys", []))
+            for i, text in enumerate(texts):
+                bbox = polygons[i] if i < len(polygons) else []
+                if hasattr(bbox, "tolist"):
+                    bbox = bbox.tolist()
+                details.append({"text": str(text), "confidence": round(float(scores[i]), 4)
+                                if i < len(scores) else 0.0, "bbox": bbox})
+        elif isinstance(item, list):
+            for bbox, (text, score) in item:
+                if hasattr(bbox, "tolist"):
+                    bbox = bbox.tolist()
+                details.append({"text": str(text), "confidence": round(float(score), 4), "bbox": bbox})
+    return {"success": bool(details), "text": [d["text"] for d in details],
+            "results": details, "details": details}
 
-    if not result:
-        return {"success": True, "text": [], "results": [], "details": []}
 
-    item = result[0]
+def run_ocr(image_input: str | np.ndarray) -> dict[str, Any]:
+    return normalize_results(get_engine().predict(image_input))
 
-    # ── PaddleOCR 3.x structure (dict with rec_texts, rec_scores, rec_polys) ──
-    if isinstance(item, dict):
-        rec_texts = item.get("rec_texts", [])
-        rec_scores = item.get("rec_scores", [])
-        rec_polys = item.get("rec_polys", item.get("dt_polys", []))
 
-        for i, text in enumerate(rec_texts):
-            score = float(rec_scores[i]) if i < len(rec_scores) else 1.0
-            bbox = rec_polys[i] if i < len(rec_polys) else []
-            if hasattr(bbox, "tolist"):
-                bbox = bbox.tolist()
+def orient_image(image: np.ndarray) -> tuple[np.ndarray, int]:
+    """Cheap 4-way orientation before normalization preserves card geometry."""
+    global _orientation
+    with _init_lock:
+        if _orientation is None:
+            from paddleocr import DocImgOrientationClassification
+            settings = engine_settings()
+            _orientation = DocImgOrientationClassification(
+                model_name="PP-LCNet_x1_0_doc_ori", device="cpu", engine=settings["engine"],
+                **({"engine_config": settings["engine_config"]}
+                   if "engine_config" in settings else {"cpu_threads": settings["cpu_threads"]}),
+                **({"model_dir": os.environ["OCR_ORIENTATION_MODEL_DIR"]}
+                   if os.getenv("OCR_ORIENTATION_MODEL_DIR") else {}),
+            )
+    result = list(_orientation.predict(image))[0]
+    angle = int(result["label_names"][0])
+    if angle not in {0, 90, 180, 270}:
+        raise RuntimeError("Unsupported document orientation result")
+    return np.ascontiguousarray(np.rot90(image, angle // 90)) if angle else image, angle
 
-            text_lines.append(text)
-            details.append({
-                "text": text,
-                "confidence": round(float(score), 4),
-                "bbox": bbox,
-            })
 
-    # ── PaddleOCR 2.x structure (list of [[bbox], (text, score)]) ──
-    elif isinstance(item, list):
-        for detection in item:
-            bbox = detection[0]
-            if hasattr(bbox, "tolist"):
-                bbox = bbox.tolist()
-            text = str(detection[1][0])
-            confidence = float(detection[1][1])
+def recognize_urdu(crops: list[np.ndarray]) -> list[dict[str, Any]]:
+    """Real old-card script recognition. Callers reject uncertain text."""
+    global _urdu_recognizer
+    if not crops or os.getenv("OCR_ENABLE_URDU", "true").lower() != "true":
+        return []
+    with _init_lock:
+        if _urdu_recognizer is None:
+            from paddleocr import TextRecognition
+            settings = engine_settings()
+            _urdu_recognizer = TextRecognition(
+                model_name="arabic_PP-OCRv5_mobile_rec", device="cpu",
+                engine=settings["engine"],
+                **({"engine_config": settings["engine_config"]}
+                   if "engine_config" in settings else {"cpu_threads": settings["cpu_threads"]}),
+                **({"model_dir": os.environ["OCR_URDU_MODEL_DIR"]}
+                   if os.getenv("OCR_URDU_MODEL_DIR") else {}),
+            )
+    return [{"text": str(r.get("rec_text", "")), "confidence": float(r.get("rec_score", 0))}
+            for r in _urdu_recognizer.predict(crops)]
 
-            text_lines.append(text)
-            details.append({
-                "text": text,
-                "confidence": round(confidence, 4),
-                "bbox": bbox,
-            })
 
-    return {
-        "success": True,
-        "text": text_lines,
-        "results": details,
-        "details": details,
-    }
+def warmup_models() -> None:
+    """Download/load models before accepting uploads, not during a visitor scan."""
+    get_engine()
+    orient_image(np.full((256, 400, 3), 255, dtype=np.uint8))

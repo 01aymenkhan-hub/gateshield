@@ -1,8 +1,9 @@
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
 
-export const RESET_TRACKER_COOKIE = 'gk_pwd_reset_tracker';
-export const RESET_AUTH_COOKIE = 'gk_pwd_reset_auth';
+const COOKIE_PREFIX = process.env.AUTH_COOKIE_PREFIX || 'gk';
+export const RESET_TRACKER_COOKIE = `${COOKIE_PREFIX}_pwd_reset_tracker`;
+export const RESET_AUTH_COOKIE = `${COOKIE_PREFIX}_pwd_reset_auth`;
 
 export type PasswordResetStatusType =
   | 'PENDING'

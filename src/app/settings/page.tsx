@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/layout/AppLayout';
 import AdminGuard from '@/components/auth/AdminGuard';
 import AdminPasswordResetSection from '@/components/admin/AdminPasswordResetSection';
 import { Settings, Building, Plus, Save, CheckCircle2 } from 'lucide-react';
 
-export default function SettingsPage() {
+function SettingsContent() {
   const searchParams = useSearchParams();
   const highlightRequestId = searchParams?.get('requestId') || null;
   const [gates, setGates] = useState<any[]>([]);
@@ -297,5 +297,13 @@ export default function SettingsPage() {
       )}
       </AdminGuard>
     </AppLayout>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div role="status">Loading settings...</div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/layout/AppLayout';
 import AdminGuard from '@/components/auth/AdminGuard';
@@ -60,7 +60,7 @@ interface EmployeePasswordResetRow {
 
 type EmployeeRequestTypeFilter = 'ALL' | 'REGISTRATION' | 'PASSWORD_RESET';
 
-export default function AdminEmployeesPage() {
+function AdminEmployeesContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<'REQUESTS' | 'EMPLOYEES'>(
     searchParams?.get('tab')?.toLowerCase() === 'employees' ? 'EMPLOYEES' : 'REQUESTS'
@@ -1651,5 +1651,13 @@ export default function AdminEmployeesPage() {
         )}
       </AppLayout>
     </AdminGuard>
+  );
+}
+
+export default function AdminEmployeesPage() {
+  return (
+    <Suspense fallback={<div role="status">Loading employees...</div>}>
+      <AdminEmployeesContent />
+    </Suspense>
   );
 }

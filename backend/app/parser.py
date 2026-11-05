@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import re
 import logging
+from datetime import date
 from typing import Any, Callable, Optional
 import numpy as np
 
@@ -271,10 +272,6 @@ def detect_cnic_format(boxes: list[BoxItem]) -> str:
     """
     combined_text = " ".join(b.raw_text.lower() for b in boxes)
 
-    # Explicit old-card OCR markers
-    if any(k in combined_text for k in ["gwsinein", "gnein", "chss", "cnge"]):
-        return "old"
-
     smart_signatures = [
         "date of expiry",
         "date of issue",
@@ -307,6 +304,12 @@ def detect_cnic_format(boxes: list[BoxItem]) -> str:
     if has_urdu:
         return "old"
 
+    # An old Urdu card often produces plausible-looking English OCR noise.
+    # A real identity number with only its DOB and no smart-card labels must
+    # not become a smart card just because that noise contains multiple words.
+    if any(validate_cnic(b.raw_text) for b in boxes) and len(dates_found) <= 1:
+        return "old"
+
     # If there are valid multi-word English name lines, default to smart CNIC
     for b in boxes:
         cleaned = clean_name_string(b.raw_text)
@@ -328,15 +331,21 @@ def validate_date(text: str) -> str:
     m = re.search(r"(?<!\d)(\d{1,2})[\.\/\-](\d{1,2})[\.\/\-](\d{4})(?!\d)", text)
     if m:
         d, mth, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        if 1 <= d <= 31 and 1 <= mth <= 12 and 1900 <= y <= 2100:
-            return f"{y:04d}-{mth:02d}-{d:02d}"
+        try:
+            if 1900 <= y <= 2100:
+                return date(y, mth, d).isoformat()
+        except ValueError:
+            pass
 
     # Look for YYYY-MM-DD
     m_ymd = re.search(r"(?<!\d)(\d{4})[\.\/\-](\d{1,2})[\.\/\-](\d{1,2})(?!\d)", text)
     if m_ymd:
         y, mth, d = int(m_ymd.group(1)), int(m_ymd.group(2)), int(m_ymd.group(3))
-        if 1 <= d <= 31 and 1 <= mth <= 12 and 1900 <= y <= 2100:
-            return f"{y:04d}-{mth:02d}-{d:02d}"
+        try:
+            if 1900 <= y <= 2100:
+                return date(y, mth, d).isoformat()
+        except ValueError:
+            pass
 
     return ""
 
@@ -358,7 +367,7 @@ def validate_cnic(text: str) -> str:
 
     # 1. Direct match for 5-7-1 pattern (with hyphen, space, dot, or underscore)
     m = re.search(r"(?<!\d)(\d{5})[\-\.\s–—_]*(\d{7})[\-\.\s–—_]*(\d{1})(?!\d)", text)
-    if m:
+    if m and m.group(1)[0] in "1234567":
         return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
 
     # 2. Try normalizing OCR letter-for-digit confusions when hyphenated structure exists
@@ -634,29 +643,9 @@ def _resolve_smart_dates(boxes: list[BoxItem]) -> tuple[str, str, str]:
             issue = unique_dates[1]
         if not expiry:
             expiry = unique_dates[-1]
-    elif len(unique_dates) == 2 and (not dob or (not issue and not expiry)):
-        d_early, d_late = unique_dates[0], unique_dates[1]
-        early_year = int(d_early[:4])
-        late_year = int(d_late[:4])
-        if not dob and early_year <= 2012:
-            dob = d_early
-            if not issue and not expiry:
-                if late_year >= 2027:
-                    expiry = d_late
-                else:
-                    issue = d_late
-        elif not issue and not expiry and late_year - early_year in {5, 10}:
-            issue = d_early
-            expiry = d_late
-    elif len(unique_dates) == 1 and not dob and not issue and not expiry:
-        only_d = unique_dates[0]
-        only_year = int(only_d[:4])
-        if only_year <= 2012:
-            dob = only_d
-        elif only_year >= 2027:
-            expiry = only_d
-        else:
-            issue = only_d
+    # A year alone cannot establish whether a date is DOB, issue or expiry.
+    # With fewer dates retain label evidence and let spatial extraction/review
+    # handle missing fields instead of hardcoded year cutoffs.
 
     return dob, issue, expiry
 
@@ -865,40 +854,31 @@ def parse_old_cnic_fields(
     for b in boxes:
         if 0.64 <= b.center_y <= 0.78 and 0.40 <= b.center_x <= 0.85:
             text = b.raw_text
-            if any(k in text for k in ["کوئی نہیں", "کوئی", "نہیں", "CHSS", "CHTG", "CNGE", "CABE"]):
+            if any(k in text for k in ["کوئی نہیں", "کوئی نھیں", "کوئی نہں"]):
                 id_mark = "Nothing"
                 break
             elif "تل" in text or "نشان" in text:
                 id_mark = translate_urdu_text(text)
                 break
-    if not id_mark:
-        id_mark = "Nothing"
     extracted["cnicIdentification"] = id_mark
 
     # 5. Full Name & Father Name:
     # On Old CNIC:
     # Name is at relative y: 0.40 - 0.53, x: 0.35 - 0.85
     # Father Name is at relative y: 0.56 - 0.68, x: 0.35 - 0.85
-    is_sample_card = (
-        extracted["cnicNumber"] == "42201-2050433-1"
-        or extracted["dateOfBirth"] == "1998-11-12"
-        or any("Gnein" in b.raw_text or "Gwsinein" in b.raw_text for b in boxes)
-    )
+    # English OCR noise, a birth date or an identity number cannot establish a
+    # person's Urdu name. Only actually recognized Urdu text is accepted here.
+    def urdu_name(ymin: float, ymax: float) -> str:
+        candidates = [b for b in boxes if ymin <= b.center_y <= ymax
+                      and 0.35 <= b.center_x <= 0.85
+                      and b.confidence >= 0.85 and re.search(r"[\u0600-\u06ff]", b.raw_text)]
+        candidates.sort(key=lambda b: (b.center_y, -b.center_x))
+        native = " ".join(b.raw_text for b in candidates)
+        native = re.sub(r"(?:والد(?:\s*کا)?\s*نام|شوہر(?:\s*کا)?\s*نام|نام)\s*[:：]?", "", native).strip()
+        return translate_urdu_text(native)
 
-    if is_sample_card:
-        extracted["fullName"] = "Ammar Ahmed Siddiqui"
-        extracted["fatherHusbandName"] = "Zafar Ahmed"
-    else:
-        # General extraction for any other Old CNIC
-        name_candidates = [b for b in boxes if 0.40 <= b.center_y <= 0.53 and 0.35 <= b.center_x <= 0.85]
-        if name_candidates:
-            combined_name = " ".join(b.raw_text for b in name_candidates)
-            extracted["fullName"] = translate_urdu_text(combined_name)
-
-        father_candidates = [b for b in boxes if 0.56 <= b.center_y <= 0.68 and 0.35 <= b.center_x <= 0.85]
-        if father_candidates:
-            combined_father = " ".join(b.raw_text for b in father_candidates)
-            extracted["fatherHusbandName"] = translate_urdu_text(combined_father)
+    extracted["fullName"] = urdu_name(0.40, 0.53)
+    extracted["fatherHusbandName"] = urdu_name(0.56, 0.68)
 
     # Date of Issue & Expiry are strictly empty for Old CNIC
     extracted["dateOfIssue"] = ""
@@ -908,7 +888,7 @@ def parse_old_cnic_fields(
     extracted["name"] = extracted["fullName"]
     extracted["fatherName"] = extracted["fatherHusbandName"]
     extracted["cnic"] = extracted["cnicNumber"]
-    extracted["countryOfStay"] = "Pakistan"
+    extracted["countryOfStay"] = "Pakistan" if extracted["cnicNumber"] else ""
 
     return extracted
 

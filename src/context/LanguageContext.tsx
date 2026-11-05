@@ -1041,16 +1041,19 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  // Urdu is the primary default language
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('gk_lang') as Language | null;
+  // Match the server's first render; restore browser preferences after hydration.
+  const [language, setLanguageState] = useState<Language>('ur');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('gk_lang');
       if (saved === 'en' || saved === 'ur') {
-        return saved;
+        setLanguageState(saved);
       }
+    } catch {
+      // The default language remains usable when browser storage is unavailable.
     }
-    return 'ur';
-  });
+  }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);

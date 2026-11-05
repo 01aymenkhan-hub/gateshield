@@ -78,11 +78,14 @@ export default function CnicForm({ data, onChange, onRescan }: CnicFormProps) {
               id="fullName"
               name="fullName"
               type="text"
+              dir="auto"
+              style={{ textAlign: 'start' }}
               value={data.fullName || data.name || ""}
               onChange={handleChange}
               placeholder="e.g. Muhammad Mehmood Asim"
               className={inputClass}
             />
+            {data.nameUrdu && <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Original Urdu: <span lang="ur" dir="rtl">{data.nameUrdu}</span> · Verify English spelling</p>}
           </div>
 
           {/* 2. Father / Husband Name */}
@@ -94,11 +97,14 @@ export default function CnicForm({ data, onChange, onRescan }: CnicFormProps) {
               id="fatherHusbandName"
               name="fatherHusbandName"
               type="text"
+              dir="auto"
+              style={{ textAlign: 'start' }}
               value={data.fatherHusbandName || data.fatherName || ""}
               onChange={handleChange}
               placeholder="e.g. Muhammad Asim Khan"
               className={inputClass}
             />
+            {data.fatherNameUrdu && <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Original Urdu: <span lang="ur" dir="rtl">{data.fatherNameUrdu}</span> · Verify English spelling</p>}
           </div>
 
           {/* 3. CNIC Number */}
@@ -213,11 +219,10 @@ export default function CnicForm({ data, onChange, onRescan }: CnicFormProps) {
       {/* Small simple green status line + Heading immediately below (no descriptive subtitle) */}
       <div className="mb-3">
         <div className="flex items-center justify-between gap-2">
-          <span
-            dir="auto"
-            className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 tracking-wide"
-          >
-            {t("scan_complete_line", "✓ Scan Complete")}
+          <span dir="auto" className={`text-xs font-extrabold tracking-wide ${(data.fullName || data.name) ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+            {(data.fullName || data.name)
+              ? t("scan_complete_line", "✓ Scan Complete")
+              : (isUr ? 'نام نہیں پڑھا گیا — تصویر دوبارہ لیں' : 'Name not read — retry with a clear photo')}
           </span>
           {onRescan && (
             <button
@@ -251,11 +256,14 @@ export default function CnicForm({ data, onChange, onRescan }: CnicFormProps) {
               id="fullName"
               name="fullName"
               type="text"
+              dir="auto"
+              style={{ textAlign: 'start' }}
               value={data.fullName || data.name || ""}
               onChange={handleChange}
               placeholder="e.g. Muhammad Mehmood Asim"
               className={opInputClass}
             />
+            {data.nameUrdu && <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{t("source_urdu_name", "Original Urdu")}: <span lang="ur" dir="rtl">{data.nameUrdu}</span> · {t("verify_english_spelling", "Verify English spelling")}</p>}
           </div>
 
           <div>
@@ -266,11 +274,14 @@ export default function CnicForm({ data, onChange, onRescan }: CnicFormProps) {
               id="fatherHusbandName"
               name="fatherHusbandName"
               type="text"
+              dir="auto"
+              style={{ textAlign: 'start' }}
               value={data.fatherHusbandName || data.fatherName || ""}
               onChange={handleChange}
               placeholder="e.g. Muhammad Asim Khan"
               className={opInputClass}
             />
+            {data.fatherNameUrdu && <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{t("source_urdu_name", "Original Urdu")}: <span lang="ur" dir="rtl">{data.fatherNameUrdu}</span> · {t("verify_english_spelling", "Verify English spelling")}</p>}
           </div>
         </div>
 

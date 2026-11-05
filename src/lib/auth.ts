@@ -4,10 +4,13 @@ import { cookies } from 'next/headers';
 import prisma from './prisma';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'gatekeeper_secret_jwt_key_2026';
-const TOKEN_COOKIE_NAME = 'gk_token';
-const EMPLOYEE_TOKEN_COOKIE_NAME = 'gk_emp_token';
-const EMPLOYEE_STATUS_COOKIE_NAME = 'gk_emp_applicant';
-const OPERATOR_STATUS_COOKIE_NAME = 'gk_op_applicant';
+// Independent installations on different ports still share a browser cookie
+// host. Give each installation its own cookie names as well as its JWT secret.
+const COOKIE_PREFIX = process.env.AUTH_COOKIE_PREFIX || 'gk';
+const TOKEN_COOKIE_NAME = `${COOKIE_PREFIX}_token`;
+const EMPLOYEE_TOKEN_COOKIE_NAME = `${COOKIE_PREFIX}_emp_token`;
+const EMPLOYEE_STATUS_COOKIE_NAME = `${COOKIE_PREFIX}_emp_applicant`;
+const OPERATOR_STATUS_COOKIE_NAME = `${COOKIE_PREFIX}_op_applicant`;
 
 export type UserRole = 'ADMIN' | 'OPERATOR' | 'EMPLOYEE';
 export type EmployeeApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
