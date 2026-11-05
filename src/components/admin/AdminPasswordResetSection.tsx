@@ -94,8 +94,10 @@ export default function AdminPasswordResetSection({
 
   useEffect(() => {
     if (highlightRequestId) {
-      setActiveHighlightId(highlightRequestId);
-      setStatusFilter('ALL');
+      const highlightTimer = setTimeout(() => {
+        setActiveHighlightId(highlightRequestId);
+        setStatusFilter('ALL');
+      }, 0);
       const timer = setTimeout(() => {
         const el = document.getElementById(`admin-pwd-req-${highlightRequestId}`);
         if (el) {
@@ -106,6 +108,7 @@ export default function AdminPasswordResetSection({
         setActiveHighlightId((curr) => (curr === highlightRequestId ? null : curr));
       }, 8000);
       return () => {
+        clearTimeout(highlightTimer);
         clearTimeout(timer);
         clearTimeout(clearTimer);
       };
@@ -113,7 +116,7 @@ export default function AdminPasswordResetSection({
   }, [highlightRequestId, requests.length]);
 
   useEffect(() => {
-    void fetchResetRequests(false);
+    const initialFetch = setTimeout(() => { void fetchResetRequests(false); }, 0);
 
     const interval = setInterval(() => {
       void fetchResetRequests(true);
@@ -134,6 +137,7 @@ export default function AdminPasswordResetSection({
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      clearTimeout(initialFetch);
       clearInterval(interval);
       window.removeEventListener('gk:refresh-password-reset-badge', handleImmediateRefresh);
       window.removeEventListener('focus', handleImmediateRefresh);

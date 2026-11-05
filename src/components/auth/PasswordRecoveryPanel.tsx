@@ -102,7 +102,8 @@ export default function PasswordRecoveryPanel({
   }, []);
 
   useEffect(() => {
-    void checkLiveStatus();
+    const initialCheck = setTimeout(() => { void checkLiveStatus(); }, 0);
+    return () => clearTimeout(initialCheck);
   }, [checkLiveStatus]);
 
   // Real-time polling while waiting for Admin decision or while on Approved screen (to detect expiry)

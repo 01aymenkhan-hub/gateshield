@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import {
@@ -12,7 +12,7 @@ import {
   PasswordResetStatusType,
 } from '@/lib/passwordReset';
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     await ensurePasswordResetSchema();
     await expireStalePasswordResetRequests();
