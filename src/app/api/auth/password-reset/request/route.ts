@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import {
   ensurePasswordResetSchema,
@@ -105,9 +106,10 @@ export async function POST(request: NextRequest) {
         id: string;
         status: 'PENDING' | 'APPROVED';
         expiresAt: Date | null;
+        trackerTokenHash: string | null;
       }>
     >`
-      SELECT "id", "status"::text AS "status", "expiresAt"
+      SELECT "id", "status"::text AS "status", "expiresAt", "trackerTokenHash"
       FROM "password_reset_requests"
       WHERE "userId" = ${user.id}
         AND "tenantId" = ${tenantId}
@@ -124,22 +126,19 @@ export async function POST(request: NextRequest) {
 
     if (existingActive.length > 0) {
       const activeReq = existingActive[0];
-      // Update trackerTokenHash so the user's current browser tracks the existing request in real time
-      await prisma.$executeRaw`
-        UPDATE "password_reset_requests"
-        SET "trackerTokenHash" = ${trackerTokenHash},
-            "portalContext" = COALESCE(${portalContext}, "portalContext"),
-            "updatedAt" = NOW()
-        WHERE "id" = ${activeReq.id}
-      `;
+      // Knowing an email address must never transfer ownership of a pending or
+      // approved reset. Preserve the original browser's tracker; other browsers
+      // receive an unrelated dummy tracker and the same generic response.
+      const cookieStore = await cookies();
+      const existingTracker = cookieStore.get(RESET_TRACKER_COOKIE)?.value;
+      const ownsRequest = existingTracker && hashToken(existingTracker) === activeReq.trackerTokenHash;
 
       const res = NextResponse.json({
         success: true,
         message: GENERIC_CONFIRMATION_MESSAGE,
         status: 'PENDING',
-        duplicatePrevented: true,
       });
-      res.cookies.set(RESET_TRACKER_COOKIE, rawTrackerToken, {
+      res.cookies.set(RESET_TRACKER_COOKIE, ownsRequest ? existingTracker : rawTrackerToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',

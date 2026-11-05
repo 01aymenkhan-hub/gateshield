@@ -132,7 +132,7 @@ export function verifyEmailExchangeTicket(
     ) {
       return null;
     }
-    if (Date.now() > decoded.e) {
+    if (!Number.isFinite(decoded.e) || Date.now() >= decoded.e) {
       return null;
     }
     return {
