@@ -1015,6 +1015,22 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
     en: 'Admin Profile & Access',
     ur: 'ایڈمن پروفائل اور رسائی',
   },
+  forgot_password_link: {
+    en: 'Forgot Password?',
+    ur: 'پاس ورڈ بھول گئے؟',
+  },
+  forgot_password_title: {
+    en: 'Forgot Password',
+    ur: 'پاس ورڈ ری سیٹ کی درخواست',
+  },
+  password_reset_requests_title: {
+    en: 'Password Reset Requests',
+    ur: 'پاس ورڈ ری سیٹ کی درخواستیں',
+  },
+  password_reset_requests_desc: {
+    en: 'Approve or reject user password recovery requests',
+    ur: 'پاس ورڈ ری سیٹ کی درخواستوں کی منظوری یا مسترد کریں',
+  },
 };
 
 const LanguageContext = createContext<LanguageContextType>({

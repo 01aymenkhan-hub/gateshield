@@ -267,6 +267,7 @@ export async function PATCH(
         UPDATE "users"
         SET
           "passwordHash" = ${passwordHash},
+          "passwordChangedAt" = ${now},
           "updatedAt" = ${now}
         WHERE "id" = ${id}
       `;
@@ -380,6 +381,7 @@ export async function PATCH(
           "role" = ${nextRole}::"Role",
           "active" = ${nextActive},
           "passwordHash" = ${passwordHash},
+          "passwordChangedAt" = ${now},
           "updatedAt" = ${now}
         WHERE "id" = ${id}
       `;

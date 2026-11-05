@@ -65,34 +65,45 @@ enum VipVisitStatus {
   CANCELLED
 }
 
+enum PasswordResetStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  EXPIRED
+}
+
 model User {
-  id               String                 @id @default(cuid())
-  email            String                 @unique
-  passwordHash     String
-  name             String
-  role             Role                   @default(OPERATOR)
-  active           Boolean                @default(true)
-  approvalStatus   EmployeeApprovalStatus @default(APPROVED)
-  departmentId     String?
-  departmentName   String?
-  position         String?
-  phoneNumber      String?
-  approvedAt       DateTime?
-  approvedById     String?
-  rejectedAt       DateTime?
-  rejectionReason  String?
-  operatorNumber   String?                @unique
-  qrLoginHash      String?                @unique
-  qrLoginEncrypted String?
-  qrLoginCreatedAt DateTime?
-  qrLoginRevokedAt DateTime?
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-  gateAccess       UserGateAccess[]
-  checkIns         Visit[]                @relation("CheckedInBy")
-  checkOuts        Visit[]                @relation("CheckedOutBy")
-  auditLogs        AuditLog[]
-  invitations      GuestInvitation[]      @relation("EmployeeInvitations")
+  id                     String                 @id @default(cuid())
+  email                  String                 @unique
+  passwordHash           String
+  passwordChangedAt      DateTime?
+  name                   String
+  role                   Role                   @default(OPERATOR)
+  active                 Boolean                @default(true)
+  approvalStatus         EmployeeApprovalStatus @default(APPROVED)
+  departmentId           String?
+  departmentName         String?
+  position               String?
+  phoneNumber            String?
+  approvedAt             DateTime?
+  approvedById           String?
+  rejectedAt             DateTime?
+  rejectionReason        String?
+  operatorNumber         String?                @unique
+  qrLoginHash            String?                @unique
+  qrLoginEncrypted       String?
+  qrLoginCreatedAt       DateTime?
+  qrLoginRevokedAt       DateTime?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  gateAccess             UserGateAccess[]
+  checkIns               Visit[]                @relation("CheckedInBy")
+  checkOuts              Visit[]                @relation("CheckedOutBy")
+  auditLogs              AuditLog[]
+  invitations            GuestInvitation[]      @relation("EmployeeInvitations")
+  passwordResetRequests  PasswordResetRequest[] @relation("UserPasswordResets")
+  reviewedPasswordResets PasswordResetRequest[] @relation("AdminReviewedPasswordResets")
 
   @@index([role, approvalStatus])
   @@map("users")
@@ -412,4 +423,37 @@ model EmailOutbox {
   @@index([status])
   @@map("email_outbox")
 }
+
+model PasswordResetRequest {
+  id               String              @id @default(cuid())
+  userId           String
+  user             User                @relation("UserPasswordResets", fields: [userId], references: [id], onDelete: Cascade)
+  userEmail        String
+  userName         String
+  userRole         Role
+  portalContext    String?
+  status           PasswordResetStatus @default(PENDING)
+  trackerTokenHash String?             @unique
+  resetTokenHash   String?             @unique
+  reviewedById     String?
+  reviewedBy       User?               @relation("AdminReviewedPasswordResets", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedByName   String?
+  approvedAt       DateTime?
+  rejectedAt       DateTime?
+  rejectionReason  String?
+  expiresAt        DateTime?
+  usedAt           DateTime?
+  completedAt      DateTime?
+  requestIp        String?
+  tenantId         String              @default("default")
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@index([userEmail, status])
+  @@index([tenantId, status])
+  @@map("password_reset_requests")
+}
+
 

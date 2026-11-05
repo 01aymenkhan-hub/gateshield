@@ -11,6 +11,7 @@ import {
   Check,
   X,
   Key,
+  KeyRound,
   Pencil,
   CheckCircle2,
   Loader2,
@@ -23,12 +24,37 @@ import {
   Phone,
   Mail,
   Plus,
+  Search,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import OperatorQrCardModal, { OperatorQrCardData } from '@/components/modals/OperatorQrCardModal';
+import PasswordInput from '@/components/ui/PasswordInput';
+import type { PasswordResetStatusType } from '@/lib/passwordReset';
 
 type ModalMode = 'create' | 'edit';
 type ActiveTab = 'operators' | 'requests';
+type OperatorRequestTypeFilter = 'ALL' | 'REGISTRATION' | 'PASSWORD_RESET';
+
+interface OperatorPasswordResetRow {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  userRole: 'OPERATOR';
+  status: PasswordResetStatusType;
+  reviewedById: string | null;
+  reviewedByName: string | null;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  expiresAt: string | null;
+  usedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  phoneNumber: string | null;
+  operatorNumber: string | null;
+}
 
 interface SharedCredentialsData {
   name: string;
@@ -44,15 +70,35 @@ export default function AccessManagementPage() {
   const searchParams = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(
-    searchParams?.get('tab') === 'requests' ? 'requests' : 'operators'
+    searchParams?.get('tab') === 'requests' ||
+      searchParams?.get('requestType') ||
+      searchParams?.get('requestId')
+      ? 'requests'
+      : 'operators'
   );
   const [users, setUsers] = useState<any[]>([]);
   const [operatorRequests, setOperatorRequests] = useState<any[]>([]);
+  const [operatorPasswordResetRequests, setOperatorPasswordResetRequests] = useState<
+    OperatorPasswordResetRow[]
+  >([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingRegistrationCount, setPendingRegistrationCount] = useState(0);
+  const [pendingPasswordResetCount, setPendingPasswordResetCount] = useState(0);
   const [gates, setGates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [successToast, setSuccessToast] = useState<string | null>(null);
-  const [requestStatusFilter, setRequestStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [requestTypeFilter, setRequestTypeFilter] = useState<OperatorRequestTypeFilter>(() => {
+    const rt = searchParams?.get('requestType')?.toUpperCase();
+    if (rt === 'REGISTRATION' || rt === 'PASSWORD_RESET') return rt;
+    return 'ALL';
+  });
+  const [requestStatusFilter, setRequestStatusFilter] = useState<
+    'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED' | 'EXPIRED'
+  >('ALL');
+  const [requestSearchQuery, setRequestSearchQuery] = useState('');
+  const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(
+    searchParams?.get('requestId') || null
+  );
 
   // Operator QR Card Modal State
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
@@ -87,12 +133,61 @@ export default function AccessManagementPage() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [isProcessingRequest, setIsProcessingRequest] = useState(false);
 
+  // Operator Password Reset Reject Modal
+  const [rejectingPasswordReset, setRejectingPasswordReset] =
+    useState<OperatorPasswordResetRow | null>(null);
+  const [passwordResetRejectionReason, setPasswordResetRejectionReason] = useState('');
+
   useEffect(() => {
-    const tabParam = searchParams?.get('tab');
-    if (tabParam === 'requests') {
+    const tabParam = searchParams?.get('tab')?.toLowerCase();
+    const reqTypeParam = searchParams?.get('requestType')?.toUpperCase();
+    const reqIdParam = searchParams?.get('requestId');
+
+    if (tabParam === 'requests' || reqTypeParam || reqIdParam) {
       setActiveTab('requests');
+    } else if (tabParam === 'operators') {
+      setActiveTab('operators');
+    }
+
+    if (reqTypeParam === 'REGISTRATION' || reqTypeParam === 'PASSWORD_RESET') {
+      setRequestTypeFilter(reqTypeParam);
+    } else if (reqIdParam) {
+      if (reqIdParam.startsWith('prr_')) {
+        setRequestTypeFilter('PASSWORD_RESET');
+      } else if (reqIdParam.startsWith('opr_')) {
+        setRequestTypeFilter('REGISTRATION');
+      }
+    }
+
+    if (reqIdParam) {
+      setRequestStatusFilter('ALL');
+      setRequestSearchQuery('');
+      setHighlightedRequestId(reqIdParam);
     }
   }, [searchParams]);
+
+  // Smooth scroll & visual highlight when deep-linked operator request row is mounted
+  useEffect(() => {
+    if (!highlightedRequestId || loading) return;
+    const scrollTimer = setTimeout(() => {
+      const rowEl = document.getElementById(`op-req-row-${highlightedRequestId}`);
+      if (rowEl) {
+        rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 180);
+    const clearTimer = setTimeout(() => {
+      setHighlightedRequestId((curr) => (curr === highlightedRequestId ? null : curr));
+    }, 8000);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [
+    highlightedRequestId,
+    loading,
+    operatorRequests.length,
+    operatorPasswordResetRequests.length,
+  ]);
 
   const showNotification = (msg: string) => {
     setSuccessToast(msg);
@@ -101,8 +196,8 @@ export default function AccessManagementPage() {
     }, 4500);
   };
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [uRes, opRes, gRes] = await Promise.all([
         fetch('/api/users', { cache: 'no-store' }),
@@ -122,7 +217,20 @@ export default function AccessManagementPage() {
       if (opRes.ok) {
         const opData = await opRes.json();
         setOperatorRequests(Array.isArray(opData.requests) ? opData.requests : []);
+        setOperatorPasswordResetRequests(
+          Array.isArray(opData.passwordResetRequests) ? opData.passwordResetRequests : []
+        );
         setPendingCount(typeof opData.pendingCount === 'number' ? opData.pendingCount : 0);
+        setPendingRegistrationCount(
+          typeof opData.pendingRegistrationCount === 'number'
+            ? opData.pendingRegistrationCount
+            : 0
+        );
+        setPendingPasswordResetCount(
+          typeof opData.pendingPasswordResetCount === 'number'
+            ? opData.pendingPasswordResetCount
+            : 0
+        );
       }
       if (gRes.ok) {
         const gData = await gRes.json();
@@ -131,12 +239,16 @@ export default function AccessManagementPage() {
     } catch (e) {
       console.error('Error loading access data:', e);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadData();
+    void loadData(false);
+    const interval = setInterval(() => {
+      void loadData(true);
+    }, 6000);
+    return () => clearInterval(interval);
   }, [loadData]);
 
   const generateTempPassword = () => {
@@ -477,6 +589,62 @@ export default function AccessManagementPage() {
     }
   };
 
+  const handleApproveOperatorPasswordReset = async (resetReq: OperatorPasswordResetRow) => {
+    setIsProcessingRequest(true);
+    try {
+      const res = await fetch(`/api/admin/password-resets/${resetReq.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'APPROVE' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to approve password reset request');
+
+      showNotification(
+        `Password reset request approved for ${resetReq.userName}. They have been notified in real time.`
+      );
+      window.dispatchEvent(new Event('gk:refresh-operator-badge'));
+      window.dispatchEvent(new Event('gk:refresh-password-reset-badge'));
+      await loadData(true);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to approve password reset request');
+    } finally {
+      setIsProcessingRequest(false);
+    }
+  };
+
+  const handleRejectOperatorPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingPasswordReset) return;
+    setIsProcessingRequest(true);
+    try {
+      const res = await fetch(`/api/admin/password-resets/${rejectingPasswordReset.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'REJECT',
+          rejectionReason:
+            passwordResetRejectionReason.trim() ||
+            'Your password reset request was declined by the Administrator.',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reject password reset request');
+
+      const targetName = rejectingPasswordReset.userName;
+      setRejectingPasswordReset(null);
+      setPasswordResetRejectionReason('');
+      showNotification(`Password reset request for ${targetName} rejected.`);
+      window.dispatchEvent(new Event('gk:refresh-operator-badge'));
+      window.dispatchEvent(new Event('gk:refresh-password-reset-badge'));
+      await loadData(true);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to reject password reset request');
+    } finally {
+      setIsProcessingRequest(false);
+    }
+  };
+
   const copyToClipboard = async (text: string, fieldKey: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -487,9 +655,74 @@ export default function AccessManagementPage() {
     }
   };
 
-  const filteredRequests = operatorRequests.filter((req) => {
-    if (requestStatusFilter === 'ALL') return true;
-    return req.approvalStatus === requestStatusFilter;
+  type UnifiedOperatorRequestItem =
+    | {
+        kind: 'REGISTRATION';
+        id: string;
+        createdAt: string;
+        status: string;
+        registration: any;
+      }
+    | {
+        kind: 'PASSWORD_RESET';
+        id: string;
+        createdAt: string;
+        status: PasswordResetStatusType;
+        passwordReset: OperatorPasswordResetRow;
+      };
+
+  const unifiedOperatorRequests: UnifiedOperatorRequestItem[] = [
+    ...operatorRequests.map((req): UnifiedOperatorRequestItem => ({
+      kind: 'REGISTRATION',
+      id: req.id,
+      createdAt: req.createdAt,
+      status: req.approvalStatus || 'PENDING',
+      registration: req,
+    })),
+    ...operatorPasswordResetRequests.map((pr): UnifiedOperatorRequestItem => ({
+      kind: 'PASSWORD_RESET',
+      id: pr.id,
+      createdAt: pr.createdAt,
+      status: pr.status,
+      passwordReset: pr,
+    })),
+  ].sort((a, b) => {
+    const aPending = a.status === 'PENDING' ? 0 : 1;
+    const bPending = b.status === 'PENDING' ? 0 : 1;
+    if (aPending !== bPending) return aPending - bPending;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  const filteredRequests = unifiedOperatorRequests.filter((item) => {
+    if (requestTypeFilter !== 'ALL' && item.kind !== requestTypeFilter) {
+      return false;
+    }
+    if (requestStatusFilter !== 'ALL' && item.status !== requestStatusFilter) {
+      return false;
+    }
+    if (requestSearchQuery.trim()) {
+      const q = requestSearchQuery.toLowerCase();
+      if (item.kind === 'REGISTRATION') {
+        const r = item.registration;
+        return (
+          (r.name || '').toLowerCase().includes(q) ||
+          (r.email || '').toLowerCase().includes(q) ||
+          (r.phone || '').toLowerCase().includes(q) ||
+          (r.operatorNumber || '').toLowerCase().includes(q) ||
+          'registration'.includes(q)
+        );
+      } else {
+        const pr = item.passwordReset;
+        return (
+          pr.userName.toLowerCase().includes(q) ||
+          pr.userEmail.toLowerCase().includes(q) ||
+          (pr.phoneNumber || '').toLowerCase().includes(q) ||
+          (pr.operatorNumber || '').toLowerCase().includes(q) ||
+          'password reset'.includes(q)
+        );
+      }
+    }
+    return true;
   });
 
   return (
@@ -727,34 +960,125 @@ export default function AccessManagementPage() {
             </div>
           )}
 
-          {/* TAB 2: SELF-REGISTRATION OPERATOR REQUESTS */}
+          {/* TAB 2: CENTRALIZED OPERATOR REQUESTS (REGISTRATION + PASSWORD RESET) */}
           {activeTab === 'requests' && (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((status) => (
-                    <button
-                      key={status}
-                      type="button"
-                      onClick={() => setRequestStatusFilter(status)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        requestStatusFilter === status
-                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                          : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+              {/* Category / Request Type Filter Pills + Search */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRequestTypeFilter('ALL')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      requestTypeFilter === 'ALL'
+                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <span>All Requests</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                        requestTypeFilter === 'ALL'
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                       }`}
                     >
-                      {status}
-                    </button>
-                  ))}
+                      {unifiedOperatorRequests.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRequestTypeFilter('REGISTRATION')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      requestTypeFilter === 'REGISTRATION'
+                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Registration Requests</span>
+                    {pendingRegistrationCount > 0 && (
+                      <span
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                          requestTypeFilter === 'REGISTRATION'
+                            ? 'bg-white text-blue-700'
+                            : 'bg-amber-500 text-slate-950'
+                        }`}
+                      >
+                        {pendingRegistrationCount}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRequestTypeFilter('PASSWORD_RESET')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      requestTypeFilter === 'PASSWORD_RESET'
+                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                    <span>Password Reset Requests</span>
+                    {pendingPasswordResetCount > 0 && (
+                      <span
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                          requestTypeFilter === 'PASSWORD_RESET'
+                            ? 'bg-white text-blue-700'
+                            : 'bg-amber-500 text-slate-950'
+                        }`}
+                      >
+                        {pendingPasswordResetCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={requestSearchQuery}
+                      onChange={(e) => setRequestSearchQuery(e.target.value)}
+                      placeholder="Search operator, email, ID..."
+                      className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Filter Pills */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(['ALL', 'PENDING', 'APPROVED', 'COMPLETED', 'REJECTED', 'EXPIRED'] as const).map(
+                    (status) => (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => setRequestStatusFilter(status)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          requestStatusFilter === status
+                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    )
+                  )}
                 </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden min-w-0">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs min-w-[760px]">
+                  <table className="w-full text-left text-xs min-w-[860px]">
                     <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200 dark:border-slate-800">
                       <tr>
-                        <th className="px-5 py-3.5">Operator Applicant</th>
+                        <th className="px-5 py-3.5">Operator</th>
+                        <th className="px-4 py-3.5">Request Type</th>
                         <th className="px-4 py-3.5">Phone Number</th>
                         <th className="px-4 py-3.5">Request Date &amp; Time</th>
                         <th className="px-4 py-3.5">Status</th>
@@ -764,109 +1088,244 @@ export default function AccessManagementPage() {
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                       {loading ? (
                         <tr>
-                          <td colSpan={5} className="p-12 text-center text-slate-400 text-xs">
+                          <td colSpan={6} className="p-12 text-center text-slate-400 text-xs">
                             <Loader2 className="w-5 h-5 animate-spin text-blue-600 mx-auto mb-2" />
-                            Loading operator registration requests...
+                            Loading operator requests...
                           </td>
                         </tr>
                       ) : filteredRequests.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="p-12 text-center text-slate-400 text-xs">
-                            No operator registration requests found.
+                          <td colSpan={6} className="p-12 text-center text-slate-400 text-xs">
+                            No operator requests found matching the selected filters.
                           </td>
                         </tr>
                       ) : (
-                        filteredRequests.map((req) => (
-                          <tr
-                            key={req.id}
-                            className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
-                          >
-                            <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-2">
-                                <p className="font-bold text-slate-900 dark:text-white">
-                                  {req.name}
-                                </p>
-                                {req.operatorNumber && (
-                                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                                    {req.operatorNumber}
+                        filteredRequests.map((item) => {
+                          const isHighlighted = highlightedRequestId === item.id;
+
+                          if (item.kind === 'REGISTRATION') {
+                            const req = item.registration;
+                            return (
+                              <tr
+                                key={`reg-${req.id}`}
+                                id={`op-req-row-${req.id}`}
+                                className={`transition-colors ${
+                                  isHighlighted
+                                    ? 'bg-blue-50/90 dark:bg-blue-950/50 ring-2 ring-inset ring-blue-500'
+                                    : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/40'
+                                }`}
+                              >
+                                <td className="px-5 py-3.5">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-bold text-slate-900 dark:text-white">
+                                      {req.name}
+                                    </p>
+                                    {req.operatorNumber && (
+                                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                        {req.operatorNumber}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-slate-400">{req.email}</p>
+                                </td>
+
+                                <td className="px-4 py-3.5">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                    <UserPlus className="w-3 h-3" />
+                                    Registration
+                                  </span>
+                                </td>
+
+                                <td className="px-4 py-3.5 text-slate-700 dark:text-slate-300 font-medium">
+                                  {req.phone || '—'}
+                                </td>
+
+                                <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">
+                                  {new Date(req.createdAt).toLocaleString()}
+                                </td>
+
+                                <td className="px-4 py-3.5">
+                                  {req.approvalStatus === 'PENDING' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300">
+                                      <Clock className="w-3 h-3" /> Pending Approval
+                                    </span>
+                                  )}
+                                  {req.approvalStatus === 'APPROVED' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">
+                                      <CheckCircle2 className="w-3 h-3" /> Approved
+                                    </span>
+                                  )}
+                                  {req.approvalStatus === 'REJECTED' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300">
+                                      <XCircle className="w-3 h-3" /> Rejected
+                                    </span>
+                                  )}
+                                </td>
+
+                                <td className="px-5 py-3.5 text-right">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setViewingRequest(req)}
+                                      className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer flex items-center gap-1"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      <span>View Details</span>
+                                    </button>
+
+                                    {req.approvalStatus !== 'APPROVED' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setApprovingRequest(req);
+                                          setApproveGates(
+                                            req.gateAccess?.map(
+                                              (ga: any) => ga.gate?.id || ga.gateId
+                                            ) || []
+                                          );
+                                        }}
+                                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer flex items-center gap-1 shadow-2xs"
+                                      >
+                                        <Check className="w-3 h-3" />
+                                        <span>Approve</span>
+                                      </button>
+                                    )}
+
+                                    {req.approvalStatus === 'PENDING' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setRejectingRequest(req);
+                                          setRejectionReason('');
+                                        }}
+                                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white cursor-pointer flex items-center gap-1 shadow-2xs"
+                                      >
+                                        <X className="w-3 h-3" />
+                                        <span>Reject</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          const pr = item.passwordReset;
+                          return (
+                            <tr
+                              key={`pr-${pr.id}`}
+                              id={`op-req-row-${pr.id}`}
+                              className={`transition-colors ${
+                                isHighlighted
+                                  ? 'bg-blue-50/90 dark:bg-blue-950/50 ring-2 ring-inset ring-blue-500'
+                                  : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/40'
+                              }`}
+                            >
+                              <td className="px-5 py-3.5">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-bold text-slate-900 dark:text-white">
+                                    {pr.userName}
+                                  </p>
+                                  {pr.operatorNumber && (
+                                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                      {pr.operatorNumber}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-slate-400">{pr.userEmail}</p>
+                              </td>
+
+                              <td className="px-4 py-3.5">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                  <KeyRound className="w-3 h-3" />
+                                  Password Reset
+                                </span>
+                              </td>
+
+                              <td className="px-4 py-3.5 text-slate-700 dark:text-slate-300 font-medium">
+                                {pr.phoneNumber || '—'}
+                              </td>
+
+                              <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">
+                                <div>{new Date(pr.createdAt).toLocaleString()}</div>
+                                {pr.expiresAt && pr.status === 'APPROVED' && (
+                                  <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
+                                    Expires: {new Date(pr.expiresAt).toLocaleTimeString()}
+                                  </div>
+                                )}
+                              </td>
+
+                              <td className="px-4 py-3.5">
+                                {pr.status === 'PENDING' && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300">
+                                    <Clock className="w-3 h-3" /> Pending Approval
                                   </span>
                                 )}
-                              </div>
-                              <p className="text-[11px] text-slate-400">{req.email}</p>
-                            </td>
-
-                            <td className="px-4 py-3.5 text-slate-700 dark:text-slate-300 font-medium">
-                              {req.phone || '—'}
-                            </td>
-
-                            <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">
-                              {new Date(req.createdAt).toLocaleString()}
-                            </td>
-
-                            <td className="px-4 py-3.5">
-                              {req.approvalStatus === 'PENDING' && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300">
-                                  <Clock className="w-3 h-3" /> Pending Approval
-                                </span>
-                              )}
-                              {req.approvalStatus === 'APPROVED' && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">
-                                  <CheckCircle2 className="w-3 h-3" /> Approved
-                                </span>
-                              )}
-                              {req.approvalStatus === 'REJECTED' && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300">
-                                  <XCircle className="w-3 h-3" /> Rejected
-                                </span>
-                              )}
-                            </td>
-
-                            <td className="px-5 py-3.5 text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => setViewingRequest(req)}
-                                  className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer flex items-center gap-1"
-                                >
-                                  <Eye className="w-3 h-3" />
-                                  <span>View Details</span>
-                                </button>
-
-                                {req.approvalStatus !== 'APPROVED' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setApprovingRequest(req);
-                                      setApproveGates(
-                                        req.gateAccess?.map(
-                                          (ga: any) => ga.gate?.id || ga.gateId
-                                        ) || []
-                                      );
-                                    }}
-                                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer flex items-center gap-1 shadow-2xs"
-                                  >
-                                    <Check className="w-3 h-3" />
-                                    <span>Approve</span>
-                                  </button>
+                                {pr.status === 'APPROVED' && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300">
+                                    <CheckCircle2 className="w-3 h-3" /> Approved (Awaiting Reset)
+                                  </span>
                                 )}
-
-                                {req.approvalStatus === 'PENDING' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setRejectingRequest(req);
-                                      setRejectionReason('');
-                                    }}
-                                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white cursor-pointer flex items-center gap-1 shadow-2xs"
-                                  >
-                                    <X className="w-3 h-3" />
-                                    <span>Reject</span>
-                                  </button>
+                                {pr.status === 'COMPLETED' && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">
+                                    <CheckCircle2 className="w-3 h-3" /> Completed
+                                  </span>
                                 )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                                {pr.status === 'REJECTED' && (
+                                  <div>
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300">
+                                      <XCircle className="w-3 h-3" /> Rejected
+                                    </span>
+                                    {pr.rejectionReason && (
+                                      <p className="text-[10px] text-rose-600 dark:text-rose-400 mt-0.5 max-w-[180px] truncate">
+                                        {pr.rejectionReason}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                                {pr.status === 'EXPIRED' && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                                    <Clock className="w-3 h-3" /> Expired
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="px-5 py-3.5 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {pr.status === 'PENDING' ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        disabled={isProcessingRequest}
+                                        onClick={() => handleApproveOperatorPasswordReset(pr)}
+                                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 cursor-pointer flex items-center gap-1 shadow-2xs"
+                                      >
+                                        <Check className="w-3 h-3" />
+                                        <span>Approve</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={isProcessingRequest}
+                                        onClick={() => {
+                                          setRejectingPasswordReset(pr);
+                                          setPasswordResetRejectionReason('');
+                                        }}
+                                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-50 cursor-pointer flex items-center gap-1 shadow-2xs"
+                                      >
+                                        <X className="w-3 h-3" />
+                                        <span>Reject</span>
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span className="text-[11px] text-slate-400 italic">
+                                      {pr.reviewedByName ? `Reviewed by ${pr.reviewedByName}` : 'Processed'}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -991,8 +1450,7 @@ export default function AccessManagementPage() {
                       Generate
                     </button>
                   </div>
-                  <input
-                    type="text"
+                  <PasswordInput
                     required={modalMode === 'create' && role === 'ADMIN'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -1478,6 +1936,79 @@ export default function AccessManagementPage() {
                     <>
                       <X className="w-3.5 h-3.5" />
                       <span>Reject Request</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Reject Operator Password Reset Request Modal */}
+        {rejectingPasswordReset && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+            <form
+              onSubmit={handleRejectOperatorPasswordReset}
+              className="w-full max-w-md p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-rose-600 text-white">
+                    <KeyRound className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      Reject Operator Password Reset
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Declining password reset for {rejectingPasswordReset.userName} ({rejectingPasswordReset.userEmail})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRejectingPasswordReset(null)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                  Reason for Rejection (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={passwordResetRejectionReason}
+                  onChange={(e) => setPasswordResetRejectionReason(e.target.value)}
+                  placeholder="Provide a brief reason for declining this password reset request..."
+                  className="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setRejectingPasswordReset(null)}
+                  className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessingRequest}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  {isProcessingRequest ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Rejecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <X className="w-3.5 h-3.5" />
+                      <span>Reject Password Reset</span>
                     </>
                   )}
                 </button>

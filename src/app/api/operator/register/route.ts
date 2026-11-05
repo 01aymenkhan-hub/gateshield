@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       title: 'New Operator Registration Request',
       message: `${fullName} (${rawEmail} • ${cleanedPhone}) requested Operator access.`,
       operatorUserId: newId,
-      targetUrl: '/operators?tab=requests',
+      targetUrl: `/access?tab=requests&requestType=REGISTRATION&requestId=${newId}`,
       dedupeKey: `op_req_${newId}`,
     });
 

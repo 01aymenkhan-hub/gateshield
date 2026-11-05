@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser, getEmployeeSessionUser } from '@/lib/auth';
 import { AppNotificationRow } from '@/lib/notifications';
+import {
+  ensurePasswordResetSchema,
+  expireStalePasswordResetRequests,
+  getTenantId,
+} from '@/lib/passwordReset';
 
 export async function GET(request: NextRequest) {
   try {
@@ -93,16 +98,29 @@ export async function GET(request: NextRequest) {
     let pendingOperatorCount = 0;
 
     if (role === 'ADMIN') {
-      const pendingCounts = await prisma.$queryRaw<
-        Array<{ empCount: number; opCount: number }>
-      >`
-        SELECT
-          COUNT(*) FILTER (WHERE "role"::text = 'EMPLOYEE' AND COALESCE("approvalStatus"::text, 'PENDING') = 'PENDING')::int AS "empCount",
-          COUNT(*) FILTER (WHERE "role"::text = 'OPERATOR' AND COALESCE("approvalStatus"::text, 'APPROVED') = 'PENDING')::int AS "opCount"
-        FROM "users"
-      `;
-      pendingEmployeeCount = pendingCounts[0]?.empCount ?? 0;
-      pendingOperatorCount = pendingCounts[0]?.opCount ?? 0;
+      await ensurePasswordResetSchema();
+      await expireStalePasswordResetRequests();
+      const tenantId = getTenantId();
+
+      const [pendingCounts, pwdResetCounts] = await Promise.all([
+        prisma.$queryRaw<Array<{ empCount: number; opCount: number }>>`
+          SELECT
+            COUNT(*) FILTER (WHERE "role"::text = 'EMPLOYEE' AND COALESCE("approvalStatus"::text, 'PENDING') = 'PENDING')::int AS "empCount",
+            COUNT(*) FILTER (WHERE "role"::text = 'OPERATOR' AND COALESCE("approvalStatus"::text, 'APPROVED') = 'PENDING')::int AS "opCount"
+          FROM "users"
+        `,
+        prisma.$queryRaw<Array<{ empPwdCount: number; opPwdCount: number }>>`
+          SELECT
+            COUNT(*) FILTER (WHERE "userRole"::text = 'EMPLOYEE' AND "status"::text = 'PENDING')::int AS "empPwdCount",
+            COUNT(*) FILTER (WHERE "userRole"::text = 'OPERATOR' AND "status"::text = 'PENDING')::int AS "opPwdCount"
+          FROM "password_reset_requests"
+          WHERE "tenantId" = ${tenantId}
+        `,
+      ]);
+      pendingEmployeeCount =
+        (pendingCounts[0]?.empCount ?? 0) + (pwdResetCounts[0]?.empPwdCount ?? 0);
+      pendingOperatorCount =
+        (pendingCounts[0]?.opCount ?? 0) + (pwdResetCounts[0]?.opPwdCount ?? 0);
     }
 
     return NextResponse.json({

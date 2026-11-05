@@ -1,11 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/layout/AppLayout';
 import AdminGuard from '@/components/auth/AdminGuard';
+import AdminPasswordResetSection from '@/components/admin/AdminPasswordResetSection';
 import { Settings, Building, Plus, Save, CheckCircle2 } from 'lucide-react';
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
+  const highlightRequestId = searchParams?.get('requestId') || null;
   const [gates, setGates] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({
     default_visitor_badge_prefix: 'GK-',
@@ -222,6 +226,12 @@ export default function SettingsPage() {
             </div>
           </form>
         </div>
+
+        {/* Section 3: Administrator Account Recovery Requests (ADMIN role only) */}
+        <AdminPasswordResetSection
+          roleFilter="ADMIN"
+          highlightRequestId={highlightRequestId}
+        />
       </div>
 
       {/* Add Gate Modal */}

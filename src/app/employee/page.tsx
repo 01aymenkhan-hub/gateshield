@@ -37,6 +37,8 @@ import {
 } from 'lucide-react';
 import GatekeeperLoader from '@/components/ui/GatekeeperLoader';
 import GateShieldLogo from '@/components/ui/GateShieldLogo';
+import PasswordInput from '@/components/ui/PasswordInput';
+import PasswordRecoveryPanel from '@/components/auth/PasswordRecoveryPanel';
 import type { EmployeeAuthUser } from '@/lib/auth';
 import type {
   GuestInvitationRecord,
@@ -105,8 +107,8 @@ export default function EmployeePortalPage() {
   const [employee, setEmployee] = useState<EmployeeAuthUser | null>(null);
   const [applicant, setApplicant] = useState<EmployeeAuthUser | null>(null);
 
-  // Auth tabs: 'login' | 'register'
-  const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
+  // Auth tabs: 'login' | 'register' | 'forgot'
+  const [authTab, setAuthTab] = useState<'login' | 'register' | 'forgot'>('login');
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -1097,20 +1099,29 @@ export default function EmployeePortalPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                        {t('emp_password', 'Password')} *
-                      </label>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="password"
-                          required
-                          value={loginPassword}
-                          onChange={(e) => setLoginPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                          {t('emp_password', 'Password')} *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuthError(null);
+                            setAuthTab('forgot');
+                          }}
+                          className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                        >
+                          {isUrdu ? 'پاس ورڈ بھول گئے؟' : 'Forgot Password?'}
+                        </button>
                       </div>
+                      <PasswordInput
+                        showLockIcon
+                        required
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
 
                     <button
@@ -1123,7 +1134,7 @@ export default function EmployeePortalPage() {
                         : t('emp_sign_in_tab', 'Sign In to Employee Portal')}
                     </button>
                   </form>
-                ) : (
+                ) : authTab === 'register' ? (
                   <form onSubmit={handleEmployeeRegister} className="space-y-3.5">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -1223,8 +1234,7 @@ export default function EmployeePortalPage() {
                         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                           {t('emp_password', 'Password')} *
                         </label>
-                        <input
-                          type="password"
+                        <PasswordInput
                           required
                           minLength={6}
                           value={regPassword}
@@ -1238,8 +1248,7 @@ export default function EmployeePortalPage() {
                         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                           {t('emp_confirm_password', 'Confirm Password')} *
                         </label>
-                        <input
-                          type="password"
+                        <PasswordInput
                           required
                           minLength={6}
                           value={regConfirmPassword}
@@ -1260,7 +1269,17 @@ export default function EmployeePortalPage() {
                         : t('emp_submit_registration', 'Submit Registration Request')}
                     </button>
                   </form>
-                )}
+                ) : authTab === 'forgot' ? (
+                  <PasswordRecoveryPanel
+                    portalContext="EMPLOYEE"
+                    initialEmail={loginEmail}
+                    onBackToLogin={(updatedEmail) => {
+                      if (updatedEmail) setLoginEmail(updatedEmail);
+                      setAuthError(null);
+                      setAuthTab('login');
+                    }}
+                  />
+                ) : null}
               </div>
             </div>
           </div>

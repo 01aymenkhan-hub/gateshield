@@ -68,6 +68,7 @@ interface DbUserRow {
   approvedAt: Date | null;
   rejectedAt: Date | null;
   rejectionReason: string | null;
+  passwordChangedAt?: Date | null;
   createdAt: Date;
 }
 
@@ -112,9 +113,9 @@ export function generateEmployeeToken(user: {
   );
 }
 
-export function verifyToken(token: string): AuthUser | null {
+export function verifyToken(token: string): (AuthUser & { iat?: number }) | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as AuthUser;
+    return jwt.verify(token, JWT_SECRET) as AuthUser & { iat?: number };
   } catch {
     return null;
   }
@@ -122,7 +123,7 @@ export function verifyToken(token: string): AuthUser | null {
 
 export function verifyEmployeeToken(
   token: string
-): { id: string; email: string; name: string; role: 'EMPLOYEE'; purpose?: string } | null {
+): { id: string; email: string; name: string; role: 'EMPLOYEE'; purpose?: string; iat?: number } | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {
       id: string;
@@ -130,6 +131,7 @@ export function verifyEmployeeToken(
       name: string;
       role: string;
       purpose?: string;
+      iat?: number;
     };
     if (!decoded || !decoded.id || decoded.role !== 'EMPLOYEE') return null;
     return {
@@ -138,6 +140,7 @@ export function verifyEmployeeToken(
       name: decoded.name,
       role: 'EMPLOYEE',
       purpose: decoded.purpose,
+      iat: decoded.iat,
     };
   } catch {
     return null;
@@ -146,7 +149,8 @@ export function verifyEmployeeToken(
 
 /**
  * Staff session check (ADMIN or OPERATOR only).
- * Automatically blocks EMPLOYEE accounts and any PENDING/REJECTED/inactive OPERATOR accounts.
+ * Automatically blocks EMPLOYEE accounts and any PENDING/REJECTED/inactive OPERATOR accounts,
+ * and revokes sessions issued before a password change.
  */
 export async function getSessionUser(): Promise<AuthUser | null> {
   try {
@@ -164,6 +168,7 @@ export async function getSessionUser(): Promise<AuthUser | null> {
         role: string;
         active: boolean;
         approvalStatus: string;
+        passwordChangedAt: Date | null;
       }>
     >`
       SELECT
@@ -172,7 +177,8 @@ export async function getSessionUser(): Promise<AuthUser | null> {
         "name",
         "role"::text AS "role",
         "active",
-        COALESCE("approvalStatus"::text, 'APPROVED') AS "approvalStatus"
+        COALESCE("approvalStatus"::text, 'APPROVED') AS "approvalStatus",
+        "passwordChangedAt"
       FROM "users"
       WHERE "id" = ${decoded.id}
       LIMIT 1
@@ -180,6 +186,14 @@ export async function getSessionUser(): Promise<AuthUser | null> {
 
     const dbUser = rows[0];
     if (!dbUser || !dbUser.active || dbUser.approvalStatus !== 'APPROVED') {
+      return null;
+    }
+
+    if (
+      dbUser.passwordChangedAt &&
+      typeof decoded.iat === 'number' &&
+      decoded.iat * 1000 < new Date(dbUser.passwordChangedAt).getTime() - 2000
+    ) {
       return null;
     }
 
@@ -343,6 +357,7 @@ export async function getEmployeeSessionUser(): Promise<EmployeeAuthUser | null>
         "approvedAt",
         "rejectedAt",
         "rejectionReason",
+        "passwordChangedAt",
         "createdAt"
       FROM "users"
       WHERE "id" = ${decoded.id}
@@ -355,6 +370,14 @@ export async function getEmployeeSessionUser(): Promise<EmployeeAuthUser | null>
       !dbUser.active ||
       dbUser.role !== 'EMPLOYEE' ||
       dbUser.approvalStatus !== 'APPROVED'
+    ) {
+      return null;
+    }
+
+    if (
+      dbUser.passwordChangedAt &&
+      typeof decoded.iat === 'number' &&
+      decoded.iat * 1000 < new Date(dbUser.passwordChangedAt).getTime() - 2000
     ) {
       return null;
     }

@@ -201,6 +201,7 @@ export async function PATCH(request: NextRequest) {
     if (active !== undefined) updateData.active = Boolean(active);
     if (password && password.trim().length >= 6) {
       updateData.passwordHash = await hashPassword(password.trim());
+      updateData.passwordChangedAt = new Date();
     }
 
     // Update user

@@ -169,6 +169,7 @@ export async function POST(request: NextRequest) {
     // Create persistent Admin notification in app_notifications
     const notifId = `ntf_${crypto.randomBytes(10).toString('hex')}`;
     const dedupeKey = `emp_req_${newId}`;
+    const targetUrl = `/employees?tab=requests&requestType=REGISTRATION&requestId=${newId}`;
     await prisma.$executeRaw`
       INSERT INTO "app_notifications" (
         "id",
@@ -176,6 +177,7 @@ export async function POST(request: NextRequest) {
         "type",
         "title",
         "message",
+        "targetUrl",
         "dedupeKey",
         "isRead",
         "createdAt"
@@ -186,6 +188,7 @@ export async function POST(request: NextRequest) {
         'EMPLOYEE_REQUEST',
         'New Employee Registration Request',
         ${`${fullName} (${resolvedDeptName} • ${position}) requested Employee Portal access.`},
+        ${targetUrl},
         ${dedupeKey},
         false,
         NOW()

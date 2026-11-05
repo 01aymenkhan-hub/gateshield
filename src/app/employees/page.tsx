@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/layout/AppLayout';
 import AdminGuard from '@/components/auth/AdminGuard';
 import GatekeeperLoader from '@/components/ui/GatekeeperLoader';
+import PasswordInput from '@/components/ui/PasswordInput';
 import {
   Users,
   UserCheck,
@@ -24,24 +26,66 @@ import {
   Power,
   ExternalLink,
   Plus,
+  KeyRound,
 } from 'lucide-react';
 import type { AdminEmployeeRow } from '@/app/api/admin/employees/route';
+import type { PasswordResetStatusType } from '@/lib/passwordReset';
 
 interface DepartmentOption {
   id: string;
   name: string;
 }
 
+interface EmployeePasswordResetRow {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  userRole: 'EMPLOYEE';
+  status: PasswordResetStatusType;
+  reviewedById: string | null;
+  reviewedByName: string | null;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  expiresAt: string | null;
+  usedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  departmentName: string | null;
+  position: string | null;
+  phoneNumber: string | null;
+}
+
+type EmployeeRequestTypeFilter = 'ALL' | 'REGISTRATION' | 'PASSWORD_RESET';
+
 export default function AdminEmployeesPage() {
-  const [activeTab, setActiveTab] = useState<'REQUESTS' | 'EMPLOYEES'>('REQUESTS');
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'REQUESTS' | 'EMPLOYEES'>(
+    searchParams?.get('tab')?.toLowerCase() === 'employees' ? 'EMPLOYEES' : 'REQUESTS'
+  );
   const [requests, setRequests] = useState<AdminEmployeeRow[]>([]);
+  const [passwordResetRequests, setPasswordResetRequests] = useState<EmployeePasswordResetRow[]>(
+    []
+  );
   const [employees, setEmployees] = useState<AdminEmployeeRow[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingRegistrationCount, setPendingRegistrationCount] = useState(0);
+  const [pendingPasswordResetCount, setPendingPasswordResetCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [requestTypeFilter, setRequestTypeFilter] = useState<EmployeeRequestTypeFilter>(() => {
+    const rt = searchParams?.get('requestType')?.toUpperCase();
+    if (rt === 'REGISTRATION' || rt === 'PASSWORD_RESET') return rt;
+    return 'ALL';
+  });
   const [requestStatusFilter, setRequestStatusFilter] = useState<
-    'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
+    'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED' | 'EXPIRED'
   >('ALL');
+  const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(
+    searchParams?.get('requestId') || null
+  );
 
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [bannerMessage, setBannerMessage] = useState<{
@@ -49,12 +93,18 @@ export default function AdminEmployeesPage() {
     text: string;
   } | null>(null);
 
-  // Reject Modal state
+  // Reject Modal state (Registration)
   const [rejectTarget, setRejectTarget] = useState<AdminEmployeeRow | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  // Approve Confirmation Modal state
+  // Approve Confirmation Modal state (Registration)
   const [approveTarget, setApproveTarget] = useState<AdminEmployeeRow | null>(null);
+
+  // Password Reset Reject Modal state
+  const [rejectResetTarget, setRejectResetTarget] = useState<EmployeePasswordResetRow | null>(
+    null
+  );
+  const [resetRejectionReason, setResetRejectionReason] = useState('');
 
   // Add Employee Modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -78,8 +128,21 @@ export default function AdminEmployeesPage() {
       if (res.ok) {
         const data = await res.json();
         setRequests(Array.isArray(data.requests) ? data.requests : []);
+        setPasswordResetRequests(
+          Array.isArray(data.passwordResetRequests) ? data.passwordResetRequests : []
+        );
         setEmployees(Array.isArray(data.employees) ? data.employees : []);
         setPendingCount(typeof data.pendingCount === 'number' ? data.pendingCount : 0);
+        setPendingRegistrationCount(
+          typeof data.pendingRegistrationCount === 'number'
+            ? data.pendingRegistrationCount
+            : 0
+        );
+        setPendingPasswordResetCount(
+          typeof data.pendingPasswordResetCount === 'number'
+            ? data.pendingPasswordResetCount
+            : 0
+        );
       }
     } catch (e) {
       console.error('Error loading admin employees:', e);
@@ -88,6 +151,53 @@ export default function AdminEmployeesPage() {
       setLoading(false);
     }
   }, []);
+
+  // Deep-link synchronization for URL query params (?tab=requests&requestType=PASSWORD_RESET&requestId=...)
+  useEffect(() => {
+    const tabParam = searchParams?.get('tab')?.toLowerCase();
+    const reqTypeParam = searchParams?.get('requestType')?.toUpperCase();
+    const reqIdParam = searchParams?.get('requestId');
+
+    if (tabParam === 'requests' || reqTypeParam || reqIdParam) {
+      setActiveTab('REQUESTS');
+    } else if (tabParam === 'employees') {
+      setActiveTab('EMPLOYEES');
+    }
+
+    if (reqTypeParam === 'REGISTRATION' || reqTypeParam === 'PASSWORD_RESET') {
+      setRequestTypeFilter(reqTypeParam);
+    } else if (reqIdParam) {
+      if (reqIdParam.startsWith('prr_')) {
+        setRequestTypeFilter('PASSWORD_RESET');
+      } else if (reqIdParam.startsWith('emp_')) {
+        setRequestTypeFilter('REGISTRATION');
+      }
+    }
+
+    if (reqIdParam) {
+      setRequestStatusFilter('ALL');
+      setSearchQuery('');
+      setHighlightedRequestId(reqIdParam);
+    }
+  }, [searchParams]);
+
+  // Smooth scroll & visual highlight when deep-linked request row is mounted
+  useEffect(() => {
+    if (!highlightedRequestId || loading) return;
+    const scrollTimer = setTimeout(() => {
+      const rowEl = document.getElementById(`emp-req-row-${highlightedRequestId}`);
+      if (rowEl) {
+        rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 180);
+    const clearTimer = setTimeout(() => {
+      setHighlightedRequestId((curr) => (curr === highlightedRequestId ? null : curr));
+    }, 8000);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightedRequestId, loading, requests.length, passwordResetRequests.length]);
 
   useEffect(() => {
     let active = true;
@@ -130,6 +240,92 @@ export default function AdminEmployeesPage() {
   const notifySidebarBadgeRefresh = () => {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('gk:refresh-employee-badge'));
+      window.dispatchEvent(new Event('gk:refresh-password-reset-badge'));
+    }
+  };
+
+  const handleApprovePasswordReset = async (resetReq: EmployeePasswordResetRow) => {
+    setActionBusyId(resetReq.id);
+    setBannerMessage(null);
+    try {
+      const res = await fetch(`/api/admin/password-resets/${resetReq.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'APPROVE' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBannerMessage({
+          type: 'error',
+          text: data.error || 'Failed to approve employee password reset request.',
+        });
+        await fetchEmployeesData();
+        notifySidebarBadgeRefresh();
+        return;
+      }
+
+      setBannerMessage({
+        type: 'success',
+        text:
+          data.message ||
+          `Password reset request approved for ${resetReq.userName} (${resetReq.userEmail}).`,
+      });
+      await fetchEmployeesData();
+      notifySidebarBadgeRefresh();
+    } catch {
+      setBannerMessage({
+        type: 'error',
+        text: 'Network error while approving employee password reset request.',
+      });
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
+  const handleRejectPasswordResetConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectResetTarget) return;
+    const target = rejectResetTarget;
+    setActionBusyId(target.id);
+    setBannerMessage(null);
+    try {
+      const res = await fetch(`/api/admin/password-resets/${target.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'REJECT',
+          rejectionReason: resetRejectionReason.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBannerMessage({
+          type: 'error',
+          text: data.error || 'Failed to reject employee password reset request.',
+        });
+        setRejectResetTarget(null);
+        await fetchEmployeesData();
+        notifySidebarBadgeRefresh();
+        return;
+      }
+
+      setBannerMessage({
+        type: 'success',
+        text:
+          data.message ||
+          `Password reset request rejected for ${target.userName} (${target.userEmail}).`,
+      });
+      setRejectResetTarget(null);
+      setResetRejectionReason('');
+      await fetchEmployeesData();
+      notifySidebarBadgeRefresh();
+    } catch {
+      setBannerMessage({
+        type: 'error',
+        text: 'Network error while rejecting employee password reset request.',
+      });
+    } finally {
+      setActionBusyId(null);
     }
   };
 
@@ -375,18 +571,91 @@ export default function AdminEmployeesPage() {
     }
   };
 
-  const filteredRequests = requests.filter((r) => {
-    if (requestStatusFilter !== 'ALL' && r.approvalStatus !== requestStatusFilter) {
+  type UnifiedEmployeeRequest =
+    | {
+        kind: 'REGISTRATION';
+        id: string;
+        name: string;
+        email: string;
+        departmentName: string | null;
+        position: string | null;
+        phoneNumber: string | null;
+        status: 'PENDING' | 'APPROVED' | 'REJECTED';
+        createdAt: string | Date;
+        rejectionReason: string | null;
+        rawReg: AdminEmployeeRow;
+      }
+    | {
+        kind: 'PASSWORD_RESET';
+        id: string;
+        name: string;
+        email: string;
+        departmentName: string | null;
+        position: string | null;
+        phoneNumber: string | null;
+        status: PasswordResetStatusType;
+        createdAt: string | Date;
+        rejectionReason: string | null;
+        expiresAt: string | null;
+        reviewedByName: string | null;
+        rawReset: EmployeePasswordResetRow;
+      };
+
+  const unifiedEmployeeRequests: UnifiedEmployeeRequest[] = [
+    ...requests.map(
+      (r): UnifiedEmployeeRequest => ({
+        kind: 'REGISTRATION',
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        departmentName: r.departmentName,
+        position: r.position,
+        phoneNumber: r.phoneNumber,
+        status: r.approvalStatus,
+        createdAt: r.createdAt,
+        rejectionReason: r.rejectionReason,
+        rawReg: r,
+      })
+    ),
+    ...passwordResetRequests.map(
+      (prr): UnifiedEmployeeRequest => ({
+        kind: 'PASSWORD_RESET',
+        id: prr.id,
+        name: prr.userName,
+        email: prr.userEmail,
+        departmentName: prr.departmentName,
+        position: prr.position,
+        phoneNumber: prr.phoneNumber,
+        status: prr.status,
+        createdAt: prr.createdAt,
+        rejectionReason: prr.rejectionReason,
+        expiresAt: prr.expiresAt,
+        reviewedByName: prr.reviewedByName,
+        rawReset: prr,
+      })
+    ),
+  ].sort((a, b) => {
+    const aPending = a.status === 'PENDING' ? 0 : 1;
+    const bPending = b.status === 'PENDING' ? 0 : 1;
+    if (aPending !== bPending) return aPending - bPending;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  const filteredRequests = unifiedEmployeeRequests.filter((item) => {
+    if (requestTypeFilter !== 'ALL' && item.kind !== requestTypeFilter) {
+      return false;
+    }
+    if (requestStatusFilter !== 'ALL' && item.status !== requestStatusFilter) {
       return false;
     }
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
-      r.name.toLowerCase().includes(q) ||
-      r.email.toLowerCase().includes(q) ||
-      (r.departmentName && r.departmentName.toLowerCase().includes(q)) ||
-      (r.position && r.position.toLowerCase().includes(q)) ||
-      (r.phoneNumber && r.phoneNumber.toLowerCase().includes(q))
+      item.name.toLowerCase().includes(q) ||
+      item.email.toLowerCase().includes(q) ||
+      (item.departmentName && item.departmentName.toLowerCase().includes(q)) ||
+      (item.position && item.position.toLowerCase().includes(q)) ||
+      (item.phoneNumber && item.phoneNumber.toLowerCase().includes(q))
     );
   });
 
@@ -546,16 +815,52 @@ export default function AdminEmployeesPage() {
                     value={requestStatusFilter}
                     onChange={(e) =>
                       setRequestStatusFilter(
-                        e.target.value as 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
+                        e.target.value as
+                          | 'ALL'
+                          | 'PENDING'
+                          | 'APPROVED'
+                          | 'REJECTED'
+                          | 'COMPLETED'
+                          | 'EXPIRED'
                       )
                     }
                     className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold"
                   >
-                    <option value="ALL">All Requests ({requests.length})</option>
+                    <option value="ALL">
+                      All Statuses ({unifiedEmployeeRequests.length})
+                    </option>
                     <option value="PENDING">Pending ({pendingCount})</option>
-                    <option value="APPROVED">Approved ({employees.length})</option>
+                    <option value="APPROVED">
+                      Approved (
+                      {
+                        unifiedEmployeeRequests.filter((r) => r.status === 'APPROVED')
+                          .length
+                      }
+                      )
+                    </option>
+                    <option value="COMPLETED">
+                      Completed (
+                      {
+                        unifiedEmployeeRequests.filter((r) => r.status === 'COMPLETED')
+                          .length
+                      }
+                      )
+                    </option>
                     <option value="REJECTED">
-                      Rejected ({requests.filter((r) => r.approvalStatus === 'REJECTED').length})
+                      Rejected (
+                      {
+                        unifiedEmployeeRequests.filter((r) => r.status === 'REJECTED')
+                          .length
+                      }
+                      )
+                    </option>
+                    <option value="EXPIRED">
+                      Expired (
+                      {
+                        unifiedEmployeeRequests.filter((r) => r.status === 'EXPIRED')
+                          .length
+                      }
+                      )
                     </option>
                   </select>
                 )}
@@ -578,14 +883,74 @@ export default function AdminEmployeesPage() {
             {/* ================================================================= */}
             {activeTab === 'REQUESTS' ? (
               <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                   <div>
                     <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
-                      Employee Registration Requests
+                      Employee Request Management
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Review applicant details and approve or reject Employee Portal access.
+                      Review and approve Employee registration requests and Forgot Password recovery requests.
                     </p>
+                  </div>
+
+                  {/* Request Category / Type Filter Pills */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setRequestTypeFilter('ALL')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        requestTypeFilter === 'ALL'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <span>All Requests</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                          requestTypeFilter === 'ALL'
+                            ? 'bg-white/20 text-white'
+                            : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+                        }`}
+                      >
+                        {unifiedEmployeeRequests.length}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRequestTypeFilter('REGISTRATION')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        requestTypeFilter === 'REGISTRATION'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Registration Requests</span>
+                      {pendingRegistrationCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950">
+                          {pendingRegistrationCount}
+                        </span>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRequestTypeFilter('PASSWORD_RESET')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        requestTypeFilter === 'PASSWORD_RESET'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Password Reset Requests</span>
+                      {pendingPasswordResetCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950">
+                          {pendingPasswordResetCount}
+                        </span>
+                      )}
+                    </button>
                   </div>
                 </div>
 
@@ -594,18 +959,18 @@ export default function AdminEmployeesPage() {
                     <div className="p-12 text-center text-xs text-slate-400 space-y-2">
                       <Users className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-700" />
                       <p className="font-semibold text-slate-500 dark:text-slate-400">
-                        No employee registration requests found.
+                        No employee requests match the selected category or filter.
                       </p>
                     </div>
                   ) : (
-                    <table className="w-full text-left text-xs min-w-[900px]">
+                    <table className="w-full text-left text-xs min-w-[980px]">
                       <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200 dark:border-slate-800">
                         <tr>
-                          <th className="px-5 py-3">Full Name</th>
-                          <th className="px-4 py-3">Department</th>
-                          <th className="px-4 py-3">Position</th>
+                          <th className="px-5 py-3">Employee Name</th>
+                          <th className="px-4 py-3">Request Type</th>
+                          <th className="px-4 py-3">Department &amp; Position</th>
                           <th className="px-4 py-3">Phone Number</th>
-                          <th className="px-4 py-3">Email Address</th>
+                          <th className="px-4 py-3">Registered Email</th>
                           <th className="px-4 py-3">Request Date / Time</th>
                           <th className="px-4 py-3">Current Status</th>
                           <th className="px-5 py-3 text-right">Actions</th>
@@ -614,25 +979,45 @@ export default function AdminEmployeesPage() {
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                         {filteredRequests.map((req) => (
                           <tr
-                            key={req.id}
-                            className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                            key={`${req.kind}_${req.id}`}
+                            id={`emp-req-row-${req.id}`}
+                            className={`transition-colors ${
+                              highlightedRequestId === req.id
+                                ? 'bg-blue-50/90 dark:bg-blue-950/60 ring-2 ring-inset ring-blue-500'
+                                : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
+                            }`}
                           >
                             <td className="px-5 py-3.5 font-bold text-slate-900 dark:text-white">
                               {req.name}
                             </td>
 
                             <td className="px-4 py-3.5">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-semibold">
-                                <Building2 className="w-3 h-3" />
-                                {req.departmentName || 'Unassigned'}
-                              </span>
+                              {req.kind === 'PASSWORD_RESET' ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-extrabold text-[10px] uppercase tracking-wider">
+                                  <KeyRound className="w-3 h-3" />
+                                  <span>Password Reset</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-extrabold text-[10px] uppercase tracking-wider">
+                                  <UserPlus className="w-3 h-3" />
+                                  <span>Registration</span>
+                                </span>
+                              )}
                             </td>
 
-                            <td className="px-4 py-3.5 text-slate-700 dark:text-slate-300 font-medium">
-                              <span className="inline-flex items-center gap-1">
-                                <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                                {req.position || '—'}
-                              </span>
+                            <td className="px-4 py-3.5">
+                              <div className="flex flex-col gap-1 items-start">
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-[11px]">
+                                  <Building2 className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                                  {req.departmentName || 'Unassigned'}
+                                </span>
+                                {req.position && (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                    <Briefcase className="w-3 h-3 text-slate-400" />
+                                    {req.position}
+                                  </span>
+                                )}
+                              </div>
                             </td>
 
                             <td className="px-4 py-3.5 font-mono text-slate-700 dark:text-slate-300">
@@ -657,26 +1042,49 @@ export default function AdminEmployeesPage() {
                             </td>
 
                             <td className="px-4 py-3.5">
-                              <span
-                                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                                  req.approvalStatus === 'PENDING'
-                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
-                                    : req.approvalStatus === 'APPROVED'
-                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
-                                }`}
-                              >
-                                {req.approvalStatus}
-                              </span>
+                              <div className="space-y-1">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                                    req.status === 'PENDING'
+                                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                                      : req.status === 'APPROVED'
+                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                                      : req.status === 'COMPLETED'
+                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-300 dark:border-blue-800'
+                                      : req.status === 'EXPIRED'
+                                      ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                                      : 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                                  }`}
+                                >
+                                  {req.status}
+                                </span>
+                                {req.kind === 'PASSWORD_RESET' &&
+                                  req.status === 'APPROVED' &&
+                                  req.expiresAt && (
+                                    <div className="text-[10px] text-slate-400">
+                                      Expires{' '}
+                                      {new Date(req.expiresAt).toLocaleTimeString([], {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      })}
+                                    </div>
+                                  )}
+                              </div>
                             </td>
 
                             <td className="px-5 py-3.5 text-right">
-                              {req.approvalStatus === 'PENDING' ? (
+                              {req.status === 'PENDING' ? (
                                 <div className="inline-flex items-center justify-end gap-2">
                                   <button
                                     type="button"
                                     disabled={actionBusyId === req.id}
-                                    onClick={() => setApproveTarget(req)}
+                                    onClick={() => {
+                                      if (req.kind === 'PASSWORD_RESET') {
+                                        void handleApprovePasswordReset(req.rawReset);
+                                      } else {
+                                        setApproveTarget(req.rawReg);
+                                      }
+                                    }}
                                     className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-extrabold shadow-2xs flex items-center gap-1 cursor-pointer transition-colors"
                                   >
                                     <Check className="w-3.5 h-3.5" />
@@ -687,8 +1095,13 @@ export default function AdminEmployeesPage() {
                                     type="button"
                                     disabled={actionBusyId === req.id}
                                     onClick={() => {
-                                      setRejectTarget(req);
-                                      setRejectionReason('');
+                                      if (req.kind === 'PASSWORD_RESET') {
+                                        setRejectResetTarget(req.rawReset);
+                                        setResetRejectionReason('');
+                                      } else {
+                                        setRejectTarget(req.rawReg);
+                                        setRejectionReason('');
+                                      }
                                     }}
                                     className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
                                   >
@@ -698,8 +1111,12 @@ export default function AdminEmployeesPage() {
                                 </div>
                               ) : (
                                 <span className="text-[11px] text-slate-400">
-                                  {req.approvalStatus === 'APPROVED'
+                                  {req.status === 'APPROVED'
                                     ? 'Approved'
+                                    : req.status === 'COMPLETED'
+                                    ? 'Password Updated'
+                                    : req.status === 'EXPIRED'
+                                    ? 'Expired'
                                     : req.rejectionReason
                                     ? `Rejected: ${req.rejectionReason}`
                                     : 'Rejected'}
@@ -1018,36 +1435,30 @@ export default function AdminEmployeesPage() {
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Password *
                     </label>
-                    <div className="relative">
-                      <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="password"
-                        required
-                        minLength={6}
-                        value={addPassword}
-                        onChange={(e) => setAddPassword(e.target.value)}
-                        placeholder="Min 6 characters"
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+                    <PasswordInput
+                      showLockIcon
+                      required
+                      minLength={6}
+                      value={addPassword}
+                      onChange={(e) => setAddPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                      className="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
 
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Confirm Password *
                     </label>
-                    <div className="relative">
-                      <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="password"
-                        required
-                        minLength={6}
-                        value={addConfirmPassword}
-                        onChange={(e) => setAddConfirmPassword(e.target.value)}
-                        placeholder="Re-enter password"
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+                    <PasswordInput
+                      showLockIcon
+                      required
+                      minLength={6}
+                      value={addConfirmPassword}
+                      onChange={(e) => setAddConfirmPassword(e.target.value)}
+                      placeholder="Re-enter password"
+                      className="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
                 </div>
 
@@ -1177,6 +1588,61 @@ export default function AdminEmployeesPage() {
                     className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white font-extrabold cursor-pointer"
                   >
                     {actionBusyId === rejectTarget.id ? 'Rejecting...' : 'Reject Request'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Reject Employee Password Reset Confirmation Modal */}
+        {rejectResetTarget && (
+          <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-rose-50/70 dark:bg-rose-950/40 flex items-center justify-between">
+                <h3 className="text-base font-extrabold text-rose-900 dark:text-rose-200 flex items-center gap-2">
+                  <XCircle className="w-5 h-5 text-rose-600" />
+                  Reject Employee Password Reset
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setRejectResetTarget(null)}
+                  className="p-1 rounded-lg text-slate-400 hover:bg-slate-200/50 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <form onSubmit={handleRejectPasswordResetConfirm} className="p-6 space-y-4 text-xs">
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Are you sure you want to reject the password reset request for{' '}
+                  <strong>{rejectResetTarget.userName}</strong> ({rejectResetTarget.userEmail})?
+                </p>
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Optional Note / Reason for Employee
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={resetRejectionReason}
+                    onChange={(e) => setResetRejectionReason(e.target.value)}
+                    placeholder="e.g. Please verify identity with HR or Security Administrator."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+                <div className="flex justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setRejectResetTarget(null)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-300 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={actionBusyId === rejectResetTarget.id}
+                    className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white font-extrabold cursor-pointer"
+                  >
+                    {actionBusyId === rejectResetTarget.id ? 'Rejecting...' : 'Reject Reset Request'}
                   </button>
                 </div>
               </form>

@@ -35,6 +35,8 @@ interface HeaderNotification {
   message: string;
   isRead: boolean;
   targetUrl?: string | null;
+  dedupeKey?: string | null;
+  operatorUserId?: string | null;
   createdAt: string;
 }
 
@@ -91,6 +93,7 @@ export default function Header({
           if (typeof window !== 'undefined' && user.role === 'ADMIN') {
             window.dispatchEvent(new Event('gk:refresh-employee-badge'));
             window.dispatchEvent(new Event('gk:refresh-operator-badge'));
+            window.dispatchEvent(new Event('gk:refresh-password-reset-badge'));
           }
           setLiveToast(newestUnseen);
           setTimeout(() => {
@@ -125,13 +128,84 @@ export default function Header({
     }
   };
 
+  const resolveNotificationTargetUrl = (notif: HeaderNotification): string | null => {
+    const rawUrl = notif.targetUrl?.trim() || '';
+    const dedupe = notif.dedupeKey?.trim() || '';
+    const msgUpper = (notif.message || '').toUpperCase();
+
+    // 1. Employee Registration Request
+    if (notif.type === 'EMPLOYEE_REQUEST' || dedupe.startsWith('emp_req_')) {
+      const empId = dedupe.startsWith('emp_req_') ? dedupe.replace('emp_req_', '') : '';
+      return empId
+        ? `/employees?tab=requests&requestType=REGISTRATION&requestId=${encodeURIComponent(empId)}`
+        : '/employees?tab=requests&requestType=REGISTRATION';
+    }
+
+    // 2. Operator Registration Request
+    if (notif.type === 'OPERATOR_REQUEST' || dedupe.startsWith('op_req_') || rawUrl.startsWith('/operators')) {
+      const opId =
+        notif.operatorUserId ||
+        (dedupe.startsWith('op_req_') ? dedupe.replace('op_req_', '') : '');
+      return opId
+        ? `/access?tab=requests&requestType=REGISTRATION&requestId=${encodeURIComponent(opId)}`
+        : '/access?tab=requests&requestType=REGISTRATION';
+    }
+
+    // 3. Password Reset Requests (New & Legacy)
+    if (
+      notif.type === 'EMPLOYEE_PASSWORD_RESET_REQUEST' ||
+      notif.type === 'OPERATOR_PASSWORD_RESET_REQUEST' ||
+      notif.type === 'ADMIN_PASSWORD_RESET_REQUEST' ||
+      notif.type === 'PASSWORD_RESET_REQUEST' ||
+      dedupe.startsWith('pwd_reset_req_') ||
+      rawUrl === '/dashboard#password-reset-requests'
+    ) {
+      if (
+        rawUrl &&
+        rawUrl !== '/dashboard#password-reset-requests' &&
+        (rawUrl.startsWith('/employees') || rawUrl.startsWith('/access') || rawUrl.startsWith('/settings'))
+      ) {
+        return rawUrl;
+      }
+
+      const reqId = dedupe.startsWith('pwd_reset_req_')
+        ? dedupe.replace('pwd_reset_req_', '')
+        : '';
+
+      if (
+        notif.type === 'EMPLOYEE_PASSWORD_RESET_REQUEST' ||
+        msgUpper.includes('(EMPLOYEE)')
+      ) {
+        return reqId
+          ? `/employees?tab=requests&requestType=PASSWORD_RESET&requestId=${encodeURIComponent(reqId)}`
+          : '/employees?tab=requests&requestType=PASSWORD_RESET';
+      }
+
+      if (
+        notif.type === 'OPERATOR_PASSWORD_RESET_REQUEST' ||
+        msgUpper.includes('(OPERATOR)')
+      ) {
+        return reqId
+          ? `/access?tab=requests&requestType=PASSWORD_RESET&requestId=${encodeURIComponent(reqId)}`
+          : '/access?tab=requests&requestType=PASSWORD_RESET';
+      }
+
+      return reqId
+        ? `/settings?section=admin-security&requestId=${encodeURIComponent(reqId)}`
+        : '/settings?section=admin-security';
+    }
+
+    return rawUrl || null;
+  };
+
   const handleClickNotification = async (notif: HeaderNotification) => {
     if (!notif.isRead) {
       await handleMarkNotificationsRead([notif.id]);
     }
     setIsNotifOpen(false);
-    if (notif.targetUrl) {
-      router.push(notif.targetUrl);
+    const resolvedUrl = resolveNotificationTargetUrl(notif);
+    if (resolvedUrl) {
+      router.push(resolvedUrl);
     }
   };
 

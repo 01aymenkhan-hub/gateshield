@@ -23,9 +23,11 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import OperatorQrScanner from '@/components/scanner/OperatorQrScanner';
 import GateShieldLogo from '@/components/ui/GateShieldLogo';
+import PasswordInput from '@/components/ui/PasswordInput';
+import PasswordRecoveryPanel from '@/components/auth/PasswordRecoveryPanel';
 
 type LoginTab = 'qr' | 'email';
-type ScreenMode = 'login' | 'register' | 'applicant_status';
+type ScreenMode = 'login' | 'register' | 'applicant_status' | 'forgot';
 
 interface ApplicantData {
   id: string;
@@ -464,27 +466,38 @@ export default function OperatorLoginPage() {
               </div>
 
               <div>
-                <label
-                  dir="auto"
-                  className={`block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 ${
-                    language === 'ur' ? 'text-right' : 'text-left'
-                  }`}
-                >
-                  {t('operator_password_label', 'Password')}{' '}
-                  <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="password"
-                    dir="ltr"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t('operator_password_placeholder', 'Enter your password')}
-                    className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-left"
-                  />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label
+                    dir="auto"
+                    className={`block text-xs font-bold text-slate-700 dark:text-slate-300 ${
+                      language === 'ur' ? 'text-right' : 'text-left'
+                    }`}
+                  >
+                    {t('operator_password_label', 'Password')}{' '}
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setScreenMode('forgot');
+                    }}
+                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                  >
+                    <span dir="auto">
+                      {language === 'ur' ? 'پاس ورڈ بھول گئے؟' : 'Forgot Password?'}
+                    </span>
+                  </button>
                 </div>
+                <PasswordInput
+                  showLockIcon
+                  dir="ltr"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t('operator_password_placeholder', 'Enter your password')}
+                  className="w-full py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-left"
+                />
               </div>
 
               <button
@@ -612,8 +625,7 @@ export default function OperatorLoginPage() {
                     {t('operator_password_label', 'Password')}{' '}
                     <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="password"
+                  <PasswordInput
                     dir="ltr"
                     required
                     value={regPassword}
@@ -632,8 +644,7 @@ export default function OperatorLoginPage() {
                     {t('confirm_password_label', 'Confirm Password')}{' '}
                     <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="password"
+                  <PasswordInput
                     dir="ltr"
                     required
                     value={regConfirmPassword}
@@ -676,6 +687,19 @@ export default function OperatorLoginPage() {
                 <span dir="auto">{t('back_to_login_btn', 'Back to Login')}</span>
               </button>
             </form>
+          )}
+
+          {screenMode === 'forgot' && (
+            <PasswordRecoveryPanel
+              portalContext="OPERATOR"
+              initialEmail={email}
+              onBackToLogin={(updatedEmail) => {
+                if (updatedEmail) setEmail(updatedEmail);
+                setError(null);
+                setLoginTab('email');
+                setScreenMode('login');
+              }}
+            />
           )}
 
           {screenMode === 'applicant_status' && applicant && (

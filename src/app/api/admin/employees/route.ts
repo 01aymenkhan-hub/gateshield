@@ -9,6 +9,12 @@ import {
 } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { sendEmployeeApprovedEmail } from '@/lib/emailService';
+import {
+  ensurePasswordResetSchema,
+  expireStalePasswordResetRequests,
+  getTenantId,
+  PasswordResetStatusType,
+} from '@/lib/passwordReset';
 
 export interface AdminEmployeeRow {
   id: string;
@@ -53,53 +59,131 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const summaryOnly = searchParams.get('summaryOnly') === 'true';
 
-    const countRows = await prisma.$queryRaw<Array<{ pendingCount: number }>>`
-      SELECT COUNT(*)::int AS "pendingCount"
-      FROM "users"
-      WHERE "role"::text = 'EMPLOYEE'
-        AND COALESCE("approvalStatus"::text, 'PENDING') = 'PENDING'
-    `;
-    const pendingCount = countRows[0]?.pendingCount ?? 0;
+    await ensurePasswordResetSchema();
+    await expireStalePasswordResetRequests();
+    const tenantId = getTenantId();
+
+    const [regCountRows, pwdCountRows] = await Promise.all([
+      prisma.$queryRaw<Array<{ pendingCount: number }>>`
+        SELECT COUNT(*)::int AS "pendingCount"
+        FROM "users"
+        WHERE "role"::text = 'EMPLOYEE'
+          AND COALESCE("approvalStatus"::text, 'PENDING') = 'PENDING'
+      `,
+      prisma.$queryRaw<Array<{ pendingCount: number }>>`
+        SELECT COUNT(*)::int AS "pendingCount"
+        FROM "password_reset_requests"
+        WHERE "tenantId" = ${tenantId}
+          AND "userRole"::text = 'EMPLOYEE'
+          AND "status"::text = 'PENDING'
+      `,
+    ]);
+
+    const pendingRegistrationCount = regCountRows[0]?.pendingCount ?? 0;
+    const pendingPasswordResetCount = pwdCountRows[0]?.pendingCount ?? 0;
+    const pendingCount = pendingRegistrationCount + pendingPasswordResetCount;
 
     if (summaryOnly) {
       return NextResponse.json({
         success: true,
         pendingCount,
+        pendingRegistrationCount,
+        pendingPasswordResetCount,
       });
     }
 
-    const allEmployeeRows = await prisma.$queryRaw<AdminEmployeeRow[]>`
-      SELECT
-        u."id",
-        u."name",
-        u."email",
-        u."departmentId",
-        COALESCE(d."name", u."departmentName", 'Unassigned') AS "departmentName",
-        u."position",
-        u."phoneNumber",
-        COALESCE(u."approvalStatus"::text, 'PENDING') AS "approvalStatus",
-        u."active",
-        u."approvedAt",
-        u."approvedById",
-        u."rejectedAt",
-        u."rejectionReason",
-        u."createdAt",
-        u."updatedAt",
-        (
-          SELECT COUNT(*)::int
-          FROM "guest_invitations" gi
-          WHERE gi."employeeId" = u."id"
-        ) AS "totalInvitations"
-      FROM "users" u
-      LEFT JOIN "departments" d ON d."id" = u."departmentId"
-      WHERE u."role"::text = 'EMPLOYEE'
-      ORDER BY
-        CASE WHEN COALESCE(u."approvalStatus"::text, 'PENDING') = 'PENDING' THEN 0
-             WHEN COALESCE(u."approvalStatus"::text, 'PENDING') = 'REJECTED' THEN 1
-             ELSE 2
-        END ASC,
-        u."createdAt" DESC
-    `;
+    const [allEmployeeRows, passwordResetRequests] = await Promise.all([
+      prisma.$queryRaw<AdminEmployeeRow[]>`
+        SELECT
+          u."id",
+          u."name",
+          u."email",
+          u."departmentId",
+          COALESCE(d."name", u."departmentName", 'Unassigned') AS "departmentName",
+          u."position",
+          u."phoneNumber",
+          COALESCE(u."approvalStatus"::text, 'PENDING') AS "approvalStatus",
+          u."active",
+          u."approvedAt",
+          u."approvedById",
+          u."rejectedAt",
+          u."rejectionReason",
+          u."createdAt",
+          u."updatedAt",
+          (
+            SELECT COUNT(*)::int
+            FROM "guest_invitations" gi
+            WHERE gi."employeeId" = u."id"
+          ) AS "totalInvitations"
+        FROM "users" u
+        LEFT JOIN "departments" d ON d."id" = u."departmentId"
+        WHERE u."role"::text = 'EMPLOYEE'
+        ORDER BY
+          CASE WHEN COALESCE(u."approvalStatus"::text, 'PENDING') = 'PENDING' THEN 0
+               WHEN COALESCE(u."approvalStatus"::text, 'PENDING') = 'REJECTED' THEN 1
+               ELSE 2
+          END ASC,
+          u."createdAt" DESC
+      `,
+      prisma.$queryRaw<
+        Array<{
+          id: string;
+          userId: string;
+          userEmail: string;
+          userName: string;
+          userRole: 'EMPLOYEE';
+          status: PasswordResetStatusType;
+          reviewedById: string | null;
+          reviewedByName: string | null;
+          approvedAt: Date | null;
+          rejectedAt: Date | null;
+          rejectionReason: string | null;
+          expiresAt: Date | null;
+          usedAt: Date | null;
+          completedAt: Date | null;
+          createdAt: Date;
+          updatedAt: Date;
+          departmentName: string | null;
+          position: string | null;
+          phoneNumber: string | null;
+        }>
+      >`
+        SELECT
+          prr."id",
+          prr."userId",
+          prr."userEmail",
+          prr."userName",
+          prr."userRole"::text AS "userRole",
+          prr."status"::text AS "status",
+          prr."reviewedById",
+          prr."reviewedByName",
+          prr."approvedAt",
+          prr."rejectedAt",
+          prr."rejectionReason",
+          prr."expiresAt",
+          prr."usedAt",
+          prr."completedAt",
+          prr."createdAt",
+          prr."updatedAt",
+          COALESCE(d."name", u."departmentName", 'Unassigned') AS "departmentName",
+          u."position",
+          u."phoneNumber"
+        FROM "password_reset_requests" prr
+        LEFT JOIN "users" u ON u."id" = prr."userId"
+        LEFT JOIN "departments" d ON d."id" = u."departmentId"
+        WHERE prr."tenantId" = ${tenantId}
+          AND prr."userRole"::text = 'EMPLOYEE'
+        ORDER BY
+          CASE WHEN prr."status"::text = 'PENDING' THEN 0
+               WHEN prr."status"::text = 'APPROVED' THEN 1
+               WHEN prr."status"::text = 'COMPLETED' THEN 2
+               WHEN prr."status"::text = 'REJECTED' THEN 3
+               ELSE 4
+          END ASC,
+          prr."createdAt" DESC
+        LIMIT 200
+      `,
+    ]);
 
     const requests = allEmployeeRows;
     const employees = allEmployeeRows.filter((row) => row.approvalStatus === 'APPROVED');
@@ -107,7 +191,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       pendingCount,
+      pendingRegistrationCount,
+      pendingPasswordResetCount,
       requests,
+      passwordResetRequests,
       employees,
     });
   } catch (error: unknown) {

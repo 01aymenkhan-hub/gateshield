@@ -9,6 +9,12 @@ import {
   hashOperatorQrToken,
   encryptOperatorQrToken,
 } from '@/lib/operatorQr';
+import {
+  ensurePasswordResetSchema,
+  expireStalePasswordResetRequests,
+  getTenantId,
+  PasswordResetStatusType,
+} from '@/lib/passwordReset';
 
 export interface AdminOperatorRow {
   id: string;
@@ -55,50 +61,125 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const summaryOnly = searchParams.get('summaryOnly') === 'true';
 
-    const countRows = await prisma.$queryRaw<Array<{ pendingCount: number }>>`
-      SELECT COUNT(*)::int AS "pendingCount"
-      FROM "users"
-      WHERE "role"::text = 'OPERATOR'
-        AND COALESCE("approvalStatus"::text, 'APPROVED') = 'PENDING'
-    `;
-    const pendingCount = countRows[0]?.pendingCount ?? 0;
+    await ensurePasswordResetSchema();
+    await expireStalePasswordResetRequests();
+    const tenantId = getTenantId();
+
+    const [regCountRows, pwdCountRows] = await Promise.all([
+      prisma.$queryRaw<Array<{ pendingCount: number }>>`
+        SELECT COUNT(*)::int AS "pendingCount"
+        FROM "users"
+        WHERE "role"::text = 'OPERATOR'
+          AND COALESCE("approvalStatus"::text, 'APPROVED') = 'PENDING'
+      `,
+      prisma.$queryRaw<Array<{ pendingCount: number }>>`
+        SELECT COUNT(*)::int AS "pendingCount"
+        FROM "password_reset_requests"
+        WHERE "tenantId" = ${tenantId}
+          AND "userRole"::text = 'OPERATOR'
+          AND "status"::text = 'PENDING'
+      `,
+    ]);
+
+    const pendingRegistrationCount = regCountRows[0]?.pendingCount ?? 0;
+    const pendingPasswordResetCount = pwdCountRows[0]?.pendingCount ?? 0;
+    const pendingCount = pendingRegistrationCount + pendingPasswordResetCount;
 
     if (summaryOnly) {
       return NextResponse.json({
         success: true,
         pendingCount,
+        pendingRegistrationCount,
+        pendingPasswordResetCount,
       });
     }
 
-    const allOperatorRows = await prisma.$queryRaw<AdminOperatorRow[]>`
-      SELECT
-        u."id",
-        u."name",
-        u."email",
-        u."role"::text AS "role",
-        u."active",
-        COALESCE(u."approvalStatus"::text, 'APPROVED') AS "approvalStatus",
-        u."phoneNumber",
-        u."position",
-        u."operatorNumber",
-        u."qrLoginHash",
-        u."qrLoginCreatedAt",
-        u."qrLoginRevokedAt",
-        u."approvedAt",
-        u."approvedById",
-        u."rejectedAt",
-        u."rejectionReason",
-        u."createdAt",
-        u."updatedAt"
-      FROM "users" u
-      WHERE u."role"::text IN ('ADMIN', 'OPERATOR')
-      ORDER BY
-        CASE WHEN COALESCE(u."approvalStatus"::text, 'APPROVED') = 'PENDING' THEN 0
-             WHEN COALESCE(u."approvalStatus"::text, 'APPROVED') = 'REJECTED' THEN 1
-             ELSE 2
-        END ASC,
-        u."createdAt" DESC
-    `;
+    const [allOperatorRows, passwordResetRequests] = await Promise.all([
+      prisma.$queryRaw<AdminOperatorRow[]>`
+        SELECT
+          u."id",
+          u."name",
+          u."email",
+          u."role"::text AS "role",
+          u."active",
+          COALESCE(u."approvalStatus"::text, 'APPROVED') AS "approvalStatus",
+          u."phoneNumber",
+          u."position",
+          u."operatorNumber",
+          u."qrLoginHash",
+          u."qrLoginCreatedAt",
+          u."qrLoginRevokedAt",
+          u."approvedAt",
+          u."approvedById",
+          u."rejectedAt",
+          u."rejectionReason",
+          u."createdAt",
+          u."updatedAt"
+        FROM "users" u
+        WHERE u."role"::text IN ('ADMIN', 'OPERATOR')
+        ORDER BY
+          CASE WHEN COALESCE(u."approvalStatus"::text, 'APPROVED') = 'PENDING' THEN 0
+               WHEN COALESCE(u."approvalStatus"::text, 'APPROVED') = 'REJECTED' THEN 1
+               ELSE 2
+          END ASC,
+          u."createdAt" DESC
+      `,
+      prisma.$queryRaw<
+        Array<{
+          id: string;
+          userId: string;
+          userEmail: string;
+          userName: string;
+          userRole: 'OPERATOR';
+          status: PasswordResetStatusType;
+          reviewedById: string | null;
+          reviewedByName: string | null;
+          approvedAt: Date | null;
+          rejectedAt: Date | null;
+          rejectionReason: string | null;
+          expiresAt: Date | null;
+          usedAt: Date | null;
+          completedAt: Date | null;
+          createdAt: Date;
+          updatedAt: Date;
+          phoneNumber: string | null;
+          operatorNumber: string | null;
+        }>
+      >`
+        SELECT
+          prr."id",
+          prr."userId",
+          prr."userEmail",
+          prr."userName",
+          prr."userRole"::text AS "userRole",
+          prr."status"::text AS "status",
+          prr."reviewedById",
+          prr."reviewedByName",
+          prr."approvedAt",
+          prr."rejectedAt",
+          prr."rejectionReason",
+          prr."expiresAt",
+          prr."usedAt",
+          prr."completedAt",
+          prr."createdAt",
+          prr."updatedAt",
+          u."phoneNumber",
+          u."operatorNumber"
+        FROM "password_reset_requests" prr
+        LEFT JOIN "users" u ON u."id" = prr."userId"
+        WHERE prr."tenantId" = ${tenantId}
+          AND prr."userRole"::text = 'OPERATOR'
+        ORDER BY
+          CASE WHEN prr."status"::text = 'PENDING' THEN 0
+               WHEN prr."status"::text = 'APPROVED' THEN 1
+               WHEN prr."status"::text = 'COMPLETED' THEN 2
+               WHEN prr."status"::text = 'REJECTED' THEN 3
+               ELSE 4
+          END ASC,
+          prr."createdAt" DESC
+        LIMIT 200
+      `,
+    ]);
 
     // Fetch gate assignments for all these users
     const allGateAccess = await prisma.userGateAccess.findMany({
@@ -135,11 +216,20 @@ export async function GET(request: NextRequest) {
     const operators = enrichedRows.filter((row) => row.approvalStatus === 'APPROVED');
     const requests = enrichedRows.filter((row) => row.role === 'OPERATOR');
 
+    const enrichedPasswordResetRequests = passwordResetRequests.map((prr) => ({
+      ...prr,
+      operatorNumber:
+        prr.operatorNumber || `OP-${prr.userId.slice(-6).toUpperCase()}`,
+    }));
+
     return NextResponse.json({
       success: true,
       pendingCount,
+      pendingRegistrationCount,
+      pendingPasswordResetCount,
       operators,
       requests,
+      passwordResetRequests: enrichedPasswordResetRequests,
     });
   } catch (error: unknown) {
     console.error('[Admin Operators GET] Error:', error);

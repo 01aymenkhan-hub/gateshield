@@ -13,6 +13,7 @@ interface LayoutContextType {
   toggleDesktopSidebar: () => void;
   pendingEmployeeCount: number;
   pendingOperatorCount: number;
+  pendingPasswordResetCount: number;
   refreshPendingCounts: () => Promise<void>;
 }
 
@@ -26,6 +27,7 @@ const LayoutContext = createContext<LayoutContextType>({
   toggleDesktopSidebar: () => {},
   pendingEmployeeCount: 0,
   pendingOperatorCount: 0,
+  pendingPasswordResetCount: 0,
   refreshPendingCounts: async () => {},
 });
 
@@ -35,15 +37,17 @@ export function LayoutProvider({ children }: { children: React.ReactNode }) {
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
   const [pendingEmployeeCount, setPendingEmployeeCount] = useState(0);
   const [pendingOperatorCount, setPendingOperatorCount] = useState(0);
+  const [pendingPasswordResetCount, setPendingPasswordResetCount] = useState(0);
   const badgeReqInFlightRef = useRef(false);
 
   const refreshPendingCounts = useCallback(async () => {
     if (user?.role !== 'ADMIN' || badgeReqInFlightRef.current) return;
     badgeReqInFlightRef.current = true;
     try {
-      const [empRes, opRes] = await Promise.all([
+      const [empRes, opRes, pwdRes] = await Promise.all([
         fetch('/api/admin/employees?summaryOnly=true', { cache: 'no-store' }),
         fetch('/api/admin/operators?summaryOnly=true', { cache: 'no-store' }),
+        fetch('/api/admin/password-resets?summaryOnly=true', { cache: 'no-store' }),
       ]);
       if (empRes.ok) {
         const data = await empRes.json();
@@ -57,6 +61,12 @@ export function LayoutProvider({ children }: { children: React.ReactNode }) {
           setPendingOperatorCount(opData.pendingCount);
         }
       }
+      if (pwdRes.ok) {
+        const pwdData = await pwdRes.json();
+        if (typeof pwdData.pendingCount === 'number') {
+          setPendingPasswordResetCount(pwdData.pendingCount);
+        }
+      }
     } catch {
       // Ignore transient network errors
     } finally {
@@ -68,6 +78,7 @@ export function LayoutProvider({ children }: { children: React.ReactNode }) {
     if (user?.role !== 'ADMIN') {
       setPendingEmployeeCount(0);
       setPendingOperatorCount(0);
+      setPendingPasswordResetCount(0);
       return;
     }
 
@@ -91,6 +102,7 @@ export function LayoutProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener('gk:refresh-employee-badge', handleImmediateRefresh);
     window.addEventListener('gk:refresh-operator-badge', handleImmediateRefresh);
+    window.addEventListener('gk:refresh-password-reset-badge', handleImmediateRefresh);
     window.addEventListener('focus', handleImmediateRefresh);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
@@ -99,6 +111,7 @@ export function LayoutProvider({ children }: { children: React.ReactNode }) {
       clearInterval(interval);
       window.removeEventListener('gk:refresh-employee-badge', handleImmediateRefresh);
       window.removeEventListener('gk:refresh-operator-badge', handleImmediateRefresh);
+      window.removeEventListener('gk:refresh-password-reset-badge', handleImmediateRefresh);
       window.removeEventListener('focus', handleImmediateRefresh);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -150,6 +163,7 @@ export function LayoutProvider({ children }: { children: React.ReactNode }) {
         toggleDesktopSidebar,
         pendingEmployeeCount,
         pendingOperatorCount,
+        pendingPasswordResetCount,
         refreshPendingCounts,
       }}
     >
