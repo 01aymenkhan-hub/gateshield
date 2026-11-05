@@ -91,6 +91,7 @@ export function generateToken(user: AuthUser): string {
       name: user.name,
       role: user.role,
       gateIds: user.gateIds || [],
+      issuedAtMs: Date.now(),
     },
     JWT_SECRET,
     { expiresIn: '7d' }
@@ -110,15 +111,16 @@ export function generateEmployeeToken(user: {
       name: user.name,
       role: 'EMPLOYEE',
       purpose: user.purpose,
+      issuedAtMs: Date.now(),
     },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
 }
 
-export function verifyToken(token: string): (AuthUser & { iat?: number }) | null {
+export function verifyToken(token: string): (AuthUser & { iat?: number; issuedAtMs?: number }) | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as AuthUser & { iat?: number };
+    return jwt.verify(token, JWT_SECRET) as AuthUser & { iat?: number; issuedAtMs?: number };
   } catch {
     return null;
   }
@@ -126,7 +128,7 @@ export function verifyToken(token: string): (AuthUser & { iat?: number }) | null
 
 export function verifyEmployeeToken(
   token: string
-): { id: string; email: string; name: string; role: 'EMPLOYEE'; purpose?: string; iat?: number } | null {
+): { id: string; email: string; name: string; role: 'EMPLOYEE'; purpose?: string; iat?: number; issuedAtMs?: number } | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {
       id: string;
@@ -135,6 +137,7 @@ export function verifyEmployeeToken(
       role: string;
       purpose?: string;
       iat?: number;
+      issuedAtMs?: number;
     };
     if (!decoded || !decoded.id || decoded.role !== 'EMPLOYEE') return null;
     return {
@@ -144,6 +147,7 @@ export function verifyEmployeeToken(
       role: 'EMPLOYEE',
       purpose: decoded.purpose,
       iat: decoded.iat,
+      issuedAtMs: decoded.issuedAtMs,
     };
   } catch {
     return null;
@@ -194,8 +198,7 @@ export async function getSessionUser(): Promise<AuthUser | null> {
 
     if (
       dbUser.passwordChangedAt &&
-      typeof decoded.iat === 'number' &&
-      decoded.iat * 1000 < new Date(dbUser.passwordChangedAt).getTime() - 2000
+      (decoded.issuedAtMs ?? (decoded.iat ?? 0) * 1000) < new Date(dbUser.passwordChangedAt).getTime()
     ) {
       return null;
     }
@@ -379,8 +382,7 @@ export async function getEmployeeSessionUser(): Promise<EmployeeAuthUser | null>
 
     if (
       dbUser.passwordChangedAt &&
-      typeof decoded.iat === 'number' &&
-      decoded.iat * 1000 < new Date(dbUser.passwordChangedAt).getTime() - 2000
+      (decoded.issuedAtMs ?? (decoded.iat ?? 0) * 1000) < new Date(dbUser.passwordChangedAt).getTime()
     ) {
       return null;
     }
