@@ -43,17 +43,17 @@ test('expiry configuration validates bounds',()=>{
   try {for(const [raw,want]of [['3',30],['invalid',30],['1441',30],['5',5],['60',60]]){process.env.PASSWORD_RESET_EXPIRY_MINUTES=raw;assert.equal(h.getResetExpiryMinutes(),want);}}
   finally {if(old===undefined)delete process.env.PASSWORD_RESET_EXPIRY_MINUTES;else process.env.PASSWORD_RESET_EXPIRY_MINUTES=old;}
 });
-function requestHarness(ownerToken) {
+function requestHarness(ownerToken,options={}) {
   const h=helper(),writes=[],user={id:'user-a',email:'user@example.invalid',name:'User A',role:'OPERATOR',active:true,approvalStatus:'APPROVED'};
   const active={id:'reset-a',status:'APPROVED',expiresAt:new Date(Date.now()+60000),trackerTokenHash:h.hashToken('original-owner-token')};
-  const db={$queryRaw:async sql=>sql.join('').includes('FROM "users"')?[user]:[active],$executeRaw:async(...args)=>{writes.push(args);return 1;}};
+  const db={$queryRaw:async sql=>{if(options.dbError)throw Error('synthetic DB failure');return sql.join('').includes('FROM "users"')?(options.missingUser?[]:[user]):(options.newRequest?[]:[active]);},$executeRaw:async(...args)=>{writes.push(args);return 1;}};
   const makeResponse=data=>({data,cookies:{values:{},set(name,value){this.values[name]=value;},delete(){}}});
   const route=load('src/app/api/auth/password-reset/request/route.ts',{
     'next/server':{NextResponse:{json:makeResponse}},'next/headers':{cookies:async()=>({get:()=>ownerToken?{value:ownerToken}:undefined})},
-    '@/lib/prisma':db,'@/lib/passwordReset':{...h,ensurePasswordResetSchema:async()=>{},expireStalePasswordResetRequests:async()=>{}},
+    '@/lib/prisma':db,'@/lib/passwordReset':{...h,checkPasswordResetRateLimit:()=>({allowed:!options.limited,retryAfterSeconds:30}),ensurePasswordResetSchema:async()=>{},expireStalePasswordResetRequests:async()=>{}},
     '@/lib/notifications':{createAppNotification:async()=>{}},'@/lib/audit':{logAudit:async()=>{}},'@/lib/emailService':{sendAdminPasswordResetRequestEmail:async()=>{}}
   });
-  return {route,writes,h,request:{headers:{get:()=> 'test-client'},json:async()=>({email:user.email})}};
+  return {route,writes,h,request:{headers:{get:()=> 'test-client'},json:async()=>({email:options.badEmail?'bad':user.email,portalContext:'OPERATOR'})}};
 }
 test('a second browser cannot replace the tracker of an approved reset',async()=>{
   const x=requestHarness();const res=await x.route.POST(x.request);
@@ -64,4 +64,35 @@ test('the original browser keeps its existing tracker on repeat request',async()
   const x=requestHarness('original-owner-token');const res=await x.route.POST(x.request);
   assert.equal(res.cookies.values[x.h.RESET_TRACKER_COOKIE],'original-owner-token');
   assert.equal(x.writes.length,0);
+});
+test('valid fresh request creates one record and returns an opaque tracker',async()=>{
+  const x=requestHarness(undefined,{newRequest:true}),res=await x.route.POST(x.request);
+  assert.equal(res.data.success,true);assert.equal(x.writes.length,1);assert.equal(res.cookies.values[x.h.RESET_TRACKER_COOKIE].length,64);
+});
+test('unknown email receives the same generic success and a dummy tracker',async()=>{
+  const x=requestHarness(undefined,{missingUser:true}),res=await x.route.POST(x.request);
+  assert.equal(res.data.success,true);assert.equal(res.data.status,'PENDING');assert.equal(x.writes.length,0);
+});
+test('invalid input and rate limits prevent any write',async()=>{
+  for(const option of [{badEmail:true},{limited:true},{dbError:true}]){
+    const x=requestHarness(undefined,option),res=await x.route.POST(x.request);
+    assert.ok(res.data.error);assert.equal(x.writes.length,0);
+  }
+});
+test('schema initialization is idempotent and expiry cleanup executes',async()=>{
+  const statements=[];
+  const h=load('src/lib/passwordReset.ts',{'@/lib/prisma':{$executeRawUnsafe:async sql=>{statements.push(sql);return 0;},$executeRaw:async sql=>{statements.push(sql.join(''));return 0;}}});
+  await h.ensurePasswordResetSchema();const count=statements.length;assert.ok(count>=7);
+  await h.ensurePasswordResetSchema();assert.equal(statements.length,count);
+  await h.expireStalePasswordResetRequests();assert.equal(statements.length,count+1);
+});
+test('password changes revoke a session issued one second earlier',async()=>{
+  const now=Date.now(),decoded={id:'u',email:'u@example.invalid',name:'Test',role:'OPERATOR',iat:Math.floor((now-1000)/1000)};
+  const auth=load('src/lib/auth.ts',{
+    'next/headers':{cookies:async()=>({get:()=>({value:'signed-test-token'})})},
+    './prisma':{$queryRaw:async()=>[{...decoded,active:true,approvalStatus:'APPROVED',passwordChangedAt:new Date(now)}]},
+    './passwordReset':{ensurePasswordResetSchema:async()=>{}},
+    'jsonwebtoken':{verify:()=>decoded},
+  });
+  assert.equal(await auth.getSessionUser(),null);
 });
