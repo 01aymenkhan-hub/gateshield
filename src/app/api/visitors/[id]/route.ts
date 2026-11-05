@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
-import { sanitizePersonWithDbFlags } from '@/lib/personSanitizer';
+import { sanitizePersonWithDbFlags, sanitizeVisitsWithDbFlags } from '@/lib/personSanitizer';
 
 export async function GET(
   request: NextRequest,
@@ -35,8 +35,13 @@ export async function GET(
       return NextResponse.json({ error: 'Person not found' }, { status: 404 });
     }
 
-    const activeVisit = person.visits.find((v: { status: string }) => v.status === 'CHECKED_IN') || null;
-    const sanitizedPerson = await sanitizePersonWithDbFlags(person);
+    const sanitizedVisits = await sanitizeVisitsWithDbFlags(person.visits as any);
+    const activeVisit =
+      sanitizedVisits.find((v: Record<string, any>) => v.status === 'CHECKED_IN') || null;
+    const sanitizedPerson = await sanitizePersonWithDbFlags({
+      ...person,
+      visits: sanitizedVisits,
+    });
 
     return NextResponse.json({
       success: true,

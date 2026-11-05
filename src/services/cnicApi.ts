@@ -16,6 +16,15 @@ export interface RawOcrResponse {
   results: OcrDetailItem[];
   details: OcrDetailItem[];
   parsed?: CnicData;
+  quality?: {
+    documentType: string;
+    needsReview: boolean;
+    missingFields: string[];
+    meanTextConfidence: number;
+    warnings: string[];
+    nameRecognition?: Record<string, string>;
+    nameTransliteration?: Record<string, string>;
+  };
 }
 
 // ============================================================================
@@ -55,6 +64,13 @@ export async function scanCnicMock(_imageFile: File): Promise<CnicData> {
 // Relative Next.js API route that proxies internally to FastAPI on http://127.0.0.1:8000
 const SCAN_API_ENDPOINT = "/api/scan-cnic";
 
+export class OcrApiError extends Error {
+  constructor(public readonly status: number) {
+    super(`OCR request failed (${status})`);
+    this.name = 'OcrApiError';
+  }
+}
+
 /**
  * Sends a CNIC image to the Next.js API route at POST /api/scan-cnic.
  * Next.js proxies the request internally to FastAPI (127.0.0.1:8000),
@@ -70,8 +86,7 @@ export async function scanCnicReal(imageFile: File): Promise<RawOcrResponse> {
   });
 
   if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`OCR error (${res.status}): ${errorText}`);
+    throw new OcrApiError(res.status);
   }
 
   return (await res.json()) as RawOcrResponse;

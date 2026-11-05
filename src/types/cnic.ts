@@ -13,6 +13,9 @@
 export interface CnicData {
   name: string;
   fatherName: string;
+  /** Original OCR text for reviewing English spelling suggestions. */
+  nameUrdu?: string;
+  fatherNameUrdu?: string;
   gender: "Male" | "Female" | "";
   countryOfStay?: string;
   cnic: string;

@@ -253,8 +253,11 @@ export default function OperatorLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between items-center p-4 sm:p-6 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased relative overflow-hidden transition-colors">
-      {/* Top Bar with Brand, Language Selector & Theme Toggle */}
+    <div
+      dir="ltr"
+      className="min-h-screen flex flex-col justify-between items-center p-4 sm:p-6 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased relative overflow-hidden transition-colors"
+    >
+      {/* Top Bar with Brand, Language Selector & Theme Toggle — Fixed LTR layout */}
       <div className="w-full max-w-md flex items-center justify-between z-20 pt-2">
         <div className="flex items-center">
           <GateShieldLogo variant="full" size="md" />
@@ -296,24 +299,39 @@ export default function OperatorLoginPage() {
       <div className="w-full max-w-sm sm:max-w-md my-auto relative z-10 space-y-5 py-4">
         {/* Brand Title Area */}
         <div className="text-center space-y-1.5">
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-snug">
+          <h1
+            dir="auto"
+            className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-snug"
+          >
             {screenMode === 'register'
-              ? 'Register as Operator'
+              ? t('register_as_operator_btn', 'Register as Operator')
               : screenMode === 'applicant_status'
-                ? 'Operator Request Status'
+                ? t('operator_request_status_title', 'Operator Request Status')
                 : t('operator_login_title', 'Operator Login')}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+          <p
+            dir="auto"
+            className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed"
+          >
             {screenMode === 'register'
-              ? 'Submit your operator account request for Administrator approval'
+              ? t(
+                  'register_operator_subtitle',
+                  'Submit your operator account request for Administrator approval'
+                )
               : screenMode === 'applicant_status'
-                ? 'Live status of your Operator registration request'
+                ? t(
+                    'operator_request_status_subtitle',
+                    'Live status of your Operator registration request'
+                  )
                 : loginTab === 'qr'
                   ? t(
                       'operator_login_subtitle',
                       'Scan your physical Operator Access Card to open your checkpoint dashboard'
                     )
-                  : 'Sign in using your approved Operator email and password'}
+                  : t(
+                      'operator_email_login_subtitle',
+                      'Sign in using your approved Operator email and password'
+                    )}
           </p>
         </div>
 
@@ -329,14 +347,16 @@ export default function OperatorLoginPage() {
                   : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200'
             }`}
           >
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <Clock className="w-4 h-4 shrink-0" />
-              <div className="min-w-0">
-                <p className="font-bold truncate">
+              <div className={`min-w-0 flex-1 ${language === 'ur' ? 'text-right' : 'text-left'}`}>
+                <p dir="auto" className="font-bold truncate">
                   {applicant.name} • {applicant.approvalStatus}
                 </p>
-                <p className="text-[11px] opacity-80 truncate">
-                  Click to view registration request status
+                <p dir="auto" className="text-[11px] opacity-80 truncate">
+                  {language === 'ur'
+                    ? 'رجسٹریشن درخواست کی صورتحال دیکھنے کے لیے کلک کریں'
+                    : 'Click to view registration request status'}
                 </p>
               </div>
             </div>
@@ -349,53 +369,22 @@ export default function OperatorLoginPage() {
           <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/80 text-rose-800 dark:text-rose-200 text-xs font-semibold flex items-start gap-3 shadow-xs animate-in fade-in duration-150">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
             <div className={`flex-1 ${language === 'ur' ? 'text-right' : 'text-left'}`}>
-              <p className="font-bold">{t('auth_failed_title', 'Authentication Notice')}</p>
-              <p className="text-[11px] font-normal text-rose-700 dark:text-rose-300 mt-0.5 leading-relaxed">
+              <p dir="auto" className="font-bold">
+                {t('auth_failed_title', 'Authentication Notice')}
+              </p>
+              <p
+                dir="auto"
+                className="text-[11px] font-normal text-rose-700 dark:text-rose-300 mt-0.5 leading-relaxed"
+              >
                 {formatErrorMessage(error)}
               </p>
             </div>
           </div>
         )}
 
-        {/* Login Mode Selector Tabs (Only visible in Login mode) */}
-        {screenMode === 'login' && (
-          <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-2xl bg-slate-200/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={() => {
-                setLoginTab('qr');
-                setError(null);
-              }}
-              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                loginTab === 'qr'
-                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <QrCode className="w-4 h-4" />
-              <span>Login with QR Code</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsScanning(false);
-                setLoginTab('email');
-                setError(null);
-              }}
-              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                loginTab === 'email'
-                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <Mail className="w-4 h-4" />
-              <span>Login with Email</span>
-            </button>
-          </div>
-        )}
-
         {/* Main Card Container */}
         <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-7 shadow-xl">
+          {/* Screen A — QR Code Login (Default Screen) */}
           {screenMode === 'login' && loginTab === 'qr' && (
             <>
               {isScanning ? (
@@ -420,17 +409,25 @@ export default function OperatorLoginPage() {
                   </div>
 
                   <div className="space-y-1.5 text-center">
-                    <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-snug">
+                    <h2
+                      dir="auto"
+                      className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-snug"
+                    >
                       {t('scan_your_qr_code', 'Scan Your QR Code')}
                     </h2>
                     <div className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400">
-                      <span>{t('tap_to_open_camera', 'Tap anywhere to open camera')}</span>
+                      <span dir="auto">
+                        {t('tap_to_open_camera', 'Tap anywhere to open camera')}
+                      </span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform shrink-0" />
                     </div>
                   </div>
 
                   <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800/80 w-full text-center">
-                    <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium">
+                    <p
+                      dir="auto"
+                      className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium"
+                    >
                       {t('instant_mobile_login', 'Instant mobile login • No password required')}
                     </p>
                   </div>
@@ -439,38 +436,53 @@ export default function OperatorLoginPage() {
             </>
           )}
 
+          {/* Screen B — Email/Password Login */}
           {screenMode === 'login' && loginTab === 'email' && (
             <form onSubmit={handleEmailLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Operator Email <span className="text-rose-500">*</span>
+                <label
+                  dir="auto"
+                  className={`block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 ${
+                    language === 'ur' ? 'text-right' : 'text-left'
+                  }`}
+                >
+                  {t('operator_email_label', 'Operator Email')}{' '}
+                  <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
+                    dir="ltr"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="operator@company.com"
-                    className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-left"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Password <span className="text-rose-500">*</span>
+                <label
+                  dir="auto"
+                  className={`block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 ${
+                    language === 'ur' ? 'text-right' : 'text-left'
+                  }`}
+                >
+                  {t('operator_password_label', 'Password')}{' '}
+                  <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="password"
+                    dir="ltr"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    placeholder={t('operator_password_placeholder', 'Enter your password')}
+                    className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-left"
                   />
                 </div>
               </div>
@@ -483,19 +495,21 @@ export default function OperatorLoginPage() {
                 {isEmailSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Signing in...</span>
+                    <span dir="auto">{t('signing_in_btn', 'Signing in...')}</span>
                   </>
                 ) : (
                   <>
-                    <span>Login to Operator Dashboard</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <span dir="auto">
+                      {t('login_to_operator_dashboard_btn', 'Login to Operator Dashboard')}
+                    </span>
+                    <ArrowRight className="w-4 h-4 shrink-0" />
                   </>
                 )}
               </button>
 
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 text-center space-y-2">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Don&apos;t have an Operator account yet?
+                <p dir="auto" className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('no_operator_account_prompt', "Don't have an Operator account yet?")}
                 </p>
                 <button
                   type="button"
@@ -505,8 +519,8 @@ export default function OperatorLoginPage() {
                   }}
                   className="w-full py-2.5 px-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>Register as Operator</span>
+                  <UserPlus className="w-3.5 h-3.5 shrink-0" />
+                  <span dir="auto">{t('register_as_operator_btn', 'Register as Operator')}</span>
                 </button>
               </div>
             </form>
@@ -515,81 +529,117 @@ export default function OperatorLoginPage() {
           {screenMode === 'register' && (
             <form onSubmit={handleOperatorRegister} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Operator Name <span className="text-rose-500">*</span>
+                <label
+                  dir="auto"
+                  className={`block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 ${
+                    language === 'ur' ? 'text-right' : 'text-left'
+                  }`}
+                >
+                  {t('operator_name_label', 'Operator Name')}{' '}
+                  <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
+                    dir="auto"
                     required
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
-                    placeholder="Full Name (e.g. Officer Bilal)"
-                    className="w-full pl-10 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    placeholder={t('operator_name_placeholder', 'Full Name (e.g. Officer Bilal)')}
+                    className={`w-full pl-10 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 ${
+                      language === 'ur' ? 'text-right' : 'text-left'
+                    }`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Email Address <span className="text-rose-500">*</span>
+                <label
+                  dir="auto"
+                  className={`block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 ${
+                    language === 'ur' ? 'text-right' : 'text-left'
+                  }`}
+                >
+                  {t('email_address_label', 'Email Address')}{' '}
+                  <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
+                    dir="ltr"
                     required
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
                     placeholder="bilal@company.com"
-                    className="w-full pl-10 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full pl-10 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Phone Number <span className="text-rose-500">*</span>
+                <label
+                  dir="auto"
+                  className={`block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 ${
+                    language === 'ur' ? 'text-right' : 'text-left'
+                  }`}
+                >
+                  {t('emp_phone', 'Phone Number')} <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="tel"
+                    dir="ltr"
                     required
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value)}
                     placeholder="0300-1234567"
-                    className="w-full pl-10 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full pl-10 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Password <span className="text-rose-500">*</span>
+                  <label
+                    dir="auto"
+                    className={`block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 ${
+                      language === 'ur' ? 'text-right' : 'text-left'
+                    }`}
+                  >
+                    {t('operator_password_label', 'Password')}{' '}
+                    <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="password"
+                    dir="ltr"
                     required
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="Min 6 chars"
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    placeholder={t('min_6_chars_placeholder', 'Min 6 chars')}
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Confirm Password <span className="text-rose-500">*</span>
+                  <label
+                    dir="auto"
+                    className={`block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 ${
+                      language === 'ur' ? 'text-right' : 'text-left'
+                    }`}
+                  >
+                    {t('confirm_password_label', 'Confirm Password')}{' '}
+                    <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="password"
+                    dir="ltr"
                     required
                     value={regConfirmPassword}
                     onChange={(e) => setRegConfirmPassword(e.target.value)}
-                    placeholder="Re-enter password"
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    placeholder={t('reenter_password_placeholder', 'Re-enter password')}
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-left"
                   />
                 </div>
               </div>
@@ -602,12 +652,14 @@ export default function OperatorLoginPage() {
                 {isRegistering ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Submitting Request...</span>
+                    <span dir="auto">{t('submitting_request_btn', 'Submitting Request...')}</span>
                   </>
                 ) : (
                   <>
-                    <UserPlus className="w-4 h-4" />
-                    <span>Submit Registration Request</span>
+                    <UserPlus className="w-4 h-4 shrink-0" />
+                    <span dir="auto">
+                      {t('submit_registration_request_btn', 'Submit Registration Request')}
+                    </span>
                   </>
                 )}
               </button>
@@ -620,8 +672,8 @@ export default function OperatorLoginPage() {
                 }}
                 className="w-full py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Login</span>
+                <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+                <span dir="auto">{t('back_to_login_btn', 'Back to Login')}</span>
               </button>
             </form>
           )}
@@ -634,16 +686,37 @@ export default function OperatorLoginPage() {
                     <Clock className="w-8 h-8 animate-pulse" />
                   </div>
                   <div className="space-y-1">
-                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300">
-                      Pending Admin Approval
+                    <span
+                      dir="auto"
+                      className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300"
+                    >
+                      {language === 'ur' ? 'ایڈمن کی منظوری زیر التواء' : 'Pending Admin Approval'}
                     </span>
-                    <h3 className="text-base font-black text-slate-900 dark:text-white pt-1">
-                      Request Submitted Successfully
+                    <h3
+                      dir="auto"
+                      className="text-base font-black text-slate-900 dark:text-white pt-1"
+                    >
+                      {language === 'ur'
+                        ? 'درخواست کامیابی سے جمع ہو گئی'
+                        : 'Request Submitted Successfully'}
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Your operator registration request for <strong>{applicant.email}</strong> has
-                      been sent to the Administrator. This screen updates automatically once
-                      reviewed.
+                    <p
+                      dir="auto"
+                      className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed"
+                    >
+                      {language === 'ur' ? (
+                        <>
+                          آپ کے آپریٹر اکاؤنٹ (<strong>{applicant.email}</strong>) کی درخواست ایڈمن
+                          کو بھیج دی گئی ہے۔ منظوری کے بعد یہ اسکرین خودکار طور پر اپ ڈیٹ ہو جائے
+                          گی۔
+                        </>
+                      ) : (
+                        <>
+                          Your operator registration request for <strong>{applicant.email}</strong>{' '}
+                          has been sent to the Administrator. This screen updates automatically
+                          once reviewed.
+                        </>
+                      )}
                     </p>
                   </div>
                 </>
@@ -655,15 +728,27 @@ export default function OperatorLoginPage() {
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <div className="space-y-1">
-                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
-                      Approved
+                    <span
+                      dir="auto"
+                      className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300"
+                    >
+                      {language === 'ur' ? 'منظور شدہ' : 'Approved'}
                     </span>
-                    <h3 className="text-base font-black text-slate-900 dark:text-white pt-1">
-                      Operator Account Approved!
+                    <h3
+                      dir="auto"
+                      className="text-base font-black text-slate-900 dark:text-white pt-1"
+                    >
+                      {language === 'ur'
+                        ? 'آپریٹر اکاؤنٹ منظور ہو گیا!'
+                        : 'Operator Account Approved!'}
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Your account ({applicant.email}) has been approved by the Administrator. You
-                      can now sign in with your email and password or QR card.
+                    <p
+                      dir="auto"
+                      className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed"
+                    >
+                      {language === 'ur'
+                        ? `آپ کا اکاؤنٹ (${applicant.email}) منظور کر لیا گیا ہے۔ اب آپ اپنے ای میل اور پاس ورڈ یا کیو آر کارڈ سے لاگ ان کر سکتے ہیں۔`
+                        : `Your account (${applicant.email}) has been approved by the Administrator. You can now sign in with your email and password or QR card.`}
                     </p>
                   </div>
                   <button
@@ -673,9 +758,13 @@ export default function OperatorLoginPage() {
                       setLoginTab('email');
                       setScreenMode('login');
                     }}
-                    className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md transition-all cursor-pointer"
+                    className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-xs font-extrabold shadow-md transition-all cursor-pointer"
                   >
-                    Proceed to Email Login
+                    <span dir="auto">
+                      {language === 'ur'
+                        ? 'ای میل لاگ ان پر جائیں'
+                        : 'Proceed to Email Login'}
+                    </span>
                   </button>
                 </>
               )}
@@ -686,15 +775,28 @@ export default function OperatorLoginPage() {
                     <XCircle className="w-8 h-8" />
                   </div>
                   <div className="space-y-1">
-                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300">
-                      Request Declined
+                    <span
+                      dir="auto"
+                      className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300"
+                    >
+                      {language === 'ur' ? 'درخواست مسترد' : 'Request Declined'}
                     </span>
-                    <h3 className="text-base font-black text-slate-900 dark:text-white pt-1">
-                      Registration Request Declined
+                    <h3
+                      dir="auto"
+                      className="text-base font-black text-slate-900 dark:text-white pt-1"
+                    >
+                      {language === 'ur'
+                        ? 'رجسٹریشن کی درخواست مسترد کر دی گئی'
+                        : 'Registration Request Declined'}
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    <p
+                      dir="auto"
+                      className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed"
+                    >
                       {applicant.rejectionReason ||
-                        'Your operator registration request was declined by the Administrator.'}
+                        (language === 'ur'
+                          ? 'ایڈمن کی جانب سے آپ کی آپریٹر رجسٹریشن کی درخواست مسترد کر دی گئی ہے۔'
+                          : 'Your operator registration request was declined by the Administrator.')}
                     </p>
                   </div>
                 </>
@@ -706,24 +808,56 @@ export default function OperatorLoginPage() {
                   onClick={() => setScreenMode('login')}
                   className="flex-1 py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                 >
-                  Back to Login
+                  <span dir="auto">{t('back_to_login_btn', 'Back to Login')}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleClearApplicantSession()}
                   className="py-2 px-3 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
-                  Clear Status
+                  <span dir="auto">{language === 'ur' ? 'حیثیت صاف کریں' : 'Clear Status'}</span>
                 </button>
               </div>
             </div>
           )}
         </div>
+
+        {/* Outside and directly below the QR scanner / Email login box: Simple clickable text link */}
+        {screenMode === 'login' && (
+          <div className="text-center pt-1">
+            {loginTab === 'qr' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsScanning(false);
+                  setLoginTab('email');
+                  setError(null);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl text-xs sm:text-sm font-extrabold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline underline-offset-4 transition-colors cursor-pointer"
+              >
+                <Mail className="w-4 h-4 shrink-0" />
+                <span dir="auto">{t('login_with_email_link', 'Login with Email')}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginTab('qr');
+                  setError(null);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl text-xs sm:text-sm font-extrabold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline underline-offset-4 transition-colors cursor-pointer"
+              >
+                <QrCode className="w-4 h-4 shrink-0" />
+                <span dir="auto">{t('login_with_qr_link', 'Login with QR Code')}</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Footer */}
       <div className="w-full max-w-md text-center py-2 z-10">
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+        <p dir="auto" className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
           {t('login_footer', 'GateShield • Checkpoint Access Control')}
         </p>
       </div>

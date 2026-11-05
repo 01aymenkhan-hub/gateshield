@@ -32,7 +32,9 @@ interface GateOption {
 
 interface VipGuestManagementViewProps {
   isModal?: boolean;
+  onlyFormModal?: boolean;
   onCloseModal?: () => void;
+  onSuccessSave?: (message: string) => void;
 }
 
 function formatCnicInput(raw: string): string {
@@ -61,7 +63,9 @@ function toDateTimeLocalValue(dt: Date | string): string {
 
 export default function VipGuestManagementView({
   isModal = false,
+  onlyFormModal = false,
   onCloseModal,
+  onSuccessSave,
 }: VipGuestManagementViewProps) {
   const { user } = useAuth();
   const { language, t } = useLanguage();
@@ -83,7 +87,7 @@ export default function VipGuestManagementView({
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   // Admin Add / Edit VIP Guest Modal state
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(onlyFormModal);
   const [editingVip, setEditingVip] = useState<VipGuestRow | null>(null);
   const [vipName, setVipName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -123,12 +127,16 @@ export default function VipGuestManagementView({
   }, []);
 
   useEffect(() => {
+    if (onlyFormModal) {
+      setLoading(false);
+      return;
+    }
     void fetchVipGuests();
     const interval = setInterval(() => {
       void fetchVipGuests();
     }, 5000);
     return () => clearInterval(interval);
-  }, [fetchVipGuests]);
+  }, [fetchVipGuests, onlyFormModal]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -228,13 +236,21 @@ export default function VipGuestManagementView({
         return;
       }
 
-      setIsFormModalOpen(false);
-      setActionSuccess(
+      const successMsg =
         data.message ||
-          (isUrdu
-            ? `وی آئی پی مہمان ${vipName.trim()} محفوظ کر دیا گیا۔`
-            : `VIP Guest ${vipName.trim()} saved and notified to all Operator gates.`)
-      );
+        (isUrdu
+          ? `وی آئی پی مہمان ${vipName.trim()} محفوظ کر دیا گیا۔`
+          : `VIP Guest ${vipName.trim()} saved and notified to all Operator gates.`);
+
+      setIsFormModalOpen(false);
+      setActionSuccess(successMsg);
+      if (onSuccessSave) {
+        onSuccessSave(successMsg);
+      }
+      if (onlyFormModal) {
+        onCloseModal?.();
+        return;
+      }
       await fetchVipGuests();
     } catch {
       setFormError(
@@ -331,24 +347,36 @@ export default function VipGuestManagementView({
   };
 
   return (
-    <div dir={isUrdu ? 'rtl' : 'ltr'} className="space-y-4">
+    <div dir="ltr" className={onlyFormModal ? '' : 'space-y-4'}>
+      {!onlyFormModal && (
+        <>
       {/* Top Header — Clean Heading: VIP Guest List (No unnecessary explanatory subtext) */}
-      <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-xs flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-xs flex items-center justify-between gap-2.5">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20 shrink-0">
             <Crown className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
+          <div
+            className={`flex items-center gap-2.5 flex-wrap min-w-0 flex-1 ${
+              isUrdu ? 'justify-end text-right' : 'justify-start text-left'
+            }`}
+          >
+            <h1
+              dir="auto"
+              className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white truncate"
+            >
               {t('vip_guest_list_title', 'VIP Guest List')}
             </h1>
-            <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+            <span
+              dir="auto"
+              className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+            >
               {isUrdu ? 'وزیٹر کارڈ درکار نہیں' : 'No Visitor Card Required'}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {gates.length > 0 && (
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs">
               <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -374,10 +402,10 @@ export default function VipGuestManagementView({
             <button
               type="button"
               onClick={openAddVipModal}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-md shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer transition-all"
+              className="px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-md shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer transition-all"
             >
-              <Plus className="w-4 h-4" />
-              <span>{t('add_vip_guest_btn', '+ Add VIP Guest')}</span>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>{t('add_vip_guest_btn', 'Add VIP Guest')}</span>
             </button>
           )}
 
@@ -385,10 +413,11 @@ export default function VipGuestManagementView({
             <button
               type="button"
               onClick={onCloseModal}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-300 cursor-pointer shrink-0 transition-colors"
               title={t('close', 'Close')}
+              aria-label={t('close', 'Close')}
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           )}
         </div>
@@ -397,22 +426,19 @@ export default function VipGuestManagementView({
       {/* Search Bar Directly Below Heading on Mobile & Desktop */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-4 flex items-center gap-3">
         <div className="relative flex-1">
-          <Search
-            className={`w-4 h-4 text-slate-400 absolute ${
-              isUrdu ? 'right-3.5' : 'left-3.5'
-            } top-1/2 -translate-y-1/2`}
-          />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            dir="auto"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t(
               'vip_search_placeholder',
               'Search by VIP name, vehicle number, or designation...'
             )}
-            className={`w-full ${
-              isUrdu ? 'pr-10 pl-4' : 'pl-10 pr-4'
-            } py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500`}
+            className={`w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              isUrdu ? 'text-right' : 'text-left'
+            }`}
           />
         </div>
       </div>
@@ -754,22 +780,29 @@ export default function VipGuestManagementView({
           ))}
         </div>
       )}
+        </>
+      )}
 
       {/* ================================================================= */}
       {/* ADMIN-ONLY ADD / EDIT VIP GUEST MODAL (Standard GateShield Blue)  */}
       {/* ================================================================= */}
       {isAdmin && isFormModalOpen && (
         <div
-          dir={isUrdu ? 'rtl' : 'ltr'}
+          dir="ltr"
           className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
         >
           <div className="w-full max-w-xl rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden my-auto animate-in fade-in-0 zoom-in-95">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
                   <Crown className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-base sm:text-lg font-extrabold">
+                <h3
+                  dir="auto"
+                  className={`text-base sm:text-lg font-extrabold flex-1 truncate ${
+                    isUrdu ? 'text-right' : 'text-left'
+                  }`}
+                >
                   {editingVip
                     ? t('edit_vip_guest_title', 'Edit VIP Guest')
                     : t('new_vip_guest_title', 'Add VIP Guest')}
@@ -777,8 +810,11 @@ export default function VipGuestManagementView({
               </div>
               <button
                 type="button"
-                onClick={() => setIsFormModalOpen(false)}
-                className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white cursor-pointer"
+                onClick={() => {
+                  setIsFormModalOpen(false);
+                  if (onlyFormModal) onCloseModal?.();
+                }}
+                className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white cursor-pointer shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -788,7 +824,9 @@ export default function VipGuestManagementView({
               {formError && (
                 <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <span>{formError}</span>
+                  <span dir="auto" className={`flex-1 ${isUrdu ? 'text-right' : 'text-left'}`}>
+                    {formError}
+                  </span>
                 </div>
               )}
 
@@ -800,6 +838,7 @@ export default function VipGuestManagementView({
                   </label>
                   <input
                     type="text"
+                    dir="auto"
                     required
                     value={vipName}
                     onChange={(e) => setVipName(e.target.value)}
@@ -815,6 +854,7 @@ export default function VipGuestManagementView({
                   </label>
                   <input
                     type="text"
+                    dir="auto"
                     required
                     value={designation}
                     onChange={(e) => setDesignation(e.target.value)}
@@ -831,20 +871,15 @@ export default function VipGuestManagementView({
                     {t('vip_vehicle_label', 'Vehicle Number')} *
                   </label>
                   <div className="relative">
-                    <Car
-                      className={`w-4 h-4 text-slate-400 absolute ${
-                        isUrdu ? 'right-3.5' : 'left-3.5'
-                      } top-1/2 -translate-y-1/2`}
-                    />
+                    <Car className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
+                      dir="ltr"
                       required
                       value={vehicleNumber}
                       onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
                       placeholder="LEB-2026"
-                      className={`w-full ${
-                        isUrdu ? 'pr-10 pl-3.5' : 'pl-10 pr-3.5'
-                      } py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono font-bold uppercase text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono font-bold uppercase text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -855,20 +890,15 @@ export default function VipGuestManagementView({
                     {t('emp_phone', 'Phone Number')} *
                   </label>
                   <div className="relative">
-                    <Phone
-                      className={`w-4 h-4 text-slate-400 absolute ${
-                        isUrdu ? 'right-3.5' : 'left-3.5'
-                      } top-1/2 -translate-y-1/2`}
-                    />
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="tel"
+                      dir="ltr"
                       required
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="03001234567"
-                      className={`w-full ${
-                        isUrdu ? 'pr-10 pl-3.5' : 'pl-10 pr-3.5'
-                      } py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -967,7 +997,10 @@ export default function VipGuestManagementView({
               <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setIsFormModalOpen(false)}
+                  onClick={() => {
+                    setIsFormModalOpen(false);
+                    if (onlyFormModal) onCloseModal?.();
+                  }}
                   className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer"
                 >
                   {t('cancel_btn', 'Cancel')}

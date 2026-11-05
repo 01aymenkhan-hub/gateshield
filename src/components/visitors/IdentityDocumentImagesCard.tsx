@@ -6,22 +6,32 @@ import { useLanguage } from '@/context/LanguageContext';
 
 export interface IdentityDocumentPerson {
   id: string;
+  category?: string | null;
+  company?: string | null;
   fullName?: string | null;
   cnicNumber?: string | null;
   dlsNumber?: string | null;
   hasCnicImage?: boolean;
   hasDlsImage?: boolean;
+  hasDeliveryDocImage?: boolean;
+  hasOutgoingDocImage?: boolean;
+  latestDeliveryVisitId?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  visits?: Array<Record<string, any>>;
 }
 
 interface IdentityDocumentImagesCardProps {
   person: IdentityDocumentPerson;
+  visitId?: string | null;
   compact?: boolean;
 }
 
 interface DocumentSlot {
-  type: 'cnic' | 'dls';
+  type: 'cnic' | 'dls' | 'delivery_doc' | 'delivery_in' | 'delivery_out';
   label: string;
   docNumber: string | null | undefined;
+  subLabel?: string | null;
+  visitId?: string | null;
   hasImage: boolean;
 }
 
@@ -42,8 +52,8 @@ function SingleDocumentImagePanel({
   const [cacheBuster, setCacheBuster] = useState<number>(0);
 
   const imageUrl = `/api/visitors/${encodeURIComponent(personId)}/document-image?type=${slot.type}${
-    cacheBuster ? `&v=${cacheBuster}` : ''
-  }`;
+    slot.visitId ? `&visitId=${encodeURIComponent(slot.visitId)}` : ''
+  }${cacheBuster ? `&v=${cacheBuster}` : ''}`;
 
   const handleRetry = () => {
     setHasError(false);
@@ -69,6 +79,11 @@ function SingleDocumentImagePanel({
             {slot.docNumber && (
               <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">
                 {slot.docNumber}
+              </p>
+            )}
+            {slot.subLabel && (
+              <p className="text-[10px] font-medium text-blue-600 dark:text-blue-400 truncate mt-0.5">
+                {slot.subLabel}
               </p>
             )}
           </div>
@@ -149,6 +164,7 @@ function SingleDocumentImagePanel({
 
 export default function IdentityDocumentImagesCard({
   person,
+  visitId = null,
   compact = false,
 }: IdentityDocumentImagesCardProps) {
   const { t } = useLanguage();
@@ -162,8 +178,21 @@ export default function IdentityDocumentImagesCard({
 
   const hasCnicImage = Boolean(person.hasCnicImage);
   const hasDlsImage = Boolean(person.hasDlsImage);
+  const latestVisit =
+    (visitId && Array.isArray(person.visits)
+      ? person.visits.find((v) => v.id === visitId)
+      : null) ||
+    (Array.isArray(person.visits) && person.visits.length > 0 ? person.visits[0] : null);
+
+  const resolvedVisitId = visitId || latestVisit?.id || person.latestDeliveryVisitId || null;
+  const hasIncomingDoc =
+    Boolean(latestVisit?.hasIncomingDoc) || Boolean(person.hasDeliveryDocImage);
+  const hasOutgoingDoc =
+    Boolean(latestVisit?.hasOutgoingDoc) || Boolean(person.hasOutgoingDocImage);
+
   const hasCnicRecord = hasCnicImage || Boolean(person.cnicNumber);
   const hasDlsRecord = hasDlsImage || Boolean(person.dlsNumber);
+  const isDelivery = String(person.category || '').toUpperCase() === 'DELIVERY';
 
   // Determine which document slots to display:
   // - If both CNIC and DLS images exist (or both document numbers/images exist and at least one has an image), show the applicable slots.
@@ -228,6 +257,42 @@ export default function IdentityDocumentImagesCard({
       label: t('cnic_image_label', 'CNIC Image'),
       docNumber: person.cnicNumber,
       hasImage: false,
+    });
+  }
+
+  if (hasIncomingDoc || hasOutgoingDoc || isDelivery) {
+    const incomingTime = latestVisit?.incomingDocCapturedAt || latestVisit?.checkInTime;
+    const outgoingTime = latestVisit?.outgoingDocCapturedAt || latestVisit?.checkOutTime;
+    const vehicleSubtitle = latestVisit?.vehicleNo
+      ? `${person.company || latestVisit?.hostName || 'Delivery'} • ${latestVisit.vehicleNo}`
+      : person.company || latestVisit?.hostName || null;
+
+    slots.push({
+      type: 'delivery_in',
+      label: t('incoming_delivery_doc_label', 'Incoming Delivery Document (Check-in)'),
+      docNumber: vehicleSubtitle,
+      subLabel:
+        hasIncomingDoc && incomingTime
+          ? `${t('captured_at_checkin_label', 'Captured at Check-in')}: ${new Date(
+              incomingTime
+            ).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}`
+          : null,
+      visitId: resolvedVisitId,
+      hasImage: hasIncomingDoc,
+    });
+
+    slots.push({
+      type: 'delivery_out',
+      label: t('outgoing_delivery_doc_label', 'Outgoing Delivery Document (Checkout)'),
+      docNumber: vehicleSubtitle,
+      subLabel:
+        hasOutgoingDoc && outgoingTime
+          ? `${t('captured_at_checkout_label', 'Captured at Checkout')}: ${new Date(
+              outgoingTime
+            ).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}`
+          : null,
+      visitId: resolvedVisitId,
+      hasImage: hasOutgoingDoc,
     });
   }
 

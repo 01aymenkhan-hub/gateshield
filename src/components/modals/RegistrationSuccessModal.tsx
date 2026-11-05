@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Check, Printer, IdCard, UserPlus, X, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
+import { Check, Printer, IdCard, UserPlus, Plus, X, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { playSelectSound, playContinueSound } from '@/utils/interactionSound';
@@ -40,7 +40,10 @@ export default function RegistrationSuccessModal({
   if (!isOpen || !visit) return null;
 
   const person = visit.person || {};
-  const visitorCardNo = visit.visitorCardNo || 'N/A';
+  const isDelivery = String(person.category || '').toUpperCase() === 'DELIVERY';
+  const visitorCardNo = isDelivery
+    ? visit.vehicleNo || visit.visitorCardNo || 'N/A'
+    : visit.visitorCardNo || 'N/A';
 
   /* ── Preserve Original Admin Panel UI 100% Unchanged ── */
   if (isAdmin) {
@@ -82,7 +85,7 @@ export default function RegistrationSuccessModal({
 
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Visitor Card Badge #
+                {isDelivery ? 'Vehicle Number' : 'Visitor Card Badge #'}
               </span>
               <span className="text-xs font-mono font-extrabold px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                 {visitorCardNo}
@@ -100,10 +103,12 @@ export default function RegistrationSuccessModal({
 
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Visit To
+                {isDelivery ? 'Delivery Source / Company' : 'Visit To'}
               </span>
               <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                {visit.hostName} ({visit.department})
+                {isDelivery
+                  ? person.company || visit.hostName || 'N/A'
+                  : `${visit.hostName} (${visit.department})`}
               </span>
             </div>
 
@@ -187,8 +192,8 @@ export default function RegistrationSuccessModal({
               onClick={onRegisterNext}
               className="w-full py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
             >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>+ Register Next Visitor</span>
+              <Plus className="w-3.5 h-3.5 shrink-0" />
+              <span>Register Next Visitor</span>
             </button>
           </div>
         </div>
@@ -224,67 +229,83 @@ export default function RegistrationSuccessModal({
 
         {/* Key Operational Pass Highlight Box */}
         <div className="mt-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-3">
-          <div
-            className={`flex items-center justify-between gap-2 ${
-              isUr ? 'flex-row-reverse' : 'flex-row'
-            }`}
-          >
-            <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400">
+          <div className="flex items-center justify-between gap-2">
+            <span
+              dir="auto"
+              className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400"
+            >
               {t('reg_visitor_name')}
             </span>
-            <span className="text-sm font-extrabold text-slate-900 dark:text-white truncate max-w-[200px]">
+            <span
+              dir="auto"
+              className="text-sm font-extrabold text-slate-900 dark:text-white truncate max-w-[200px]"
+            >
               {person.fullName || visit.hostName || 'Registered Visitor'}
             </span>
           </div>
 
-          <div
-            className={`flex items-center justify-between gap-2 ${
-              isUr ? 'flex-row-reverse' : 'flex-row'
-            }`}
-          >
-            <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400">
-              {t('reg_card_badge_no')}
+          <div className="flex items-center justify-between gap-2">
+            <span
+              dir="auto"
+              className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400"
+            >
+              {isDelivery
+                ? t('vehicle_no_label', 'Vehicle Number')
+                : t('reg_card_badge_no')}
             </span>
-            <span className="text-sm font-mono font-extrabold px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+            <span
+              dir="ltr"
+              className="text-sm font-mono font-extrabold px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+            >
               {visitorCardNo}
             </span>
           </div>
 
-          <div
-            className={`flex items-center justify-between gap-2 ${
-              isUr ? 'flex-row-reverse' : 'flex-row'
-            }`}
-          >
-            <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400">
+          <div className="flex items-center justify-between gap-2">
+            <span
+              dir="auto"
+              className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400"
+            >
               {t('checkin_status_label', 'Check-in Status')}
             </span>
-            <span className="text-xs font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+            <span
+              dir="auto"
+              className="text-xs font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300"
+            >
               {visit.status === 'CHECKED_IN' || !visit.status ? 'CHECKED IN' : visit.status}
             </span>
           </div>
 
-          <div
-            className={`flex items-center justify-between gap-2 ${
-              isUr ? 'flex-row-reverse' : 'flex-row'
-            }`}
-          >
-            <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400">
-              {t('reg_visit_to')}
+          <div className="flex items-center justify-between gap-2">
+            <span
+              dir="auto"
+              className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400"
+            >
+              {isDelivery
+                ? t('delivery_source_label', 'Delivery Source / Company Name')
+                : t('reg_visit_to')}
             </span>
-            <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-              {visit.hostName} ({visit.department})
+            <span
+              dir="auto"
+              className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200"
+            >
+              {isDelivery
+                ? person.company || visit.hostName || 'N/A'
+                : `${visit.hostName} (${visit.department})`}
             </span>
           </div>
 
-          <div
-            className={`flex items-center justify-between gap-2 border-t border-slate-200/60 dark:border-slate-700/60 pt-2.5 ${
-              isUr ? 'flex-row-reverse' : 'flex-row'
-            }`}
-          >
-            <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400">
+          <div className="flex items-center justify-between gap-2 border-t border-slate-200/60 dark:border-slate-700/60 pt-2.5">
+            <span
+              dir="auto"
+              className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400"
+            >
               {t('checkin_time_label', 'Check-in Time')} / {t('reg_entry_gate')}
             </span>
-            <span className="text-xs sm:text-sm font-extrabold text-slate-700 dark:text-slate-300">
+            <span
+              dir="auto"
+              className="text-xs sm:text-sm font-extrabold text-slate-700 dark:text-slate-300"
+            >
               {visit.timeIn
                 ? new Date(visit.timeIn).toLocaleTimeString([], {
                     hour: '2-digit',
@@ -304,14 +325,21 @@ export default function RegistrationSuccessModal({
           <div className="mt-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 space-y-2">
             <div
               className={`flex items-start gap-2 text-xs font-bold ${
-                isUr ? 'flex-row-reverse text-right' : 'flex-row text-left'
+                isUr ? 'text-right' : 'text-left'
               }`}
             >
               <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <p>{t('image_save_failed_warning', 'Visitor registered, but saving the scanned ID card image failed.')}</p>
+              <div className="flex-1">
+                <p dir="auto">
+                  {t(
+                    'image_save_failed_warning',
+                    'Visitor registered, but saving the scanned ID card image failed.'
+                  )}
+                </p>
                 {imageStorageError && (
-                  <p className="text-[11px] font-medium opacity-85 mt-0.5">{imageStorageError}</p>
+                  <p dir="auto" className="text-[11px] font-medium opacity-85 mt-0.5">
+                    {imageStorageError}
+                  </p>
                 )}
               </div>
             </div>
@@ -376,8 +404,8 @@ export default function RegistrationSuccessModal({
             }}
             className="w-full py-3 px-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
-            <UserPlus className="w-4 h-4 shrink-0" />
-            <span>{t('register_next_visitor_btn')}</span>
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>{t('register_next_visitor_btn', 'Register Next Visitor')}</span>
           </button>
         </div>
       </div>

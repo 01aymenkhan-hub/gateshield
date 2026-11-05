@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import prisma from '@/lib/prisma';
 import { getEmployeeSessionUser, getSessionUser } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { ensureImageStoredAsFileUrl } from '@/lib/fileStorage';
 
 export interface GuestInvitationRecord {
   id: string;
@@ -159,10 +160,21 @@ export async function POST(request: NextRequest) {
       typeof body.guestName === 'string' ? body.guestName.trim().replace(/\s+/g, ' ') : '';
     const rawPhone = typeof body.guestPhone === 'string' ? body.guestPhone.trim() : '';
     const rawCnic = typeof body.guestCnic === 'string' ? body.guestCnic.trim() : '';
-    const guestPhotoUrl =
+    const rawGuestPhotoUrl =
       typeof body.guestPhotoUrl === 'string' && body.guestPhotoUrl.trim().length > 0
         ? body.guestPhotoUrl.trim()
         : null;
+    let guestPhotoUrl: string | null = rawGuestPhotoUrl;
+    if (rawGuestPhotoUrl) {
+      try {
+        guestPhotoUrl = await ensureImageStoredAsFileUrl(rawGuestPhotoUrl, 'invitations', 'inv');
+      } catch (imgErr: any) {
+        return NextResponse.json(
+          { error: imgErr?.message || 'Invalid Guest Photo format.' },
+          { status: 400 }
+        );
+      }
+    }
     const alongWith =
       typeof body.alongWith === 'string' && body.alongWith.trim().length > 0
         ? body.alongWith.trim().replace(/\s+/g, ' ')

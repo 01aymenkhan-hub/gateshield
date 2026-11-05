@@ -125,8 +125,8 @@ export default function SettingsPage() {
               onClick={() => setIsAddGateOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>+ Add Gate</span>
+              <Plus className="w-3.5 h-3.5 shrink-0" />
+              <span>Add Gate</span>
             </button>
           </div>
 

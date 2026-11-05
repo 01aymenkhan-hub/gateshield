@@ -49,10 +49,10 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   vip_guest_desc: { en: 'VIP arrival & vehicle check-in', ur: 'وی آئی پی آمد اور گاڑی چیک اِن' },
 
   // Action Buttons
-  add_visitor_btn: { en: '+ Add Visitor', ur: '+ نیا وزیٹر' },
+  add_visitor_btn: { en: 'Add Visitor', ur: 'نیا وزیٹر' },
   checkout_btn: { en: 'Check Out', ur: 'چھٹی کریں' },
   status_btn: { en: 'Check Status', ur: 'تفصیل دیکھیں' },
-  vendor_btn: { en: '+ Vendor', ur: '+ وینڈر' },
+  vendor_btn: { en: 'Vendor', ur: 'وینڈر' },
   view_pass: { en: 'View Pass', ur: 'پاس دیکھیں' },
   view_all: { en: 'View All', ur: 'سب دیکھیں' },
   close: { en: 'Close', ur: 'بند کریں' },
@@ -379,7 +379,7 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   reg_card_badge_no: { en: 'Visitor Card #', ur: 'وزیٹر کارڈ نمبر' },
   reg_visit_to: { en: 'Visit To', ur: 'ملاقات' },
   reg_entry_gate: { en: 'Entry Gate', ur: 'انٹری گیٹ' },
-  register_next_visitor_btn: { en: '+ Register Next Visitor', ur: '+ اگلا وزیٹر درج کریں' },
+  register_next_visitor_btn: { en: 'Register Next Visitor', ur: 'اگلا وزیٹر درج کریں' },
   collect_physical_card_label: {
     en: 'Collect Physical Visitor Card:',
     ur: 'وزیٹر سے یہ کارڈ واپس لیں:',
@@ -712,12 +712,30 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
 
   // ── Parcel Management & Unexpected Parcel Form ──
   parcel_management_title: { en: 'Parcel Tracker', ur: 'پارسل ٹریکر' },
-  register_unexpected_parcel: { en: '+ Unexpected Parcel', ur: '+ غیر متوقع پارسل' },
+  register_unexpected_parcel: { en: 'Unexpected Parcel', ur: 'غیر متوقع پارسل' },
   unexpected_parcel_title: { en: 'Unexpected Parcel', ur: 'غیر متوقع پارسل' },
+  parcel_tab_expected_short: { en: 'Expected', ur: 'متوقع' },
+  parcel_tab_received_short: { en: 'Received', ur: 'موصول' },
+  parcel_tab_delivered_short: { en: 'Delivered', ur: 'حوالے' },
+  parcel_tab_all_short: { en: 'History', ur: 'ریکارڈ' },
   employee_label: { en: 'Employee', ur: 'ملازم' },
   select_employee_placeholder: { en: 'Select Employee', ur: 'ملازم منتخب کریں' },
   search_employee_placeholder: { en: 'Search employee name...', ur: 'ملازم کا نام تلاش کریں...' },
-  parcel_from_label: { en: 'Parcel From', ur: 'پارسل بھیجنے والا' },
+  parcel_sender_name_label: { en: 'Parcel Sender Name', ur: 'پارسل بھیجنے والے کا نام' },
+  parcel_sender_name_placeholder: { en: 'Enter parcel sender name', ur: 'پارسل بھیجنے والے کا نام درج کریں' },
+  parcel_sender_phone_label: { en: 'Parcel Sender Phone Number', ur: 'پارسل بھیجنے والے کا فون نمبر' },
+  parcel_sender_phone_placeholder: { en: 'e.g. 03001234567', ur: 'مثلاً 03001234567' },
+  employee_name_label: { en: 'Employee Name', ur: 'ملازم کا نام' },
+  employee_name_placeholder: { en: 'Enter employee name', ur: 'ملازم کا نام درج کریں' },
+  employee_phone_label: { en: 'Employee Phone Number', ur: 'ملازم کا فون نمبر' },
+  employee_phone_placeholder: { en: 'e.g. 03001234567', ur: 'مثلاً 03001234567' },
+  employee_department_label: { en: 'Employee Department', ur: 'ملازم کا شعبہ (ڈیپارٹمنٹ)' },
+  select_department_placeholder: { en: 'Select Department', ur: 'شعبہ منتخب کریں' },
+  no_departments_available: {
+    en: 'No departments available. Please configure departments in the Admin Panel.',
+    ur: 'کوئی شعبہ دستیاب نہیں ہے۔ براہ کرم ایڈمن پینل میں شعبے شامل کریں۔',
+  },
+  parcel_from_label: { en: 'Parcel From', ur: 'پارسل کا ذریعہ (Parcel From)' },
   select_parcel_from: { en: 'Select Sender', ur: 'بھیجنے والا منتخب کریں' },
   other_sender_label: { en: 'Sender Name', ur: 'بھیجنے والے کا نام' },
   other_sender_placeholder: { en: 'Enter sender name', ur: 'بھیجنے والے کا نام لکھیں' },
@@ -747,7 +765,7 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
 
   // ── VIP Guest List & Management ──
   vip_guest_list_title: { en: 'VIP Guest List', ur: 'وی آئی پی مہمانوں کی فہرست' },
-  add_vip_guest_btn: { en: '+ Add VIP Guest', ur: '+ نیا وی آئی پی مہمان' },
+  add_vip_guest_btn: { en: 'Add VIP Guest', ur: 'نیا وی آئی پی مہمان' },
   edit_vip_guest_title: { en: 'Edit VIP Guest', ur: 'وی آئی پی مہمان میں ترمیم' },
   new_vip_guest_title: { en: 'Add VIP Guest', ur: 'نیا وی آئی پی مہمان شامل کریں' },
   vip_name_label: { en: 'VIP Name', ur: 'وی آئی پی مہمان کا نام' },
@@ -767,6 +785,236 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   update_vip_btn: { en: 'Update VIP Guest', ur: 'وی آئی پی اپ ڈیٹ کریں' },
   cancel_btn: { en: 'Cancel', ur: 'منسوخ کریں' },
   no_vip_found: { en: 'No VIP guests found.', ur: 'کوئی وی آئی پی مہمان نہیں ملا۔' },
+
+  // ── Operator Login Screen (QR & Email/Password Screens) ──
+  login_with_email_link: { en: 'Login with Email', ur: 'ای میل کے ذریعے لاگ ان کریں' },
+  login_with_qr_link: { en: 'Login with QR Code', ur: 'کیو آر کوڈ کے ذریعے لاگ ان کریں' },
+  operator_email_login_subtitle: {
+    en: 'Sign in using your approved Operator email and password',
+    ur: 'اپنے منظور شدہ آپریٹر ای میل اور پاس ورڈ کے ذریعے لاگ ان کریں',
+  },
+  operator_email_label: { en: 'Operator Email', ur: 'آپریٹر ای میل' },
+  operator_password_label: { en: 'Password', ur: 'پاس ورڈ' },
+  operator_password_placeholder: { en: 'Enter your password', ur: 'اپنا پاس ورڈ درج کریں' },
+  signing_in_btn: { en: 'Signing in...', ur: 'لاگ ان ہو رہا ہے...' },
+  login_to_operator_dashboard_btn: {
+    en: 'Login to Operator Dashboard',
+    ur: 'آپریٹر ڈیش بورڈ میں لاگ ان کریں',
+  },
+  no_operator_account_prompt: {
+    en: "Don't have an Operator account yet?",
+    ur: 'کیا آپ کا آپریٹر اکاؤنٹ ابھی نہیں بنا؟',
+  },
+  register_as_operator_btn: { en: 'Register as Operator', ur: 'بطور آپریٹر رجسٹر کریں' },
+  register_operator_subtitle: {
+    en: 'Submit your operator account request for Administrator approval',
+    ur: 'ایڈمن کی منظوری کے لیے اپنے آپریٹر اکاؤنٹ کی درخواست جمع کروائیں',
+  },
+  operator_request_status_title: {
+    en: 'Operator Request Status',
+    ur: 'آپریٹر درخواست کی حیثیت',
+  },
+  operator_request_status_subtitle: {
+    en: 'Live status of your Operator registration request',
+    ur: 'آپ کی آپریٹر رجسٹریشن درخواست کی موجودہ صورتحال',
+  },
+  operator_name_label: { en: 'Operator Name', ur: 'آپریٹر کا نام' },
+  operator_name_placeholder: {
+    en: 'Full Name (e.g. Officer Bilal)',
+    ur: 'پورا نام (مثلاً آفیسر بلال)',
+  },
+  email_address_label: { en: 'Email Address', ur: 'ای میل ایڈریس' },
+  confirm_password_label: { en: 'Confirm Password', ur: 'پاس ورڈ کی تصدیق کریں' },
+  min_6_chars_placeholder: { en: 'Min 6 chars', ur: 'کم از کم 6 حروف' },
+  reenter_password_placeholder: { en: 'Re-enter password', ur: 'پاس ورڈ دوبارہ درج کریں' },
+  submitting_request_btn: { en: 'Submitting Request...', ur: 'درخواست جمع ہو رہی ہے...' },
+  submit_registration_request_btn: {
+    en: 'Submit Registration Request',
+    ur: 'رجسٹریشن کی درخواست جمع کروائیں',
+  },
+  back_to_login_btn: { en: 'Back to Login', ur: 'واپس لاگ ان پر جائیں' },
+
+  // Delivery Registration Workflow
+  delivery_source_title: {
+    en: 'Delivery Source / Company Name',
+    ur: 'ڈلیوری سورس / کمپنی کا نام',
+  },
+  delivery_source_subtitle: {
+    en: 'Enter the name of the cargo company, courier service, or source from which the delivery arrived',
+    ur: 'اس کارگو کمپنی، کوریئر سروس یا ادارے کا نام درج کریں جہاں سے ڈلیوری آئی ہے',
+  },
+  delivery_source_label: {
+    en: 'Delivery Source / Company Name',
+    ur: 'ڈلیوری سورس / کمپنی کا نام',
+  },
+  delivery_source_placeholder: {
+    en: 'e.g. TCS, DHL, Leopards, Daraz, Supplier Name',
+    ur: 'مثلاً ٹی سی ایس، ڈی ایچ ایل، لیپرڈز، دراز یا کمپنی کا نام',
+  },
+  delivery_source_required_hint: {
+    en: 'Please enter Delivery Source / Company Name to continue',
+    ur: 'آگے بڑھنے کے لیے ڈلیوری سورس / کمپنی کا نام درج کریں',
+  },
+  capture_image_title: {
+    en: 'Capture Image',
+    ur: 'تصویر لیں',
+  },
+  capture_image_optional_sub: {
+    en: 'Capture a photo of the delivery person (optional) or tap Next to continue',
+    ur: 'ڈلیوری لانے والے شخص کی تصویر لیں (اختیاری) یا آگے بڑھنے کے لیے اگلا بٹن دبائیں',
+  },
+  capture_document_title: {
+    en: 'Capture Document',
+    ur: 'ڈلیوری دستاویز کی تصویر لیں',
+  },
+  capture_document_subtitle: {
+    en: 'Capture a clear picture of the delivery slip, parcel receipt, or document provided by the delivery person',
+    ur: 'ڈلیوری والے شخص کی فراہم کردہ ڈلیوری سلپ، رسید یا دستاویز کی صاف تصویر لیں',
+  },
+  capture_document_btn: {
+    en: 'Capture Document',
+    ur: 'دستاویز کی تصویر لیں',
+  },
+  retake_document_btn: {
+    en: 'Retake Document',
+    ur: 'دوبارہ تصویر لیں',
+  },
+  document_captured_title: {
+    en: 'Delivery Document Captured',
+    ur: 'ڈلیوری دستاویز کی تصویر محفوظ ہو گئی',
+  },
+  document_attached_badge: {
+    en: 'Document Attached ✓',
+    ur: 'دستاویز منسلک ✓',
+  },
+  delivery_document_required_hint: {
+    en: 'Please capture the delivery document image to continue',
+    ur: 'آگے بڑھنے کے لیے ڈلیوری دستاویز کی تصویر لینا ضروری ہے',
+  },
+  delivery_document_image_label: {
+    en: 'Delivery Document Image',
+    ur: 'ڈلیوری دستاویز کی تصویر',
+  },
+  incoming_delivery_doc_label: {
+    en: 'Incoming Delivery Document (Check-in)',
+    ur: 'آمد کی ڈلیوری دستاویز (چیک اِن)',
+  },
+  outgoing_delivery_doc_label: {
+    en: 'Outgoing Delivery Document (Checkout)',
+    ur: 'اخراج کی ڈلیوری دستاویز (چیک آؤٹ)',
+  },
+  captured_at_checkin_label: {
+    en: 'Captured at Check-in',
+    ur: 'چیک اِن کے وقت محفوظ کردہ',
+  },
+  captured_at_checkout_label: {
+    en: 'Captured at Checkout',
+    ur: 'چیک آؤٹ کے وقت محفوظ کردہ',
+  },
+  next_btn: {
+    en: 'Next',
+    ur: 'اگلا',
+  },
+  phone_and_vc_title: {
+    en: 'Phone Number & VC Card Number',
+    ur: 'فون نمبر اور وزیٹر کارڈ نمبر',
+  },
+  phone_and_vehicle_title: {
+    en: 'Phone Number & Vehicle Number',
+    ur: 'فون نمبر اور گاڑی کا نمبر',
+  },
+  vehicle_no_label: {
+    en: 'Vehicle Number',
+    ur: 'گاڑی کا نمبر (Vehicle Number)',
+  },
+  vehicle_no_hint: {
+    en: 'Enter the delivery vehicle registration number (e.g. KHI-1234 or LEB-4589)',
+    ur: 'ڈلیوری والی گاڑی کا رجسٹریشن نمبر درج کریں (مثلاً KHI-1234 یا LEB-4589)',
+  },
+  vehicle_no_placeholder: {
+    en: 'e.g. KHI-1234 or LEB-4589',
+    ur: 'مثلاً KHI-1234 یا LEB-4589',
+  },
+  vehicle_no_error: {
+    en: 'Please enter a valid Vehicle Number (at least 3 alphanumeric characters).',
+    ur: 'براہ کرم گاڑی کا درست نمبر درج کریں (کم از کم 3 حروف یا ہندسے)۔',
+  },
+  delivery_checkout_title: {
+    en: 'Delivery Checkout',
+    ur: 'ڈلیوری چیک آؤٹ',
+  },
+  delivery_checkout_instruction: {
+    en: 'Capture a clear picture of the outgoing goods list, dispatch slip, gate pass, or invoice provided by the delivery person before confirming checkout.',
+    ur: 'چیک آؤٹ کی تصدیق سے پہلے ڈلیوری والے شخص کی فراہم کردہ آؤٹ گوئنگ سامان کی فہرست، ڈسپیچ سلپ، گیٹ پاس یا رسید کی صاف تصویر لیں۔',
+  },
+  capture_outgoing_doc_label: {
+    en: 'Outgoing Delivery Document',
+    ur: 'آؤٹ گوئنگ ڈلیوری دستاویز',
+  },
+  capture_outgoing_doc_btn: {
+    en: 'Capture Outgoing Document',
+    ur: 'آؤٹ گوئنگ دستاویز کی تصویر لیں',
+  },
+  retake_outgoing_doc_btn: {
+    en: 'Retake Outgoing Document',
+    ur: 'دوبارہ تصویر لیں',
+  },
+  outgoing_doc_captured_badge: {
+    en: 'Outgoing Document Captured ✓',
+    ur: 'آؤٹ گوئنگ دستاویز محفوظ ہو گئی ✓',
+  },
+  confirm_checkout_btn: {
+    en: 'Confirm Checkout',
+    ur: 'چیک آؤٹ کی تصدیق کریں',
+  },
+  information_form_title: {
+    en: 'Information Form',
+    ur: 'معلومات کا فارم',
+  },
+  admin_qa_employee_requests: {
+    en: 'Employee Requests',
+    ur: 'ملازمین کی درخواستیں',
+  },
+  admin_qa_employee_requests_desc: {
+    en: 'Review & approve employee registrations',
+    ur: 'ملازمین کی رجسٹریشن درخواستوں کی منظوری',
+  },
+  admin_qa_operator_requests: {
+    en: 'Operator Requests',
+    ur: 'آپریٹر کی درخواستیں',
+  },
+  admin_qa_operator_requests_desc: {
+    en: 'Approve operators & assign gate access',
+    ur: 'آپریٹر رجسٹریشن اور گیٹ رسائی کی منظوری',
+  },
+  admin_qa_departments: {
+    en: 'Departments',
+    ur: 'شعبہ جات (Departments)',
+  },
+  admin_qa_departments_desc: {
+    en: 'Manage departments & HOD contacts',
+    ur: 'شعبہ جات اور سربراہان کی تفصیلات',
+  },
+  admin_qa_invite_vip: {
+    en: 'Invite VIP Guest',
+    ur: 'وی آئی پی مہمان مدعو کریں',
+  },
+  admin_qa_invite_vip_desc: {
+    en: 'Register VIP arrival & vehicle pass',
+    ur: 'وی آئی پی مہمان کی آمد اور گاڑی رجسٹر کریں',
+  },
+  admin_qa_pending_badge: {
+    en: 'Pending',
+    ur: 'زیر التواء',
+  },
+  admin_qa_no_pending: {
+    en: 'No Pending',
+    ur: 'کوئی زیر التواء نہیں',
+  },
+  admin_profile_label: {
+    en: 'Admin Profile & Access',
+    ur: 'ایڈمن پروفائل اور رسائی',
+  },
 };
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -777,16 +1025,19 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  // Urdu is the primary default language
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('gk_lang') as Language | null;
+  // Match the server's first render; restore browser preferences after hydration.
+  const [language, setLanguageState] = useState<Language>('ur');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('gk_lang');
       if (saved === 'en' || saved === 'ur') {
-        return saved;
+        setLanguageState(saved);
       }
+    } catch {
+      // The default language remains usable when browser storage is unavailable.
     }
-    return 'ur';
-  });
+  }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
@@ -796,7 +1047,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.lang = language;
-      document.documentElement.dir = language === 'ur' ? 'rtl' : 'ltr';
+      // Keep structural layout direction fixed as LTR so UI elements, logos, headers,
+      // sidebars, cards, and buttons never flip or mirror positions when switching languages.
+      document.documentElement.dir = 'ltr';
+      document.documentElement.dataset.lang = language;
     }
   }, [language]);
 

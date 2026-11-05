@@ -1,8 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@font-face {
+  font-family: 'Jameel Noori Nastaleeq Regular';
+  src:
+    local('Jameel Noori Nastaleeq Regular'),
+    local('Jameel Noori Nastaleeq'),
+    url('/fonts/JameelNooriNastaleeq-Regular.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 108%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200F, U+202A-202E;
+}
 
 :root {
+  --font-en: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-ur: 'Inter', 'Jameel Noori Nastaleeq Regular', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-active-sans: var(--font-en);
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
@@ -12,11 +28,30 @@
   --muted-foreground: #64748b;
   --sidebar-bg: #ffffff;
   --sidebar-border: #e2e8f0;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
   --border: #e2e8f0;
+
+  /* GateShield Official Primary Brand Color Palette (#354F96) */
+  --brand-primary: #354F96;
+  --brand-primary-50: #f0f3fa;
+  --brand-primary-100: #dee5f5;
+  --brand-primary-200: #c1cfec;
+  --brand-primary-300: #96b0df;
+  --brand-primary-400: #698bd0;
+  --brand-primary-500: #4666b4;
+  --brand-primary-600: #354F96;
+  --brand-primary-700: #2b417d;
+  --brand-primary-800: #223466;
+  --brand-primary-900: #1b2952;
+  --brand-primary-950: #111a36;
+
+  --accent: var(--brand-primary-600);
+  --accent-hover: var(--brand-primary-700);
+  --primary: var(--brand-primary-600);
+  --primary-hover: var(--brand-primary-700);
+  --primary-active: var(--brand-primary-800);
+  --primary-focus: var(--brand-primary-500);
+  --primary-subtle: var(--brand-primary-50);
+  --primary-foreground: #ffffff;
 }
 
 .dark {
@@ -29,11 +64,16 @@
   --muted-foreground: #94a3b8;
   --sidebar-bg: #0c121e;
   --sidebar-border: #1e293b;
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
   --border: #1e293b;
+
+  --accent: var(--brand-primary-400);
+  --accent-hover: var(--brand-primary-300);
+  --primary: var(--brand-primary-600);
+  --primary-hover: var(--brand-primary-500);
+  --primary-active: var(--brand-primary-700);
+  --primary-focus: var(--brand-primary-400);
+  --primary-subtle: var(--brand-primary-950);
+  --primary-foreground: #ffffff;
 }
 
 @theme inline {
@@ -48,16 +88,68 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-accent: var(--accent);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-focus: var(--primary-focus);
+  --color-primary-subtle: var(--primary-subtle);
   --color-primary-foreground: var(--primary-foreground);
   --color-border: var(--border);
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Centralized GateShield Primary Brand Scale (#354F96) */
+  --color-brand-50: var(--brand-primary-50);
+  --color-brand-100: var(--brand-primary-100);
+  --color-brand-200: var(--brand-primary-200);
+  --color-brand-300: var(--brand-primary-300);
+  --color-brand-400: var(--brand-primary-400);
+  --color-brand-500: var(--brand-primary-500);
+  --color-brand-600: var(--brand-primary-600);
+  --color-brand-700: var(--brand-primary-700);
+  --color-brand-800: var(--brand-primary-800);
+  --color-brand-900: var(--brand-primary-900);
+  --color-brand-950: var(--brand-primary-950);
+
+  /* Map primary blue/indigo UI utility tokens to the centralized #354F96 brand scale */
+  --color-blue-50: var(--brand-primary-50);
+  --color-blue-100: var(--brand-primary-100);
+  --color-blue-200: var(--brand-primary-200);
+  --color-blue-300: var(--brand-primary-300);
+  --color-blue-400: var(--brand-primary-400);
+  --color-blue-500: var(--brand-primary-500);
+  --color-blue-600: var(--brand-primary-600);
+  --color-blue-700: var(--brand-primary-700);
+  --color-blue-800: var(--brand-primary-800);
+  --color-blue-900: var(--brand-primary-900);
+  --color-blue-950: var(--brand-primary-950);
+
+  --color-indigo-50: var(--brand-primary-50);
+  --color-indigo-100: var(--brand-primary-100);
+  --color-indigo-200: var(--brand-primary-200);
+  --color-indigo-300: var(--brand-primary-300);
+  --color-indigo-400: var(--brand-primary-400);
+  --color-indigo-500: var(--brand-primary-500);
+  --color-indigo-600: var(--brand-primary-600);
+  --color-indigo-700: var(--brand-primary-700);
+  --color-indigo-800: var(--brand-primary-800);
+  --color-indigo-900: var(--brand-primary-900);
+  --color-indigo-950: var(--brand-primary-950);
+
+  --font-sans: var(--font-active-sans);
+  --font-urdu: var(--font-ur);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+html[lang="en"] {
+  --font-active-sans: var(--font-en);
+}
+
+html[lang="ur"] {
+  --font-active-sans: var(--font-ur);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-active-sans);
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   letter-spacing: -0.011em;
   transition: background-color 0.15s ease, color 0.15s ease;
@@ -108,19 +200,19 @@ body {
 
 @keyframes gk-subtle-wave-blue {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.35), 0 0 0 0 rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 0 rgba(53, 79, 150, 0.35), 0 0 0 0 rgba(53, 79, 150, 0.15);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.12), 0 0 0 16px rgba(37, 99, 235, 0);
+    box-shadow: 0 0 0 8px rgba(53, 79, 150, 0.12), 0 0 0 16px rgba(53, 79, 150, 0);
   }
 }
 
 @keyframes gk-vc-card-wave-glow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.32), 0 0 0 0 rgba(16, 185, 129, 0.14);
+    box-shadow: 0 0 0 0 rgba(53, 79, 150, 0.32), 0 0 0 0 rgba(16, 185, 129, 0.14);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.12), 0 0 0 12px rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 6px rgba(53, 79, 150, 0.12), 0 0 0 12px rgba(16, 185, 129, 0);
   }
 }
 
@@ -142,16 +234,16 @@ body {
 
 /*
  * 0. Continuous clockwise perimeter scan around the outer hexagonal building outline:
- *    Uses SVG pathLength="1000" so 1000 -> 0 loops with zero jump or seam.
- *    Starts at top peak (287.5, 12) and reaches the bottom-right gate entrance
- *    at ~35%..52% of the cycle, synchronized with the gate opening.
+ *    Uses SVG pathLength="1000" and per-layer --gs-dash-start / --gs-dash-end offsets
+ *    (differing by exactly 1000) so the multi-layer comet head and fading trail loop
+ *    with zero jump or seam.
  */
 @keyframes gs-perimeter-scan {
   0% {
-    stroke-dashoffset: 1000;
+    stroke-dashoffset: var(--gs-dash-start, 1000);
   }
   100% {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: var(--gs-dash-end, 0);
   }
 }
 
@@ -292,7 +384,112 @@ body {
   .gs-logo-stationary-base {
     clip-path: none !important;
   }
-  .gs-gate-overlay-svg {
+  .gs-perimeter-scan-line,
+  .gs-gate-leaf,
+  .gs-access-light,
+  .gs-gate-edge,
+  .gs-entrance-glow {
+    animation: none !important;
     display: none !important;
   }
+  .gs-outline-base-glow {
+    stroke-opacity: 0.45 !important;
+  }
+  .gs-outline-base-line {
+    stroke-opacity: 0.65 !important;
+  }
+}
+
+/* ========================================================================== */
+/* Bilingual (Urdu / English) Fixed-Layout & Natural Text Direction Rules     */
+/* ========================================================================== */
+/*
+ * Core principle: Structural layout (`dir="ltr"`), element dimensions, line
+ * heights, and spacing stay identical in both languages so switching between
+ * English and Urdu causes zero layout fluctuation. Only main headings are
+ * slightly enlarged in Urdu.
+ */
+:root {
+  --ur-heading-main: clamp(1.55rem, 2vw, 1.85rem);
+  --ur-heading-section: clamp(1.15rem, 1.4vw, 1.3rem);
+  --ur-heading-card: clamp(1.05rem, 1.2vw, 1.15rem);
+}
+
+html[lang="ur"],
+html[lang="ur"] body {
+  font-family: var(--font-ur);
+  font-feature-settings: "liga" 1, "clig" 1, "calt" 1, "kern" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis-weight: none;
+}
+
+html[lang="ur"] h1,
+html[lang="ur"] h2,
+html[lang="ur"] h3,
+html[lang="ur"] h4,
+html[lang="ur"] h5,
+html[lang="ur"] h6,
+html[lang="ur"] p,
+html[lang="ur"] span,
+html[lang="ur"] label,
+html[lang="ur"] th,
+html[lang="ur"] td,
+html[lang="ur"] li,
+html[lang="ur"] option,
+html[lang="ur"] optgroup,
+html[lang="ur"] select,
+html[lang="ur"] button,
+html[lang="ur"] input:not(.font-mono),
+html[lang="ur"] textarea:not(.font-mono),
+html[lang="ur"] a {
+  font-family: var(--font-ur);
+  font-feature-settings: "liga" 1, "clig" 1, "calt" 1, "kern" 1;
+  font-variant-ligatures: common-ligatures contextual;
+  font-synthesis-weight: none;
+  letter-spacing: normal;
+  unicode-bidi: plaintext;
+}
+
+/* Slightly enlarge only Main Headings in Urdu */
+html[lang="ur"] h1 {
+  font-size: var(--ur-heading-main);
+}
+
+html[lang="ur"] h2 {
+  font-size: var(--ur-heading-section);
+}
+
+html[lang="ur"] h3 {
+  font-size: var(--ur-heading-card);
+}
+
+html[lang="ur"] input::placeholder,
+html[lang="ur"] textarea::placeholder {
+  font-family: var(--font-ur);
+  letter-spacing: normal;
+}
+
+html[lang="ur"] label:not(.text-center),
+html[lang="ur"] .text-start {
+  text-align: right;
+}
+
+html[lang="ur"]
+  input:not([type="email"]):not([type="password"]):not([type="tel"]):not([type="url"]):not([type="number"]):not([type="date"]):not([type="time"]):not([type="datetime-local"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.font-mono):not(.text-center),
+html[lang="ur"] select:not(.font-mono):not(.text-center),
+html[lang="ur"] textarea:not(.text-center) {
+  unicode-bidi: plaintext;
+  text-align: right;
+}
+
+html[lang="ur"] input[type="email"],
+html[lang="ur"] input[type="password"],
+html[lang="ur"] input[type="tel"],
+html[lang="ur"] input[type="number"],
+html[lang="ur"] input[type="date"],
+html[lang="ur"] input[type="time"],
+html[lang="ur"] input[type="datetime-local"],
+html[lang="ur"] input.font-mono {
+  direction: ltr;
+  text-align: left;
 }

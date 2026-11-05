@@ -24,6 +24,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link
+          rel="preload"
+          href="/fonts/JameelNooriNastaleeq-Regular.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -36,6 +43,11 @@ export default function RootLayout({
                   document.documentElement.classList.remove('dark');
                   document.documentElement.style.colorScheme = 'light';
                 }
+                var lang = localStorage.getItem('gk_lang');
+                var activeLang = (lang === 'en' || lang === 'ur') ? lang : 'ur';
+                document.documentElement.lang = activeLang;
+                document.documentElement.dir = 'ltr';
+                document.documentElement.dataset.lang = activeLang;
               } catch (e) {}
             `,
           }}

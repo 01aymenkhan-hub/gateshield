@@ -568,7 +568,6 @@ export default function EmployeePortalPage() {
           senderPlatform: parcelSenderPlatform.trim(),
           expectedArrivalDate: parcelExpectedDate,
           ownerPhone: parcelOwnerPhone.trim(),
-          departmentId: parcelDepartmentId,
           notes: parcelNotes.trim() || undefined,
         }),
       });
@@ -710,8 +709,11 @@ export default function EmployeePortalPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 flex flex-col">
-      {/* Top Header Bar */}
-      <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#0c121e]/95 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between gap-2 sticky top-0 z-30">
+      {/* Top Header Bar — Fixed LTR layout so switching between Urdu & English never flips header alignment */}
+      <header
+        dir="ltr"
+        className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#0c121e]/95 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between gap-2 sticky top-0 z-30"
+      >
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <button
             type="button"
@@ -723,7 +725,10 @@ export default function EmployeePortalPage() {
             <GateShieldLogo variant="full" size="md" />
           </button>
           <div className="min-w-0">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 inline-block truncate max-w-full">
+            <span
+              dir="auto"
+              className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 inline-block truncate max-w-full"
+            >
               {t('emp_portal_title', 'Employee Portal')}
             </span>
           </div>
@@ -779,20 +784,33 @@ export default function EmployeePortalPage() {
                 </button>
 
                 {isNotificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl z-50 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/50">
-                      <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
-                        {t('emp_arrival_notifications', 'Guest & Parcel Notifications')}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setIsNotificationsOpen(false)}
-                        className="p-1 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-400 cursor-pointer"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                  <>
+                    <div
+                      className="fixed inset-0 bg-slate-950/30 backdrop-blur-[1px] z-40 sm:hidden"
+                      onClick={() => setIsNotificationsOpen(false)}
+                    />
+                    <div
+                      dir="ltr"
+                      className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 max-h-[75vh] sm:max-h-[24rem] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl z-50 overflow-hidden"
+                    >
+                      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 bg-slate-50/70 dark:bg-slate-800/50 shrink-0">
+                        <span
+                          dir="auto"
+                          className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100 truncate"
+                        >
+                          {t('emp_arrival_notifications', 'Guest & Parcel Notifications')}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsNotificationsOpen(false)}
+                          className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-300 cursor-pointer shrink-0"
+                          title={t('close', 'Close')}
+                          aria-label={t('close', 'Close')}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex-1 overflow-y-auto overflow-x-hidden divide-y divide-slate-100 dark:divide-slate-800">
                       {notifications.length === 0 ? (
                         <div className="p-6 text-center text-xs text-slate-400">
                           No notifications yet. You will be notified here in real time when your invited guest arrives or when a parcel is received or delivered at a gate.
@@ -842,15 +860,16 @@ export default function EmployeePortalPage() {
                                   })}
                                 </span>
                               </div>
-                              <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                                {n.message}
-                              </p>
-                            </div>
-                          );
-                        })
-                      )}
+                                <p className="text-slate-700 dark:text-slate-300 leading-relaxed break-words">
+                                  {n.message}
+                                </p>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
 
@@ -1097,7 +1116,7 @@ export default function EmployeePortalPage() {
                     <button
                       type="submit"
                       disabled={authSubmitting}
-                      className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+                      className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer"
                     >
                       {authSubmitting
                         ? 'Signing in...'
@@ -1234,7 +1253,7 @@ export default function EmployeePortalPage() {
                     <button
                       type="submit"
                       disabled={authSubmitting}
-                      className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-emerald-500/20 transition-all cursor-pointer mt-2"
+                      className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer mt-2"
                     >
                       {authSubmitting
                         ? 'Submitting Request...'
@@ -1709,7 +1728,7 @@ export default function EmployeePortalPage() {
                             <button
                               type="submit"
                               disabled={inviteSubmitting}
-                              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                             >
                               <UserPlus className="w-4 h-4" />
                               <span>
@@ -2121,7 +2140,7 @@ export default function EmployeePortalPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {/* Arrival Date */}
                             <div>
                               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -2165,35 +2184,6 @@ export default function EmployeePortalPage() {
                                 />
                               </div>
                             </div>
-
-                            {/* Department */}
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                                {t('emp_department', 'Department')} *
-                              </label>
-                              <div className="relative">
-                                <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                                <select
-                                  required
-                                  value={parcelDepartmentId}
-                                  onChange={(e) => setParcelDepartmentId(e.target.value)}
-                                  className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border ${
-                                    parcelErrorField === 'departmentId'
-                                      ? 'border-rose-500 ring-1 ring-rose-500'
-                                      : 'border-slate-200 dark:border-slate-700'
-                                  } bg-slate-50 dark:bg-slate-800/70 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                >
-                                  <option value="" disabled>
-                                    {t('select_department', 'Select Department')}
-                                  </option>
-                                  {departments.map((d) => (
-                                    <option key={d.id} value={d.id}>
-                                      {d.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
                           </div>
 
                           <div>
@@ -2213,7 +2203,7 @@ export default function EmployeePortalPage() {
                             <button
                               type="submit"
                               disabled={parcelSubmitting}
-                              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-sm font-extrabold shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                             >
                               <Package className="w-4 h-4" />
                               <span>
@@ -2276,7 +2266,7 @@ export default function EmployeePortalPage() {
                           </div>
                         </div>
 
-                        <div className="overflow-x-auto">
+                        <div>
                           {filteredParcels.length === 0 ? (
                             <div className="p-12 text-center text-xs text-slate-400 space-y-2">
                               <Package className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-700" />
@@ -2285,7 +2275,148 @@ export default function EmployeePortalPage() {
                               </p>
                             </div>
                           ) : (
-                            <table className="w-full text-left text-xs min-w-[860px]">
+                            <>
+                              {/* Mobile Vertical Parcel Cards (< md) */}
+                              <div className="md:hidden p-3 space-y-3">
+                                {filteredParcels.map((prc) => (
+                                  <div
+                                    key={prc.id}
+                                    className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 p-3.5 space-y-2.5 shadow-2xs"
+                                  >
+                                    <div className="flex items-start justify-between gap-2.5">
+                                      <div className="flex items-start gap-2.5 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 overflow-hidden flex items-center justify-center shrink-0">
+                                          {prc.photoUrl ? (
+                                            /* eslint-disable-next-line @next/next/no-img-element */
+                                            <img
+                                              src={prc.photoUrl}
+                                              alt={prc.senderPlatform}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          ) : (
+                                            <Package className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                          )}
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="font-extrabold text-slate-900 dark:text-white text-sm leading-tight break-words">
+                                            {prc.senderPlatform}
+                                          </p>
+                                          <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                                            {prc.ownerName} &bull; {prc.departmentName}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex flex-col items-end gap-1 shrink-0">
+                                        <span
+                                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                                            prc.status === 'RECEIVED'
+                                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                              : prc.status === 'DELIVERED'
+                                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300'
+                                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                          }`}
+                                        >
+                                          {prc.status === 'RECEIVED'
+                                            ? t('parcel_status_received', 'Received')
+                                            : prc.status === 'DELIVERED'
+                                            ? t('parcel_status_delivered', 'Delivered')
+                                            : t('parcel_status_expected', 'Expected')}
+                                        </span>
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                          {prc.source === 'EXPECTED'
+                                            ? isUrdu
+                                              ? 'متوقع'
+                                              : 'Expected'
+                                            : isUrdu
+                                            ? 'غیر متوقع'
+                                            : 'Unexpected'}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/70 dark:border-slate-700/70 text-xs">
+                                      <div>
+                                        <span className="block text-[10px] font-bold uppercase text-slate-400">
+                                          {t('parcel_expected_date', 'Arrival Date')}
+                                        </span>
+                                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                          {prc.expectedArrivalDate
+                                            ? new Date(prc.expectedArrivalDate).toLocaleDateString([], {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                year: 'numeric',
+                                              })
+                                            : '—'}
+                                        </span>
+                                      </div>
+
+                                      <div>
+                                        <span className="block text-[10px] font-bold uppercase text-slate-400">
+                                          {t('parcel_receiving_gate', 'Receiving Gate')}
+                                        </span>
+                                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                          {prc.receivingGateName ||
+                                            (isUrdu ? 'گیٹ پر آمد کا انتظار' : 'Awaiting Arrival')}
+                                        </span>
+                                      </div>
+
+                                      {prc.receivedAt && (
+                                        <div>
+                                          <span className="block text-[10px] font-bold uppercase text-slate-400">
+                                            {isUrdu ? 'وصولی کا وقت' : 'Received'}
+                                          </span>
+                                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                            {new Date(prc.receivedAt).toLocaleString([], {
+                                              month: 'short',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit',
+                                            })}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {prc.deliveredAt && (
+                                        <div>
+                                          <span className="block text-[10px] font-bold uppercase text-slate-400">
+                                            {isUrdu ? 'حوالگی کا وقت' : 'Delivered'}
+                                          </span>
+                                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                            {new Date(prc.deliveredAt).toLocaleString([], {
+                                              month: 'short',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit',
+                                            })}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {prc.notes && (
+                                      <p className="text-[11px] text-slate-500 italic break-words">
+                                        {prc.notes}
+                                      </p>
+                                    )}
+
+                                    {prc.photoUrl && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setPreviewParcelPhoto(prc)}
+                                        className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                                      >
+                                        <Eye className="w-3.5 h-3.5" />
+                                        <span>{isUrdu ? 'تصویر دیکھیں' : 'View Photo'}</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Desktop Table (md+) */}
+                              <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full text-left text-xs min-w-[860px]">
                               <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200 dark:border-slate-800">
                                 <tr>
                                   <th className="px-5 py-3">{t('parcel_from', 'Parcel From')}</th>
@@ -2445,8 +2576,10 @@ export default function EmployeePortalPage() {
                                     </td>
                                   </tr>
                                 ))}
-                              </tbody>
-                            </table>
+                                </tbody>
+                              </table>
+                            </div>
+                          </>
                           )}
                         </div>
                       </div>
@@ -2530,7 +2663,7 @@ export default function EmployeePortalPage() {
                     required
                     value={reinviteGuestName}
                     onChange={(e) => setReinviteGuestName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -2543,7 +2676,7 @@ export default function EmployeePortalPage() {
                     required
                     value={reinvitePhone}
                     onChange={(e) => setReinvitePhone(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -2559,7 +2692,7 @@ export default function EmployeePortalPage() {
                     min={getTodayDateString()}
                     value={reinviteDate}
                     onChange={(e) => setReinviteDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -2570,7 +2703,7 @@ export default function EmployeePortalPage() {
                   <select
                     value={reinviteTime}
                     onChange={(e) => setReinviteTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {ESTIMATED_ARRIVAL_SLOTS.map((slot) => (
                       <option key={slot} value={slot}>
@@ -2591,7 +2724,7 @@ export default function EmployeePortalPage() {
                     value={reinviteCnic}
                     onChange={(e) => setReinviteCnic(formatCnicInput(e.target.value))}
                     placeholder="35202-1234567-1"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -2604,7 +2737,7 @@ export default function EmployeePortalPage() {
                     value={reinviteAlongWith}
                     onChange={(e) => setReinviteAlongWith(e.target.value)}
                     placeholder={t('along_with_placeholder', 'Accompanying persons or count')}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -2620,7 +2753,7 @@ export default function EmployeePortalPage() {
                 <button
                   type="submit"
                   disabled={reinviteSubmitting}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-extrabold shadow-md cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-xs font-extrabold shadow-md shadow-blue-500/20 cursor-pointer"
                 >
                   {reinviteSubmitting
                     ? isUrdu

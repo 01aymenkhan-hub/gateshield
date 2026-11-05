@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
-const nextConfig = {
+const nextConfig: NextConfig = {
+  outputFileTracingExcludes: {
+    '/*': ['./backend/**/*', './uploads/**/*', './.git/**/*'],
+  },
   allowedDevOrigins: [
     "unworthy-undecided-cabana.ngrok-free.dev",
   ],

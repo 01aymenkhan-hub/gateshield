@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { getSessionUser, getEmployeeSessionUser } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { createAppNotification } from '@/lib/notifications';
+import { ensureImageStoredAsFileUrl } from '@/lib/fileStorage';
 
 export interface VipGuestRow {
   id: string;
@@ -275,6 +276,17 @@ export async function POST(request: NextRequest) {
     const newId = `vip_${crypto.randomBytes(12).toString('hex')}`;
     const now = new Date();
     const plannedArrivalIso = plannedArrivalTime.toISOString();
+    let storedPhotoUrl: string | null = photoUrl;
+    if (photoUrl) {
+      try {
+        storedPhotoUrl = await ensureImageStoredAsFileUrl(photoUrl, 'vip', 'vip');
+      } catch (imgErr: any) {
+        return NextResponse.json(
+          { error: imgErr?.message || 'Invalid VIP Guest photo format.' },
+          { status: 400 }
+        );
+      }
+    }
 
     await prisma.$executeRaw`
       INSERT INTO "vip_guests" (
@@ -302,7 +314,7 @@ export async function POST(request: NextRequest) {
         ${vehicleNumber},
         ${plannedArrivalIso},
         ${cnicNumber},
-        ${photoUrl},
+        ${storedPhotoUrl},
         ${notes},
         'UPCOMING'::"VipVisitStatus",
         true,
@@ -354,7 +366,7 @@ export async function POST(request: NextRequest) {
       vehicleNumber,
       plannedArrivalTime,
       cnicNumber,
-      photoUrl,
+      photoUrl: storedPhotoUrl,
       notes,
       status: 'UPCOMING',
       active: true,

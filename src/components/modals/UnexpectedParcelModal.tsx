@@ -9,18 +9,17 @@ import {
   AlertCircle,
   Truck,
   User,
+  Phone,
+  Building2,
+  Loader2,
   RefreshCw,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import type { ParcelRow } from '@/app/api/employee/parcels/route';
 
-interface EmployeeLookupItem {
+interface DepartmentOption {
   id: string;
   name: string;
-  phoneNumber: string | null;
-  departmentId: string | null;
-  departmentName: string | null;
-  position: string | null;
 }
 
 interface UnexpectedParcelModalProps {
@@ -33,6 +32,19 @@ interface UnexpectedParcelModalProps {
 const PARCEL_FROM_OPTIONS = ['Foodpanda', 'TCS', 'Bank', 'Other'] as const;
 type ParcelFromOption = (typeof PARCEL_FROM_OPTIONS)[number];
 
+function validateAppPhoneNumber(raw: string): { valid: boolean; cleaned: string } {
+  const cleaned = raw.trim().replace(/[\s\-()]+/g, '');
+  if (!cleaned) {
+    return { valid: false, cleaned: '' };
+  }
+  const isPakLocal = /^03\d{9}$/.test(cleaned);
+  const isInternational = /^\+?[1-9]\d{9,14}$/.test(cleaned);
+  return {
+    valid: isPakLocal || isInternational,
+    cleaned,
+  };
+}
+
 export default function UnexpectedParcelModal({
   isOpen,
   onClose,
@@ -42,10 +54,17 @@ export default function UnexpectedParcelModal({
   const { language, t } = useLanguage();
   const isUrdu = language === 'ur';
 
-  const [employees, setEmployees] = useState<EmployeeLookupItem[]>([]);
+  // Dynamic departments from Admin Panel
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState<boolean>(false);
+  const [departmentsError, setDepartmentsError] = useState<string | null>(null);
 
-  // Form state
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  // Form state (Fields 1–5 + Parcel From + Photo + Notes)
+  const [senderName, setSenderName] = useState('');
+  const [senderPhone, setSenderPhone] = useState('');
+  const [employeeName, setEmployeeName] = useState('');
+  const [employeePhone, setEmployeePhone] = useState('');
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
   const [parcelFromOption, setParcelFromOption] = useState<ParcelFromOption | ''>('');
   const [customSender, setCustomSender] = useState('');
   const [notes, setNotes] = useState('');
@@ -71,33 +90,45 @@ export default function UnexpectedParcelModal({
     setCameraActive(false);
   }, []);
 
+  const loadDepartments = useCallback(async () => {
+    setDepartmentsLoading(true);
+    setDepartmentsError(null);
+    try {
+      const res = await fetch('/api/departments?activeOnly=true', { cache: 'no-store' });
+      if (!res.ok) {
+        throw new Error('Failed to load departments');
+      }
+      const data = await res.json();
+      if (Array.isArray(data.departments)) {
+        setDepartments(
+          data.departments.map((d: { id: string; name: string }) => ({
+            id: d.id,
+            name: d.name,
+          }))
+        );
+      } else {
+        setDepartments([]);
+      }
+    } catch {
+      setDepartmentsError(
+        t('departments_load_error', 'Unable to load departments. Please try again.')
+      );
+    } finally {
+      setDepartmentsLoading(false);
+    }
+  }, [t]);
+
   useEffect(() => {
     if (!isOpen) {
       stopCamera();
       return;
     }
 
-    let mounted = true;
-    const loadEmployees = async () => {
-      try {
-        const prcMetaRes = await fetch('/api/parcels?includeEmployees=true&status=EXPECTED');
-        if (prcMetaRes.ok && mounted) {
-          const metaData = await prcMetaRes.json();
-          if (Array.isArray(metaData.employees)) {
-            setEmployees(metaData.employees);
-          }
-        }
-      } catch {
-        // Non-fatal
-      }
-    };
-
-    void loadEmployees();
+    void loadDepartments();
     return () => {
-      mounted = false;
       stopCamera();
     };
-  }, [isOpen, stopCamera]);
+  }, [isOpen, loadDepartments, stopCamera]);
 
   const startCamera = async () => {
     setCameraError(null);
@@ -150,7 +181,11 @@ export default function UnexpectedParcelModal({
   };
 
   const resetForm = () => {
-    setSelectedEmployeeId('');
+    setSenderName('');
+    setSenderPhone('');
+    setEmployeeName('');
+    setEmployeePhone('');
+    setSelectedDepartmentId('');
     setParcelFromOption('');
     setCustomSender('');
     setNotes('');
@@ -164,8 +199,53 @@ export default function UnexpectedParcelModal({
     e.preventDefault();
     setError(null);
 
-    if (!selectedEmployeeId) {
-      setError(isUrdu ? 'براہ کرم ملازم منتخب کریں۔' : 'Please select an Employee.');
+    const trimmedSenderName = senderName.trim().replace(/\s+/g, ' ');
+    if (!trimmedSenderName) {
+      setError(
+        isUrdu
+          ? 'براہ کرم پارسل بھیجنے والے کا نام درج کریں۔'
+          : 'Parcel Sender Name is required.'
+      );
+      return;
+    }
+
+    const senderPhoneValidation = validateAppPhoneNumber(senderPhone);
+    if (!senderPhoneValidation.valid) {
+      setError(
+        isUrdu
+          ? 'براہ کرم پارسل بھیجنے والے کا درست فون نمبر درج کریں (مثلاً 03001234567)۔'
+          : 'Please enter a valid Parcel Sender Phone Number (e.g., 03001234567).'
+      );
+      return;
+    }
+
+    const trimmedEmployeeName = employeeName.trim().replace(/\s+/g, ' ');
+    if (!trimmedEmployeeName) {
+      setError(
+        isUrdu
+          ? 'براہ کرم ملازم کا نام درج کریں۔'
+          : 'Employee Name is required.'
+      );
+      return;
+    }
+
+    const employeePhoneValidation = validateAppPhoneNumber(employeePhone);
+    if (!employeePhoneValidation.valid) {
+      setError(
+        isUrdu
+          ? 'براہ کرم ملازم کا درست فون نمبر درج کریں (مثلاً 03001234567)۔'
+          : 'Please enter a valid Employee Phone Number (e.g., 03001234567).'
+      );
+      return;
+    }
+
+    const selectedDept = departments.find((d) => d.id === selectedDepartmentId);
+    if (!selectedDepartmentId || !selectedDept) {
+      setError(
+        isUrdu
+          ? 'براہ کرم ملازم کا شعبہ (ڈیپارٹمنٹ) منتخب کریں۔'
+          : 'Please select an Employee Department.'
+      );
       return;
     }
 
@@ -179,7 +259,7 @@ export default function UnexpectedParcelModal({
             ? 'براہ کرم بھیجنے والے کا نام درج کریں۔'
             : 'Please enter the sender name.'
           : isUrdu
-          ? 'براہ کرم پارسل بھیجنے والا منتخب کریں۔'
+          ? 'براہ کرم پارسل کا ذریعہ (Parcel From) منتخب کریں۔'
           : 'Please select Parcel From.'
       );
       return;
@@ -194,16 +274,18 @@ export default function UnexpectedParcelModal({
       return;
     }
 
-    const selectedEmp = employees.find((emp) => emp.id === selectedEmployeeId);
-
     setSubmitting(true);
     try {
       const res = await fetch('/api/parcels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          employeeId: selectedEmployeeId,
-          ownerName: selectedEmp?.name || '',
+          senderName: trimmedSenderName,
+          senderPhone: senderPhoneValidation.cleaned,
+          ownerName: trimmedEmployeeName,
+          ownerPhone: employeePhoneValidation.cleaned,
+          departmentId: selectedDept.id,
+          departmentName: selectedDept.name,
           senderPlatform: resolvedSender,
           photoUrl,
           notes: notes.trim() || undefined,
@@ -245,18 +327,18 @@ export default function UnexpectedParcelModal({
 
   return (
     <div
-      dir={isUrdu ? 'rtl' : 'ltr'}
+      dir="ltr"
       className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
     >
       <div className="w-full max-w-xl rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden my-auto animate-in fade-in-0 zoom-in-95">
         {/* Header — Consistent GateShield Blue Theme */}
         <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
               <Package className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-extrabold leading-tight">
+            <div className={`min-w-0 flex-1 ${isUrdu ? 'text-right' : 'text-left'}`}>
+              <h2 dir="auto" className="text-base sm:text-lg font-extrabold leading-tight truncate">
                 {confirmedParcel
                   ? isUrdu
                     ? 'پارسل وصولی کی تصدیق'
@@ -272,7 +354,7 @@ export default function UnexpectedParcelModal({
               resetForm();
               onClose();
             }}
-            className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white cursor-pointer"
+            className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -317,14 +399,46 @@ export default function UnexpectedParcelModal({
               )}
 
               <div className="sm:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 space-y-2 text-xs">
+                {confirmedParcel.senderName && (
+                  <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
+                    <span className="text-slate-500">
+                      {t('parcel_sender_name_label', 'Parcel Sender Name')}
+                    </span>
+                    <span className="font-extrabold text-slate-900 dark:text-white">
+                      {confirmedParcel.senderName}
+                    </span>
+                  </div>
+                )}
+                {confirmedParcel.senderPhone && (
+                  <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
+                    <span className="text-slate-500">
+                      {t('parcel_sender_phone_label', 'Parcel Sender Phone Number')}
+                    </span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      {confirmedParcel.senderPhone}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
-                  <span className="text-slate-500">{t('employee_label', 'Employee')}</span>
+                  <span className="text-slate-500">
+                    {t('employee_name_label', 'Employee Name')}
+                  </span>
                   <span className="font-extrabold text-slate-900 dark:text-white">
                     {confirmedParcel.ownerName}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
-                  <span className="text-slate-500">{t('emp_department', 'Department')}</span>
+                  <span className="text-slate-500">
+                    {t('employee_phone_label', 'Employee Phone Number')}
+                  </span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">
+                    {confirmedParcel.ownerPhone}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
+                  <span className="text-slate-500">
+                    {t('employee_department_label', 'Employee Department')}
+                  </span>
                   <span className="font-bold text-slate-900 dark:text-white">
                     {confirmedParcel.departmentName}
                   </span>
@@ -379,7 +493,7 @@ export default function UnexpectedParcelModal({
                   resetForm();
                   onClose();
                 }}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-extrabold shadow-md cursor-pointer"
               >
                 {t('close', 'Close')}
               </button>
@@ -397,39 +511,138 @@ export default function UnexpectedParcelModal({
               </div>
             )}
 
-            {/* 1. Employee Selection (Department & Phone resolved automatically on server) */}
+            {/* 1. Parcel Sender Name */}
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                {t('employee_label', 'Employee')} *
+                {t('parcel_sender_name_label', 'Parcel Sender Name')} *
               </label>
               <div className="relative">
-                <User
-                  className={`w-4 h-4 text-slate-400 absolute ${
-                    isUrdu ? 'right-3.5' : 'left-3.5'
-                  } top-1/2 -translate-y-1/2 pointer-events-none`}
+                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  required
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                  placeholder={t('parcel_sender_name_placeholder', 'Enter parcel sender name')}
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+            </div>
+
+            {/* 2. Parcel Sender Phone Number */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('parcel_sender_phone_label', 'Parcel Sender Phone Number')} *
+              </label>
+              <div className="relative">
+                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  required
+                  value={senderPhone}
+                  onChange={(e) => setSenderPhone(e.target.value)}
+                  placeholder={t('parcel_sender_phone_placeholder', 'e.g. 03001234567')}
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* 3. Employee Name */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('employee_name_label', 'Employee Name')} *
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  required
+                  value={employeeName}
+                  onChange={(e) => setEmployeeName(e.target.value)}
+                  placeholder={t('employee_name_placeholder', 'Enter employee name')}
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* 4. Employee Phone Number */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('employee_phone_label', 'Employee Phone Number')} *
+              </label>
+              <div className="relative">
+                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  required
+                  value={employeePhone}
+                  onChange={(e) => setEmployeePhone(e.target.value)}
+                  placeholder={t('employee_phone_placeholder', 'e.g. 03001234567')}
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* 5. Employee Department — Dynamic Dropdown from Admin Panel */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('employee_department_label', 'Employee Department')} *
+              </label>
+              <div className="relative">
+                {departmentsLoading ? (
+                  <Loader2 className="w-4 h-4 text-blue-500 animate-spin absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                ) : (
+                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                )}
                 <select
                   required
-                  value={selectedEmployeeId}
-                  onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                  className={`w-full ${
-                    isUrdu ? 'pr-10 pl-3.5' : 'pl-10 pr-3.5'
-                  } py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  disabled={departmentsLoading || departments.length === 0}
+                  value={selectedDepartmentId}
+                  onChange={(e) => setSelectedDepartmentId(e.target.value)}
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">
-                    {t('select_employee_placeholder', 'Select Employee')}
+                    {departmentsLoading
+                      ? t('loading_departments', 'Loading departments...')
+                      : departments.length === 0
+                      ? t(
+                          'no_departments_available',
+                          'No departments available. Please configure departments in the Admin Panel.'
+                        )
+                      : t('select_department_placeholder', 'Select Department')}
                   </option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name}
-                      {emp.departmentName ? ` (${emp.departmentName})` : ''}
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
                     </option>
                   ))}
                 </select>
               </div>
+              {departmentsError && (
+                <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-rose-600 dark:text-rose-400">
+                  <span>{departmentsError}</span>
+                  <button
+                    type="button"
+                    onClick={() => void loadDepartments()}
+                    className="font-bold underline cursor-pointer shrink-0"
+                  >
+                    {t('retry', 'Retry')}
+                  </button>
+                </div>
+              )}
+              {!departmentsLoading && !departmentsError && departments.length === 0 && (
+                <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  {t(
+                    'no_departments_available',
+                    'No departments available. Please configure departments in the Admin Panel.'
+                  )}
+                </p>
+              )}
             </div>
 
-            {/* 2. Parcel From (Foodpanda, TCS, Bank, Other) */}
+            {/* 6. Parcel From (Foodpanda, TCS, Bank, Other) */}
             <div className="space-y-3">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                 {t('parcel_from_label', 'Parcel From')} *

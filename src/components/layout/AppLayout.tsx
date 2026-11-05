@@ -53,7 +53,10 @@ export default function AppLayout({
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 antialiased selection:bg-blue-500 selection:text-white">
+    <div
+      dir="ltr"
+      className="min-h-screen flex bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 antialiased selection:bg-blue-500 selection:text-white"
+    >
       {/* Sidebar Navigation */}
       <Sidebar />
 
@@ -65,7 +68,10 @@ export default function AppLayout({
           onOpenCheckStatus={() => setIsCheckStatusOpen(true)}
         />
 
-        <main className="flex-1 p-3 sm:p-4 md:p-5 lg:p-6 overflow-y-auto min-w-0">
+        <main
+          dir="ltr"
+          className="flex-1 p-3 sm:p-4 md:p-5 lg:p-6 overflow-y-auto min-w-0"
+        >
           {children}
         </main>
       </div>

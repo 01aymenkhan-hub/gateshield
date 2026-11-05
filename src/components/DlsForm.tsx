@@ -192,12 +192,11 @@ export default function DlsForm({ data, onChange, onRescan }: DlsFormProps) {
     <section className="bg-white dark:bg-slate-900 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4">
       {/* Small simple green status line + Heading immediately below (no descriptive subtitle) */}
       <div className="mb-3">
-        <div
-          className={`flex items-center justify-between gap-2 ${
-            isUr ? "flex-row-reverse" : "flex-row"
-          }`}
-        >
-          <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 tracking-wide">
+        <div className="flex items-center justify-between gap-2">
+          <span
+            dir="auto"
+            className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 tracking-wide"
+          >
             {t("scan_complete_line", "✓ Scan Complete")}
           </span>
           {onRescan && (
@@ -210,7 +209,7 @@ export default function DlsForm({ data, onChange, onRescan }: DlsFormProps) {
               className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>{t("rescan_card_btn", "Rescan Card")}</span>
+              <span dir="auto">{t("rescan_card_btn", "Rescan Card")}</span>
             </button>
           )}
         </div>

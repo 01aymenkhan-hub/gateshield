@@ -4,6 +4,7 @@ import { getSessionUser, getEmployeeSessionUser } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { createAppNotification } from '@/lib/notifications';
 import { VipGuestRow } from '@/app/api/vip-guests/route';
+import { ensureImageStoredAsFileUrl } from '@/lib/fileStorage';
 
 export async function PATCH(
   request: NextRequest,
@@ -135,12 +136,23 @@ export async function PATCH(
             ? body.cnicNumber.trim()
             : null
           : vip.cnicNumber;
-      const photoUrl =
+      const rawPhotoUrl =
         body.photoUrl !== undefined
           ? typeof body.photoUrl === 'string' && body.photoUrl.trim()
             ? body.photoUrl.trim()
             : null
           : vip.photoUrl;
+      let photoUrl: string | null = rawPhotoUrl;
+      if (rawPhotoUrl) {
+        try {
+          photoUrl = await ensureImageStoredAsFileUrl(rawPhotoUrl, 'vip', 'vip');
+        } catch (imgErr: any) {
+          return NextResponse.json(
+            { error: imgErr?.message || 'Invalid VIP Guest photo format.' },
+            { status: 400 }
+          );
+        }
+      }
       const notes =
         body.notes !== undefined
           ? typeof body.notes === 'string' && body.notes.trim()

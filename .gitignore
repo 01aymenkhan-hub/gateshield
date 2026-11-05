@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!backend/.env.example
 
 # vercel
 .vercel
@@ -56,3 +58,8 @@ official_models/
 # local test & scratch assets
 scratch_*.jpg
 *.log
+
+# Local OCR workers and private real-card test fixtures
+/.local/
+/uploads/
+/backend/samples/old-cnic-pic.jpg

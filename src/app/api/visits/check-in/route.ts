@@ -4,10 +4,17 @@ import { getSessionUser } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { generatePassCode } from '@/lib/qrUtils';
 import {
-  validateDocumentImageDataUrl,
   sanitizeVisitsWithDbFlags,
   sanitizePersonForClient,
+  ensureDeliveryDocColumns,
+  formatVehicleNoForStorage,
+  normalizeVehicleNoKey,
 } from '@/lib/personSanitizer';
+import {
+  saveImageDataUrlToFile,
+  ensureImageStoredAsFileUrl,
+  StoredFileResult,
+} from '@/lib/fileStorage';
 
 function formatCardNoForStorage(raw: string): string {
   return raw
@@ -50,6 +57,8 @@ export async function POST(request: NextRequest) {
       photoUrl,
       cnicImageData,
       dlsImageData,
+      deliveryDocImageData,
+      deliverySource,
       company,
       hostName,
       department,
@@ -62,12 +71,79 @@ export async function POST(request: NextRequest) {
       notes,
     } = body;
 
+    const isDelivery = String(category || '').toUpperCase() === 'DELIVERY';
+
     if (!fullName || !fullName.trim()) {
       return NextResponse.json({ error: 'Full name is required' }, { status: 400 });
     }
 
-    if (!hostName || !hostName.trim()) {
+    const resolvedDeliverySource = isDelivery
+      ? String(deliverySource || company || hostName || '').trim()
+      : '';
+
+    if (isDelivery && !resolvedDeliverySource) {
+      return NextResponse.json(
+        { error: 'Delivery Source / Company Name is required' },
+        { status: 400 }
+      );
+    }
+
+    const effectiveHostName = isDelivery
+      ? resolvedDeliverySource
+      : typeof hostName === 'string'
+      ? hostName.trim()
+      : '';
+    const effectiveCompany = isDelivery
+      ? resolvedDeliverySource
+      : typeof company === 'string' && company.trim()
+      ? company.trim()
+      : null;
+
+    if (!effectiveHostName) {
       return NextResponse.json({ error: 'Host person name is required' }, { status: 400 });
+    }
+
+    // Validate and store required Incoming Delivery Document image to disk for DELIVERY category
+    let savedIncomingDoc: StoredFileResult | null = null;
+    const hasIncomingDeliveryDoc =
+      typeof deliveryDocImageData === 'string' && deliveryDocImageData.trim().length > 0;
+
+    if (isDelivery && !hasIncomingDeliveryDoc) {
+      return NextResponse.json(
+        { error: 'Incoming delivery document image is required for Delivery registration.' },
+        { status: 400 }
+      );
+    }
+
+    if (hasIncomingDeliveryDoc) {
+      try {
+        savedIncomingDoc = await saveImageDataUrlToFile(
+          deliveryDocImageData,
+          'delivery/incoming',
+          'delivery_in'
+        );
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Invalid delivery document image';
+        return NextResponse.json(
+          { error: `Incoming delivery document: ${msg}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Store visitor/delivery portrait photo to persistent file storage if provided
+    let storedProfilePhotoUrl: string | null = null;
+    if (typeof photoUrl === 'string' && photoUrl.trim().length > 0) {
+      try {
+        storedProfilePhotoUrl = await ensureImageStoredAsFileUrl(
+          photoUrl,
+          'profiles',
+          'profile'
+        );
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Invalid profile photo';
+        return NextResponse.json({ error: `Visitor photo: ${msg}` }, { status: 400 });
+      }
     }
 
     // Resolve Department (supports both departmentId and department name)
@@ -113,17 +189,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (isDelivery && !resolvedDepartmentName) {
+      resolvedDepartmentName = 'Delivery';
+    }
+
     if (!resolvedDepartmentName) {
       return NextResponse.json({ error: 'Department is required' }, { status: 400 });
     }
 
-    // Manual Visitor Card Number validation: required, never auto-generated
-    const formattedCardNo = visitorCardNo ? formatCardNoForStorage(String(visitorCardNo)) : '';
-    const cardComparisonKey = visitorCardNo ? normalizeCardKey(String(visitorCardNo)) : '';
+    // Manual Visitor Card Number validation for standard categories; Vehicle Number required for DELIVERY
+    const formattedCardNo =
+      !isDelivery && visitorCardNo ? formatCardNoForStorage(String(visitorCardNo)) : '';
+    const cardComparisonKey =
+      !isDelivery && visitorCardNo ? normalizeCardKey(String(visitorCardNo)) : '';
 
-    if (!formattedCardNo || !cardComparisonKey) {
+    if (!isDelivery && (!formattedCardNo || !cardComparisonKey)) {
       return NextResponse.json(
         { error: 'Visitor Card Number is required. Please enter the number printed on the physical card.' },
+        { status: 400 }
+      );
+    }
+
+    const formattedVehicleNo = vehicleNo ? formatVehicleNoForStorage(String(vehicleNo)) : '';
+    const normalizedVehicleNo = vehicleNo ? normalizeVehicleNoKey(String(vehicleNo)) : '';
+
+    if (isDelivery && (!formattedVehicleNo || normalizedVehicleNo.length < 2)) {
+      return NextResponse.json(
+        { error: 'Vehicle Number is required for Delivery registration (e.g. KHI-1234).' },
         { status: 400 }
       );
     }
@@ -216,53 +308,55 @@ export async function POST(request: NextRequest) {
     // verify card is not assigned to any active visitor, verify person is not blacklisted or already inside,
     // and atomically create the visit record.
     const { visit, person } = await prisma.$transaction(async (tx) => {
-      const lockNamespaceKey = `gk_card_${cardComparisonKey}`;
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockNamespaceKey}))`;
+      if (formattedCardNo && cardComparisonKey) {
+        const lockNamespaceKey = `gk_card_${cardComparisonKey}`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockNamespaceKey}))`;
 
-      const activeVisitsWithCards = await tx.visit.findMany({
-        where: {
-          status: { in: ['CHECKED_IN', 'OVERSTAY'] },
-          checkOutTime: null,
-          visitorCardNo: { not: null },
-        },
-        select: {
-          id: true,
-          visitorCardNo: true,
-          visitNumber: true,
-        },
-      });
+        const activeVisitsWithCards = await tx.visit.findMany({
+          where: {
+            status: { in: ['CHECKED_IN', 'OVERSTAY'] },
+            checkOutTime: null,
+            visitorCardNo: { not: null },
+          },
+          select: {
+            id: true,
+            visitorCardNo: true,
+            visitNumber: true,
+          },
+        });
 
-      const duplicateCardVisit = activeVisitsWithCards.find(
-        (v) => v.visitorCardNo && normalizeCardKey(v.visitorCardNo) === cardComparisonKey
-      );
-
-      if (duplicateCardVisit) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const conflictErr: any = new Error(
-          'This card is already assigned. Please choose another available card.'
+        const duplicateCardVisit = activeVisitsWithCards.find(
+          (v) => v.visitorCardNo && normalizeCardKey(v.visitorCardNo) === cardComparisonKey
         );
-        conflictErr.status = 409;
-        conflictErr.code = 'CARD_ALREADY_ASSIGNED';
-        throw conflictErr;
-      }
 
-      const duplicatePendingInvitation = await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT "id"
-        FROM "guest_invitations"
-        WHERE "status"::text = 'PENDING'
-          AND "normalizedCardKey" IS NOT NULL
-          AND "normalizedCardKey" = ${cardComparisonKey}
-        LIMIT 1
-      `;
+        if (duplicateCardVisit) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const conflictErr: any = new Error(
+            'This card is already assigned. Please choose another available card.'
+          );
+          conflictErr.status = 409;
+          conflictErr.code = 'CARD_ALREADY_ASSIGNED';
+          throw conflictErr;
+        }
 
-      if (duplicatePendingInvitation.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const conflictErr: any = new Error(
-          'This card is already preassigned to an upcoming invited guest. Please choose another available card.'
-        );
-        conflictErr.status = 409;
-        conflictErr.code = 'CARD_ALREADY_ASSIGNED';
-        throw conflictErr;
+        const duplicatePendingInvitation = await tx.$queryRaw<Array<{ id: string }>>`
+          SELECT "id"
+          FROM "guest_invitations"
+          WHERE "status"::text = 'PENDING'
+            AND "normalizedCardKey" IS NOT NULL
+            AND "normalizedCardKey" = ${cardComparisonKey}
+          LIMIT 1
+        `;
+
+        if (duplicatePendingInvitation.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const conflictErr: any = new Error(
+            'This card is already preassigned to an upcoming invited guest. Please choose another available card.'
+          );
+          conflictErr.status = 409;
+          conflictErr.code = 'CARD_ALREADY_ASSIGNED';
+          throw conflictErr;
+        }
       }
 
       let existingPerson = null;
@@ -333,8 +427,8 @@ export async function POST(request: NextRequest) {
         presentAddress: presentAddress?.trim() || null,
         permanentAddress: permanentAddress?.trim() || null,
         phoneNumber: cleanPhone || existingPerson?.phoneNumber || null,
-        photoUrl: photoUrl || existingPerson?.photoUrl || null,
-        company: company?.trim() || null,
+        photoUrl: storedProfilePhotoUrl || existingPerson?.photoUrl || null,
+        company: effectiveCompany || existingPerson?.company || null,
         belongings: belongings?.trim() || null,
       };
 
@@ -364,11 +458,11 @@ export async function POST(request: NextRequest) {
           visitNumber,
           passCode,
           personId: savedPerson.id,
-          hostName: hostName.trim(),
+          hostName: effectiveHostName,
           department: resolvedDepartmentName,
-          purpose: purpose?.trim() || null,
-          visitorCardNo: formattedCardNo,
-          vehicleNo: vehicleNo?.trim() || null,
+          purpose: purpose?.trim() || (isDelivery ? 'Delivery' : null),
+          visitorCardNo: isDelivery ? null : formattedCardNo || null,
+          vehicleNo: formattedVehicleNo || null,
           belongings: belongings?.trim() || null,
           status: 'CHECKED_IN',
           entryGateId: resolvedGateId,
@@ -393,24 +487,62 @@ export async function POST(request: NextRequest) {
       return { visit: createdVisit, person: savedPerson };
     });
 
-    // Save scanned CNIC / DLS document images using parameterized SQL so cached Prisma DMMF never rejects the columns
+    await ensureDeliveryDocColumns();
+
+    if (normalizedVehicleNo) {
+      await prisma.$executeRaw`
+        UPDATE "visits"
+        SET "vehicleNoNormalized" = ${normalizedVehicleNo}
+        WHERE "id" = ${visit.id}
+      `;
+    }
+
+    // Save scanned CNIC / DLS / Delivery document images to persistent file storage and store only metadata in PostgreSQL
     let imageStorageStatus: 'saved' | 'failed' | 'none' = 'none';
     let imageStorageError: string | null = null;
     const hasIncomingCnicImage = typeof cnicImageData === 'string' && cnicImageData.trim().length > 0;
     const hasIncomingDlsImage = typeof dlsImageData === 'string' && dlsImageData.trim().length > 0;
 
+    if (savedIncomingDoc) {
+      try {
+        await prisma.$executeRaw`
+          UPDATE "visits"
+          SET "incomingDocPath" = ${savedIncomingDoc.storageKey},
+              "incomingDocMime" = ${savedIncomingDoc.mime},
+              "incomingDocSize" = ${savedIncomingDoc.size},
+              "incomingDocCapturedAt" = NOW(),
+              "updatedAt" = NOW()
+          WHERE "id" = ${visit.id}
+        `;
+        await prisma.$executeRaw`
+          UPDATE "persons"
+          SET "deliveryDocImagePath" = ${savedIncomingDoc.storageKey},
+              "deliveryDocImageMime" = ${savedIncomingDoc.mime},
+              "deliveryDocImageSize" = ${savedIncomingDoc.size},
+              "updatedAt" = NOW()
+          WHERE "id" = ${person.id}
+        `;
+        imageStorageStatus = 'saved';
+      } catch (docErr: unknown) {
+        const msg = docErr instanceof Error ? docErr.message : 'Database update failed';
+        console.error('Failed to store delivery document metadata for visit:', visit.id, msg);
+        imageStorageStatus = 'failed';
+        imageStorageError = 'Failed to save incoming delivery document metadata to database.';
+      }
+    }
+
     if (hasIncomingCnicImage || hasIncomingDlsImage) {
-      let validCnicData: string | null = null;
-      let validCnicMime: string | null = null;
-      let validDlsData: string | null = null;
-      let validDlsMime: string | null = null;
+      let savedCnicFile: StoredFileResult | null = null;
+      let savedDlsFile: StoredFileResult | null = null;
       const validationErrors: string[] = [];
 
       if (hasIncomingCnicImage) {
         try {
-          const cnicValidation = validateDocumentImageDataUrl(cnicImageData);
-          validCnicData = cnicValidation.normalizedDataUrl;
-          validCnicMime = cnicValidation.mime;
+          savedCnicFile = await saveImageDataUrlToFile(
+            cnicImageData,
+            'cnic',
+            `cnic_${person.id}`
+          );
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : 'Invalid image';
           validationErrors.push(`CNIC image: ${msg}`);
@@ -419,9 +551,11 @@ export async function POST(request: NextRequest) {
 
       if (hasIncomingDlsImage) {
         try {
-          const dlsValidation = validateDocumentImageDataUrl(dlsImageData);
-          validDlsData = dlsValidation.normalizedDataUrl;
-          validDlsMime = dlsValidation.mime;
+          savedDlsFile = await saveImageDataUrlToFile(
+            dlsImageData,
+            'dls',
+            `dls_${person.id}`
+          );
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : 'Invalid image';
           validationErrors.push(`Driving Licence image: ${msg}`);
@@ -433,31 +567,35 @@ export async function POST(request: NextRequest) {
         imageStorageError = validationErrors.join('; ');
       }
 
-      if (validCnicData || validDlsData) {
+      if (savedCnicFile || savedDlsFile) {
         try {
-          if (validCnicData && validDlsData) {
+          if (savedCnicFile && savedDlsFile) {
             await prisma.$executeRaw`
               UPDATE "persons"
-              SET "cnicImageData" = ${validCnicData},
-                  "cnicImageMime" = ${validCnicMime},
-                  "dlsImageData" = ${validDlsData},
-                  "dlsImageMime" = ${validDlsMime},
+              SET "cnicImagePath" = ${savedCnicFile.storageKey},
+                  "cnicImageMime" = ${savedCnicFile.mime},
+                  "cnicImageSize" = ${savedCnicFile.size},
+                  "dlsImagePath" = ${savedDlsFile.storageKey},
+                  "dlsImageMime" = ${savedDlsFile.mime},
+                  "dlsImageSize" = ${savedDlsFile.size},
                   "updatedAt" = NOW()
               WHERE "id" = ${person.id}
             `;
-          } else if (validCnicData) {
+          } else if (savedCnicFile) {
             await prisma.$executeRaw`
               UPDATE "persons"
-              SET "cnicImageData" = ${validCnicData},
-                  "cnicImageMime" = ${validCnicMime},
+              SET "cnicImagePath" = ${savedCnicFile.storageKey},
+                  "cnicImageMime" = ${savedCnicFile.mime},
+                  "cnicImageSize" = ${savedCnicFile.size},
                   "updatedAt" = NOW()
               WHERE "id" = ${person.id}
             `;
-          } else if (validDlsData) {
+          } else if (savedDlsFile) {
             await prisma.$executeRaw`
               UPDATE "persons"
-              SET "dlsImageData" = ${validDlsData},
-                  "dlsImageMime" = ${validDlsMime},
+              SET "dlsImagePath" = ${savedDlsFile.storageKey},
+                  "dlsImageMime" = ${savedDlsFile.mime},
+                  "dlsImageSize" = ${savedDlsFile.size},
                   "updatedAt" = NOW()
               WHERE "id" = ${person.id}
             `;
@@ -468,9 +606,9 @@ export async function POST(request: NextRequest) {
           }
         } catch (imgErr: unknown) {
           const msg = imgErr instanceof Error ? imgErr.message : 'Database update failed';
-          console.error('Failed to store identity document image for person:', person.id, msg);
+          console.error('Failed to store identity document metadata for person:', person.id, msg);
           imageStorageStatus = 'failed';
-          imageStorageError = 'Failed to save scanned ID card image to database.';
+          imageStorageError = 'Failed to save scanned ID card image metadata to database.';
         }
       }
     }

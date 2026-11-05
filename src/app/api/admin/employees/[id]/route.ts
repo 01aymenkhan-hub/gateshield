@@ -60,9 +60,12 @@ export async function PATCH(
         ? body.rejectionReason.trim()
         : null;
 
-    if (!['APPROVE', 'REJECT', 'TOGGLE_ACTIVE'].includes(action)) {
+    if (!['APPROVE', 'REJECT', 'TOGGLE_ACTIVE', 'UPDATE_DEPARTMENT'].includes(action)) {
       return NextResponse.json(
-        { error: 'Invalid action. Supported actions: APPROVE, REJECT, TOGGLE_ACTIVE.' },
+        {
+          error:
+            'Invalid action. Supported actions: APPROVE, REJECT, TOGGLE_ACTIVE, UPDATE_DEPARTMENT.',
+        },
         { status: 400 }
       );
     }
@@ -218,6 +221,68 @@ export async function PATCH(
           rejectionReason,
         },
         emailDispatch: emailResult,
+      });
+    }
+
+    if (action === 'UPDATE_DEPARTMENT') {
+      const nextDepartmentId =
+        typeof body.departmentId === 'string' && body.departmentId.trim()
+          ? body.departmentId.trim()
+          : '';
+      if (!nextDepartmentId) {
+        return NextResponse.json(
+          { error: 'Please select a valid Department.' },
+          { status: 400 }
+        );
+      }
+
+      const deptRows = await prisma.$queryRaw<
+        Array<{ id: string; name: string }>
+      >`
+        SELECT "id", "name"
+        FROM "departments"
+        WHERE "id" = ${nextDepartmentId}
+        LIMIT 1
+      `;
+
+      const dept = deptRows[0];
+      if (!dept) {
+        return NextResponse.json(
+          { error: 'Selected department does not exist.' },
+          { status: 404 }
+        );
+      }
+
+      await prisma.$executeRaw`
+        UPDATE "users"
+        SET "departmentId" = ${dept.id},
+            "departmentName" = ${dept.name},
+            "updatedAt" = NOW()
+        WHERE "id" = ${id} AND "role"::text = 'EMPLOYEE'
+      `;
+
+      await logAudit({
+        action: 'UPDATE_EMPLOYEE_DEPARTMENT',
+        entityType: 'User',
+        entityId: id,
+        details: {
+          name: targetEmployee.name,
+          email: targetEmployee.email,
+          previousDepartment: targetEmployee.departmentName,
+          newDepartmentId: dept.id,
+          newDepartmentName: dept.name,
+        },
+        performedById: user.id,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Updated ${targetEmployee.name}'s department to ${dept.name}.`,
+        employee: {
+          ...targetEmployee,
+          departmentId: dept.id,
+          departmentName: dept.name,
+        },
       });
     }
 

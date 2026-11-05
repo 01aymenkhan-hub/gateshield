@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import re
 import logging
+from datetime import date
 from typing import Any, Optional
 import numpy as np
 
@@ -69,7 +70,14 @@ def extract_date_from_string(text: str) -> tuple[str, str]:
         d = int(m.group(1))
         mon = m.group(2).capitalize()[:3]
         y = int(m.group(3))
-        if 1 <= d <= 31 and mon.lower() in MONTH_ABBRS and 1900 <= y <= 2100:
+        valid = False
+        try:
+            month_number = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].index(mon.lower()) + 1
+            date(y, month_number, d)
+            valid = 1900 <= y <= 2100
+        except ValueError:
+            pass
+        if valid:
             date_str = f"{d:02d}-{mon}-{y:04d}"
             # Extract text before and after the date
             remaining = (text[:m.start()] + " " + text[m.end():]).strip()
@@ -81,7 +89,13 @@ def extract_date_from_string(text: str) -> tuple[str, str]:
         d = int(m_num.group(1))
         mth = int(m_num.group(2))
         y = int(m_num.group(3))
-        if 1 <= d <= 31 and 1 <= mth <= 12 and 1900 <= y <= 2100:
+        valid = False
+        try:
+            date(y, mth, d)
+            valid = 1900 <= y <= 2100
+        except ValueError:
+            pass
+        if valid:
             months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
             date_str = f"{d:02d}-{months[mth-1]}-{y:04d}"
             remaining = (text[:m_num.start()] + " " + text[m_num.end():]).strip()
@@ -152,10 +166,6 @@ def format_authority_text(raw_lines: list[str]) -> str:
         t = re.sub(r"DL\s*Cl[a-z]*ton", "DL Clifton", t, flags=re.IGNORECASE)
         t = re.sub(r"DL\s*Saud[a-z]*", "DL Saudabad", t, flags=re.IGNORECASE)
 
-        # Fix 'Bhurgar' -> 'Bhurgari'
-        if "Bhurgar" in t and not t.endswith("i"):
-            t = t.replace("Bhurgar", "Bhurgari")
-
         # Fix 'M.Ayoob' -> 'M. Ayoob'
         t = re.sub(r"\bM\.([A-Za-z])", r"M. \1", t)
 
@@ -167,10 +177,7 @@ def format_authority_text(raw_lines: list[str]) -> str:
         if t and t not in cleaned_pieces:
             cleaned_pieces.append(t)
 
-    # If Clifton was found without Karachi, add Karachi as per card layout
     res = ", ".join(cleaned_pieces)
-    if "Clifton" in res and "Karachi" not in res:
-        res = res + ", Karachi"
 
     # Normalize double commas and whitespace
     res = re.sub(r"\s*,\s*", ", ", res).strip(" ,")
@@ -389,4 +396,9 @@ def parse_dls_fields(
 
     extracted["licensingAuthority"] = format_authority_text(authority_raw_pieces)
 
+    # A nearby title/label is not a licence number. Preserve supported numeric
+    # and prefixed alphanumeric formats, reject free-form OCR noise.
+    licence = extracted["licenseNumber"]
+    if not re.fullmatch(r"[1-7]\d{4}-\d{7}-\d(?:#\d+)?|[A-Z]{1,8}[-/][A-Z0-9][A-Z0-9/-]{3,24}", licence, re.IGNORECASE):
+        extracted["licenseNumber"] = ""
     return extracted

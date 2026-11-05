@@ -43,12 +43,16 @@ def order_points(pts: np.ndarray) -> np.ndarray:
     return rect
 
 
-def normalize_card_image(image: np.ndarray) -> np.ndarray:
+def normalize_card_image(
+    image: np.ndarray,
+    output_size: tuple[int, int] = (NORMALIZED_WIDTH, NORMALIZED_HEIGHT),
+) -> np.ndarray:
     """
     Detects card boundary and performs perspective transform if a card contour
     is detected against background. Otherwise resizes directly to 1000x630.
     """
     h, w = image.shape[:2]
+    output_width, output_height = output_size
 
     # Quick check if card contour is distinct
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -85,16 +89,16 @@ def normalize_card_image(image: np.ndarray) -> np.ndarray:
         # Perspective warp to standard 1000x630
         dst = np.array([
             [0, 0],
-            [NORMALIZED_WIDTH - 1, 0],
-            [NORMALIZED_WIDTH - 1, NORMALIZED_HEIGHT - 1],
-            [0, NORMALIZED_HEIGHT - 1]
+            [output_width - 1, 0],
+            [output_width - 1, output_height - 1],
+            [0, output_height - 1]
         ], dtype="float32")
         M = cv2.getPerspectiveTransform(card_contour, dst)
-        warped = cv2.warpPerspective(image, M, (NORMALIZED_WIDTH, NORMALIZED_HEIGHT))
+        warped = cv2.warpPerspective(image, M, output_size)
         return warped
 
     # Fallback / direct normalization
-    return cv2.resize(image, (NORMALIZED_WIDTH, NORMALIZED_HEIGHT), interpolation=cv2.INTER_AREA)
+    return cv2.resize(image, output_size, interpolation=cv2.INTER_AREA)
 
 
 def enhance_card_image(image: np.ndarray) -> np.ndarray:

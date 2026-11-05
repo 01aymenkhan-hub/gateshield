@@ -8,6 +8,7 @@ import {
   Upload,
   ArrowLeft,
   ArrowRight,
+  Plus,
 } from 'lucide-react';
 import VisitInfoStep from '../VisitInfoStep';
 import CnicScanner from '../CnicScanner';
@@ -22,8 +23,8 @@ import GatekeeperLoader from '../ui/GatekeeperLoader';
 import { CnicData, ScanStatus } from '../../types/cnic';
 import { DlsData, DocumentType } from '../../types/dls';
 import { VisitInfoData, VisitorStepData, SubmissionStatus } from '../../types/visitor';
-import { scanCnicReal, scanCnicMock, RawOcrResponse } from '../../services/cnicApi';
-import { scanDlsReal, scanDlsMock, RawDlsResponse } from '../../services/dlsApi';
+import { scanCnicReal, OcrApiError, RawOcrResponse } from '../../services/cnicApi';
+import { scanDlsReal, RawDlsResponse } from '../../services/dlsApi';
 import { parseCnicOcr } from '../../utils/cnicParser';
 import { compressIdentityImageFile } from '../../utils/documentImageCompression';
 import {
@@ -40,6 +41,7 @@ const EMPTY_VISIT_INFO: VisitInfoData = {
   meetName: '',
   department: '',
   departmentId: '',
+  deliverySource: '',
 };
 
 const EMPTY_CNIC_DATA: CnicData = {
@@ -71,8 +73,11 @@ const EMPTY_DLS_DATA: DlsData = {
 const EMPTY_VISITOR_DATA: VisitorStepData = {
   photoPreview: null,
   photoFile: null,
+  deliveryDocumentPreview: null,
+  deliveryDocumentFile: null,
   phoneNumber: '',
   visitorCardNo: '',
+  vehicleNo: '',
   hasBelongings: false,
   belongings: '',
 };
@@ -97,8 +102,10 @@ export default function CheckInModal({
 
   // Admin 3-step state (unchanged)
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
-  // Operator 6-step state (1: Category, 2: Visit Info, 3: Scan ID Card, 4: Review Scanned Details, 5: Capture Photo, 6: Registration Details)
+  // Operator step state (1: Category, 2: Visit Info / Delivery Source, 3: Scan ID Card, 4: Review Scanned Details, 5: Capture Image, 6: Registration Details)
   const [operatorStep, setOperatorStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
+  // Sub-step for Delivery Step 5 (Capture Document) between Capture Image and Phone/VC Details
+  const [isDeliveryDocStep, setIsDeliveryDocStep] = useState<boolean>(false);
 
   const [category, setCategory] = useState<string>(() =>
     isAdmin ? defaultCategory || 'VISITOR' : ''
@@ -116,6 +123,7 @@ export default function CheckInModal({
     if (isOpen && !isAdmin) {
       setCategory('');
       setOperatorStep(1);
+      setIsDeliveryDocStep(false);
     }
   }
 
@@ -128,6 +136,8 @@ export default function CheckInModal({
   // CNIC Form State & Scanned Image State
   const [cnicFormData, setCnicFormData] = useState<CnicData>(EMPTY_CNIC_DATA);
   const [cnicScanStatus, setCnicScanStatus] = useState<ScanStatus>('idle');
+  const [cnicNeedsReview, setCnicNeedsReview] = useState(false);
+  const [cnicScanWarnings, setCnicScanWarnings] = useState<string[]>([]);
   const [, setRawCnicOcrResult] = useState<RawOcrResponse | null>(null);
   const [cnicScannedImage, setCnicScannedImage] = useState<string | null>(null);
   const [cnicImageCaptureError, setCnicImageCaptureError] = useState<string | null>(null);
@@ -135,6 +145,7 @@ export default function CheckInModal({
   // DLS Form State & Scanned Image State
   const [dlsFormData, setDlsFormData] = useState<DlsData>(EMPTY_DLS_DATA);
   const [dlsScanStatus, setDlsScanStatus] = useState<ScanStatus>('idle');
+  const [dlsNeedsReview, setDlsNeedsReview] = useState(false);
   const [, setRawDlsOcrResult] = useState<RawDlsResponse | null>(null);
   const [dlsScannedImage, setDlsScannedImage] = useState<string | null>(null);
   const [dlsImageCaptureError, setDlsImageCaptureError] = useState<string | null>(null);
@@ -156,10 +167,12 @@ export default function CheckInModal({
       case 'scanning':
         return 'Analyzing CNIC with OCR...';
       case 'success':
-        return 'CNIC scanned successfully! Fields populated.';
+        return cnicNeedsReview
+          ? 'CNIC scanned. Verify flagged details and complete any missing names.'
+          : 'CNIC scanned successfully! Fields populated.';
       case 'error':
         return scanErrorReason === 'service_error'
-          ? 'Unable to connect to the OCR service on port 8000. Please verify the backend is running or try again.'
+          ? 'The scanning service is busy or unavailable. Please try again shortly.'
           : 'Could not extract readable CNIC details from this image. Please try another photo or enter details manually.';
       default:
         return '';
@@ -174,7 +187,7 @@ export default function CheckInModal({
         return 'Driving License scanned successfully! Fields populated.';
       case 'error':
         return scanErrorReason === 'service_error'
-          ? 'Unable to connect to the OCR service on port 8000. Please verify the backend is running or try again.'
+          ? 'The scanning service is busy or unavailable. Please try again shortly.'
           : 'Could not extract readable Driving License details from this image. Please try another photo or enter details manually.';
       default:
         return '';
@@ -184,6 +197,8 @@ export default function CheckInModal({
   const handleCnicScan = useCallback(
     async (file: File) => {
       setCnicScanStatus('scanning');
+      setCnicNeedsReview(false);
+      setCnicScanWarnings([]);
       setScanErrorReason(null);
       setCnicImageCaptureError(null);
 
@@ -205,7 +220,9 @@ export default function CheckInModal({
 
         setRawCnicOcrResult(result);
         const rawItems = result.results || result.details || [];
-        const fallbackParsed = parseCnicOcr(rawItems);
+        // The new backend validates fields and deliberately leaves uncertain
+        // identity data empty. Legacy client heuristics must not fill it back.
+        const fallbackParsed = parseCnicOcr(result.quality ? [] : rawItems);
         const backendParsed: Partial<CnicData> = result.parsed || {};
 
         // Merge backend region parser with frontend label-relative parser so no detected field is lost
@@ -232,6 +249,8 @@ export default function CheckInModal({
         }
 
         const structuredData: CnicData = {
+          nameUrdu: backendParsed.nameUrdu,
+          fatherNameUrdu: backendParsed.fatherNameUrdu,
           name: mergedName,
           fullName: mergedName,
           fatherName: mergedFather,
@@ -277,6 +296,8 @@ export default function CheckInModal({
         }
 
         setCnicFormData(structuredData);
+        setCnicNeedsReview(Boolean(result.quality?.needsReview));
+        setCnicScanWarnings(result.quality?.warnings || []);
         setCnicScanStatus('success');
         if (!isAdmin) {
           playContinueSound();
@@ -284,7 +305,7 @@ export default function CheckInModal({
         }
       } catch (err) {
         console.error('[GateShield OCR] CNIC scan failed with service/runtime error:', err);
-        setScanErrorReason('service_error');
+        setScanErrorReason(err instanceof OcrApiError && err.status < 500 ? 'unreadable' : 'service_error');
 
         const compressedImg = await compressionPromise;
         if (compressedImg.ok) {
@@ -294,17 +315,8 @@ export default function CheckInModal({
           setCnicImageCaptureError(compressedImg.error);
         }
 
-        if (isAdmin) {
-          try {
-            const mockResult = await scanCnicMock(file);
-            setCnicFormData(mockResult);
-            setCnicScanStatus('success');
-          } catch {
-            setCnicScanStatus('error');
-          }
-        } else {
-          setCnicScanStatus('error');
-        }
+        setCnicFormData(EMPTY_CNIC_DATA);
+        setCnicScanStatus('error');
       }
     },
     [isAdmin]
@@ -313,6 +325,7 @@ export default function CheckInModal({
   const handleDlsScan = useCallback(
     async (file: File) => {
       setDlsScanStatus('scanning');
+      setDlsNeedsReview(false);
       setScanErrorReason(null);
       setDlsImageCaptureError(null);
 
@@ -360,6 +373,7 @@ export default function CheckInModal({
         }
 
         setDlsFormData(structuredData);
+        setDlsNeedsReview(Boolean(result.quality?.needsReview));
         setDlsScanStatus('success');
         if (!isAdmin) {
           playContinueSound();
@@ -367,7 +381,7 @@ export default function CheckInModal({
         }
       } catch (err) {
         console.error('[GateShield OCR] DLS scan failed with service/runtime error:', err);
-        setScanErrorReason('service_error');
+        setScanErrorReason(err instanceof OcrApiError && err.status < 500 ? 'unreadable' : 'service_error');
 
         const compressedImg = await compressionPromise;
         if (compressedImg.ok) {
@@ -377,17 +391,8 @@ export default function CheckInModal({
           setDlsImageCaptureError(compressedImg.error);
         }
 
-        if (isAdmin) {
-          try {
-            const mockResult = await scanDlsMock(file);
-            setDlsFormData(mockResult);
-            setDlsScanStatus('success');
-          } catch {
-            setDlsScanStatus('error');
-          }
-        } else {
-          setDlsScanStatus('error');
-        }
+        setDlsFormData(EMPTY_DLS_DATA);
+        setDlsScanStatus('error');
       }
     },
     [isAdmin]
@@ -493,10 +498,32 @@ export default function CheckInModal({
         photoUrl: visitorData.photoPreview,
         cnicImageData: cnicScannedImage || undefined,
         dlsImageData: dlsScannedImage || undefined,
-        hostName: visitInfo.meetName,
-        department: visitInfo.department,
+        deliveryDocImageData:
+          category === 'DELIVERY'
+            ? visitorData.deliveryDocumentPreview || undefined
+            : undefined,
+        deliverySource:
+          category === 'DELIVERY'
+            ? (visitInfo.deliverySource || visitInfo.meetName || '').trim()
+            : undefined,
+        company:
+          category === 'DELIVERY'
+            ? (visitInfo.deliverySource || visitInfo.meetName || '').trim()
+            : undefined,
+        hostName:
+          category === 'DELIVERY'
+            ? (visitInfo.deliverySource || visitInfo.meetName || '').trim()
+            : visitInfo.meetName,
+        department:
+          category === 'DELIVERY'
+            ? visitInfo.department || 'Delivery'
+            : visitInfo.department,
         departmentId: visitInfo.departmentId || undefined,
-        visitorCardNo: visitorData.visitorCardNo,
+        visitorCardNo: category === 'DELIVERY' ? undefined : visitorData.visitorCardNo,
+        vehicleNo:
+          category === 'DELIVERY'
+            ? (visitorData.vehicleNo || '').trim()
+            : undefined,
         belongings:
           visitorData.hasBelongings && visitorData.belongings?.trim()
             ? visitorData.belongings.trim()
@@ -596,14 +623,18 @@ export default function CheckInModal({
   const handleResetAll = () => {
     setCurrentStep(1);
     setOperatorStep(1);
+    setIsDeliveryDocStep(false);
     setCategory(isAdmin ? defaultCategory || 'VISITOR' : '');
     setVisitInfo(EMPTY_VISIT_INFO);
     setCnicFormData(EMPTY_CNIC_DATA);
     setCnicScanStatus('idle');
+    setCnicNeedsReview(false);
+    setCnicScanWarnings([]);
     setCnicScannedImage(null);
     setCnicImageCaptureError(null);
     setDlsFormData(EMPTY_DLS_DATA);
     setDlsScanStatus('idle');
+    setDlsNeedsReview(false);
     setDlsScannedImage(null);
     setDlsImageCaptureError(null);
     setVisitorData(EMPTY_VISITOR_DATA);
@@ -619,7 +650,30 @@ export default function CheckInModal({
 
   if (!isOpen) return null;
 
+  const isDelivery = category === 'DELIVERY';
+
   const getOperatorStepTitle = (step: 1 | 2 | 3 | 4 | 5 | 6) => {
+    if (isDelivery && step >= 2) {
+      if (step === 2) {
+        return t('delivery_source_title', 'Delivery Source / Company Name');
+      }
+      if (step === 3) {
+        return t('scan_id_card_title', 'Scan ID Card');
+      }
+      if (step === 4) {
+        return t('information_form_title', 'Information Form');
+      }
+      if (step === 5 && !isDeliveryDocStep) {
+        return t('capture_image_title', 'Capture Image');
+      }
+      if (step === 5 && isDeliveryDocStep) {
+        return t('capture_document_title', 'Capture Document');
+      }
+      if (step === 6) {
+        return t('phone_and_vehicle_title', 'Phone Number & Vehicle Number');
+      }
+    }
+
     switch (step) {
       case 1:
         return t('select_category_title', 'Select Visitor Category');
@@ -634,6 +688,25 @@ export default function CheckInModal({
       case 6:
         return t('registration_details_title', 'Registration Details');
     }
+  };
+
+  const getOperatorStepProgressBadge = (step: 1 | 2 | 3 | 4 | 5 | 6): string => {
+    if (isDelivery && step >= 2) {
+      const deliveryStepNum =
+        step === 2
+          ? 1
+          : step === 3
+          ? 2
+          : step === 4
+          ? 3
+          : step === 5 && !isDeliveryDocStep
+          ? 4
+          : step === 5 && isDeliveryDocStep
+          ? 5
+          : 6;
+      return `${deliveryStepNum}/6`;
+    }
+    return `${step}/6`;
   };
 
   return (
@@ -663,9 +736,10 @@ export default function CheckInModal({
                   <button
                     type="button"
                     onClick={() => setIsUnexpectedParcelOpen(true)}
-                    className="text-xs font-extrabold px-2.5 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white cursor-pointer"
+                    className="text-xs font-extrabold px-2.5 py-0.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white cursor-pointer inline-flex items-center gap-1"
                   >
-                    + Register Parcel
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
+                    <span>Register Parcel</span>
                   </button>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -678,20 +752,22 @@ export default function CheckInModal({
 
               <button
                 onClick={onClose}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0 cursor-pointer"
+                title={t('close', 'Close')}
+                aria-label={t('close', 'Close')}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
           ) : (
-            <div className="px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 shrink-0">
-              <div className={isUr ? 'text-right' : 'text-left'}>
+            <div className="px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2.5 bg-slate-50 dark:bg-slate-900/50 shrink-0">
+              <div className={`min-w-0 ${isUr ? 'text-right' : 'text-left'}`}>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base">
                     {getOperatorStepTitle(operatorStep)}
                   </h2>
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                    {t('step_progress_label', 'Step')} {operatorStep}/6
+                    {t('step_progress_label', 'Step')} {getOperatorStepProgressBadge(operatorStep)}
                   </span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -704,14 +780,15 @@ export default function CheckInModal({
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => {
                     handleResetAll();
                     onClose();
                   }}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shrink-0 transition-colors"
                   title={t('close', 'Close')}
+                  aria-label={t('close', 'Close')}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -723,8 +800,17 @@ export default function CheckInModal({
           {isAdmin ? (
             /* ── ORIGINAL ADMIN 3-STEP BODY (100% UNCHANGED) ── */
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {currentStep === 2 && (documentType === 'cnic' ? cnicNeedsReview : dlsNeedsReview) && (
+                <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  {isUr ? 'کچھ تفصیلات کی تصدیق ضروری ہے۔ نام، نمبر اور تاریخیں اصل کارڈ سے ملا کر درست کریں۔' : 'Some details need review. Check names, numbers and dates against the original card and complete any missing fields.'}
+                  {documentType === 'cnic' && cnicScanWarnings.map((warning, index) => (
+                    <span key={index} className="mt-1 block">{warning}</span>
+                  ))}
+                </p>
+              )}
               {currentStep === 1 && (
                 <VisitInfoStep
+                  category={category}
                   data={visitInfo}
                   onChange={setVisitInfo}
                   onNext={() => setCurrentStep(2)}
@@ -827,6 +913,7 @@ export default function CheckInModal({
               {currentStep === 3 && (
                 <div>
                   <VisitorStep
+                    category={category}
                     visitInfo={visitInfo}
                     documentType={documentType}
                     cnicData={cnicFormData}
@@ -845,6 +932,14 @@ export default function CheckInModal({
           ) : (
             /* ── OPERATOR 6-STEP MOBILE-FIRST REGISTRATION FLOW ── */
             <div className="p-3.5 sm:p-5 overflow-y-auto flex-1 space-y-4">
+              {operatorStep === 4 && (documentType === 'cnic' ? cnicNeedsReview : dlsNeedsReview) && (
+                <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  {isUr ? 'کچھ تفصیلات کی تصدیق ضروری ہے۔ نام، نمبر اور تاریخیں اصل کارڈ سے ملا کر درست کریں۔' : 'Some details need review. Check names, numbers and dates against the original card and complete any missing fields.'}
+                  {documentType === 'cnic' && cnicScanWarnings.map((warning, index) => (
+                    <span key={index} className="mt-1 block">{warning}</span>
+                  ))}
+                </p>
+              )}
               {/* STEP 1: SELECT VISITOR CATEGORY (Auto-advances to Step 2, or opens Unexpected Parcel Registration if Parcel is selected) */}
               {operatorStep === 1 && (
                 <VisitInfoStep
@@ -1046,6 +1141,7 @@ export default function CheckInModal({
                       type="button"
                       onClick={() => {
                         playContinueSound();
+                        setIsDeliveryDocStep(false);
                         setOperatorStep(5);
                       }}
                       disabled={!isDocumentValid}
@@ -1055,16 +1151,21 @@ export default function CheckInModal({
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none'
                       }`}
                     >
-                      <span>{t('continue_btn', 'Continue')}</span>
+                      <span>
+                        {isDelivery
+                          ? t('next_btn', 'Next')
+                          : t('continue_btn', 'Continue')}
+                      </span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* STEP 5: CAPTURE VISITOR PHOTO */}
-              {operatorStep === 5 && (
+              {/* STEP 5: CAPTURE IMAGE (Optional for Delivery) & DELIVERY DOCUMENT CAPTURE (Required for Delivery) */}
+              {operatorStep === 5 && !isDeliveryDocStep && (
                 <VisitorStep
+                  category={category}
                   operatorMode="photo"
                   visitInfo={visitInfo}
                   documentType={documentType}
@@ -1073,7 +1174,32 @@ export default function CheckInModal({
                   visitorData={visitorData}
                   onChangeVisitorData={setVisitorData}
                   onBack={() => setOperatorStep(4)}
-                  onNextPhotoStep={() => setOperatorStep(6)}
+                  onNextPhotoStep={() => {
+                    if (isDelivery) {
+                      setIsDeliveryDocStep(true);
+                    } else {
+                      setOperatorStep(6);
+                    }
+                  }}
+                  onSubmit={handleFinalSubmit}
+                  submissionStatus={submissionStatus}
+                  submissionError={submissionError}
+                  onResetAll={handleResetAll}
+                />
+              )}
+
+              {operatorStep === 5 && isDelivery && isDeliveryDocStep && (
+                <VisitorStep
+                  category={category}
+                  operatorMode="delivery-document"
+                  visitInfo={visitInfo}
+                  documentType={documentType}
+                  cnicData={cnicFormData}
+                  dlsData={dlsFormData}
+                  visitorData={visitorData}
+                  onChangeVisitorData={setVisitorData}
+                  onBack={() => setIsDeliveryDocStep(false)}
+                  onNextDeliveryDocStep={() => setOperatorStep(6)}
                   onSubmit={handleFinalSubmit}
                   submissionStatus={submissionStatus}
                   submissionError={submissionError}
@@ -1084,6 +1210,7 @@ export default function CheckInModal({
               {/* STEP 6: REGISTRATION DETAILS (Phone, VC Number, Carrying Items & Final Submit) */}
               {operatorStep === 6 && (
                 <VisitorStep
+                  category={category}
                   operatorMode="details"
                   visitInfo={visitInfo}
                   documentType={documentType}
@@ -1091,7 +1218,14 @@ export default function CheckInModal({
                   dlsData={dlsFormData}
                   visitorData={visitorData}
                   onChangeVisitorData={setVisitorData}
-                  onBack={() => setOperatorStep(5)}
+                  onBack={() => {
+                    if (isDelivery) {
+                      setIsDeliveryDocStep(true);
+                      setOperatorStep(5);
+                    } else {
+                      setOperatorStep(5);
+                    }
+                  }}
                   onSubmit={handleFinalSubmit}
                   submissionStatus={submissionStatus}
                   submissionError={submissionError}

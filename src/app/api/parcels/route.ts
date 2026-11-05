@@ -5,6 +5,34 @@ import { getSessionUser, getEmployeeSessionUser } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { createAppNotification } from '@/lib/notifications';
 import { ParcelRow } from '@/app/api/employee/parcels/route';
+import { ensureImageStoredAsFileUrl } from '@/lib/fileStorage';
+
+let parcelSenderColumnsEnsured = false;
+
+async function ensureParcelSenderColumns() {
+  if (parcelSenderColumnsEnsured) return;
+  try {
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "parcels" ADD COLUMN IF NOT EXISTS "senderName" TEXT, ADD COLUMN IF NOT EXISTS "senderPhone" TEXT;`
+    );
+    parcelSenderColumnsEnsured = true;
+  } catch (err) {
+    console.warn('[Parcels] Column check warning:', err);
+  }
+}
+
+function cleanAndValidatePhone(raw: string): { valid: boolean; cleaned: string } {
+  const cleaned = raw.trim().replace(/[\s\-()]+/g, '');
+  if (!cleaned) {
+    return { valid: false, cleaned: '' };
+  }
+  const isPakLocal = /^03\d{9}$/.test(cleaned);
+  const isInternational = /^\+?[1-9]\d{9,14}$/.test(cleaned);
+  return {
+    valid: isPakLocal || isInternational,
+    cleaned,
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,6 +47,8 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    await ensureParcelSenderColumns();
 
     const { searchParams } = new URL(request.url);
     const statusFilter = (searchParams.get('status') || 'ALL').toUpperCase();
@@ -35,6 +65,8 @@ export async function GET(request: NextRequest) {
         p."ownerPhone",
         p."departmentId",
         p."departmentName",
+        p."senderName",
+        p."senderPhone",
         p."senderPlatform",
         p."expectedArrivalDate",
         p."source"::text AS "source",
@@ -82,6 +114,8 @@ export async function GET(request: NextRequest) {
           p.ownerName.toLowerCase().includes(search) ||
           p.ownerPhone.toLowerCase().includes(search) ||
           p.departmentName.toLowerCase().includes(search) ||
+          (p.senderName && p.senderName.toLowerCase().includes(search)) ||
+          (p.senderPhone && p.senderPhone.toLowerCase().includes(search)) ||
           p.senderPlatform.toLowerCase().includes(search) ||
           (p.receivingGateName && p.receivingGateName.toLowerCase().includes(search)) ||
           (p.deliveryGateName && p.deliveryGateName.toLowerCase().includes(search)) ||
@@ -196,13 +230,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    await ensureParcelSenderColumns();
+
     const body = await request.json();
+    const senderNameInput =
+      typeof body.senderName === 'string'
+        ? body.senderName.trim().replace(/\s+/g, ' ')
+        : '';
+    const rawSenderPhone =
+      typeof body.senderPhone === 'string' ? body.senderPhone.trim() : '';
     const ownerNameInput =
       typeof body.ownerName === 'string'
         ? body.ownerName.trim().replace(/\s+/g, ' ')
+        : typeof body.employeeName === 'string'
+        ? body.employeeName.trim().replace(/\s+/g, ' ')
         : '';
     const rawPhone =
-      typeof body.ownerPhone === 'string' ? body.ownerPhone.trim() : '';
+      typeof body.ownerPhone === 'string'
+        ? body.ownerPhone.trim()
+        : typeof body.employeePhone === 'string'
+        ? body.employeePhone.trim()
+        : '';
     const departmentIdInput =
       typeof body.departmentId === 'string' ? body.departmentId.trim() : '';
     const departmentNameInput =
@@ -228,108 +276,63 @@ export async function POST(request: NextRequest) {
         ? body.employeeId.trim()
         : null;
 
-    // 1. Validate & resolve Employee relationship on the server (including registered Department and Phone)
-    interface EmployeeProfileRow {
-      id: string;
-      name: string;
-      phoneNumber: string | null;
-      departmentId: string | null;
-      departmentName: string | null;
-    }
-
-    let matchedEmployee: EmployeeProfileRow | null = null;
-
-    if (explicitEmployeeId) {
-      const empRows = await prisma.$queryRaw<EmployeeProfileRow[]>`
-        SELECT
-          u."id",
-          u."name",
-          u."phoneNumber",
-          u."departmentId",
-          COALESCE(d."name", u."departmentName") AS "departmentName"
-        FROM "users" u
-        LEFT JOIN "departments" d ON d."id" = u."departmentId"
-        WHERE u."id" = ${explicitEmployeeId}
-          AND u."role"::text = 'EMPLOYEE'
-          AND COALESCE(u."approvalStatus"::text, 'PENDING') = 'APPROVED'
-          AND u."active" = true
-        LIMIT 1
-      `;
-      if (empRows.length === 0) {
-        return NextResponse.json(
-          { error: 'Selected employee is not valid or not active.', field: 'employeeId' },
-          { status: 400 }
-        );
-      }
-      matchedEmployee = empRows[0];
-    } else if (ownerNameInput || rawPhone) {
-      const cleanedInputPhone = rawPhone.replace(/[\s\-()]/g, '');
-      const empRows = await prisma.$queryRaw<EmployeeProfileRow[]>`
-        SELECT
-          u."id",
-          u."name",
-          u."phoneNumber",
-          u."departmentId",
-          COALESCE(d."name", u."departmentName") AS "departmentName"
-        FROM "users" u
-        LEFT JOIN "departments" d ON d."id" = u."departmentId"
-        WHERE u."role"::text = 'EMPLOYEE'
-          AND COALESCE(u."approvalStatus"::text, 'PENDING') = 'APPROVED'
-          AND u."active" = true
-          AND (
-            (${cleanedInputPhone !== ''} AND u."phoneNumber" = ${cleanedInputPhone})
-            OR (${ownerNameInput !== ''} AND LOWER(u."name") = ${ownerNameInput.toLowerCase()})
-          )
-        ORDER BY CASE WHEN ${cleanedInputPhone !== ''} AND u."phoneNumber" = ${cleanedInputPhone} THEN 0 ELSE 1 END ASC
-        LIMIT 1
-      `;
-      if (empRows.length > 0) {
-        matchedEmployee = empRows[0];
-      }
-    }
-
-    const resolvedEmployeeId = matchedEmployee ? matchedEmployee.id : null;
-    const ownerName = matchedEmployee ? matchedEmployee.name : ownerNameInput;
-
-    if (!ownerName) {
+    // 1. Validate the 5 top fields in exact order:
+    // (1) Parcel Sender Name
+    if (!senderNameInput) {
       return NextResponse.json(
-        { error: 'Please select an Employee.', field: 'employeeId' },
+        { error: 'Parcel Sender Name is required.', field: 'senderName' },
         { status: 400 }
       );
     }
 
-    const cleanedPhone = matchedEmployee?.phoneNumber
-      ? matchedEmployee.phoneNumber.replace(/[\s\-()]/g, '')
-      : rawPhone.replace(/[\s\-()]/g, '') || 'N/A';
-
-    if (!senderPlatform) {
+    // (2) Parcel Sender Phone Number
+    const senderPhoneCheck = cleanAndValidatePhone(rawSenderPhone);
+    if (!senderPhoneCheck.valid) {
       return NextResponse.json(
         {
-          error: 'Parcel From is required.',
-          field: 'senderPlatform',
+          error:
+            'Please enter a valid Parcel Sender Phone Number (e.g., 03001234567).',
+          field: 'senderPhone',
         },
         { status: 400 }
       );
     }
+    const cleanedSenderPhone = senderPhoneCheck.cleaned;
 
-    if (!photoUrl) {
+    // (3) Employee Name
+    if (!ownerNameInput) {
       return NextResponse.json(
-        { error: 'Please capture a Parcel Photo.', field: 'photoUrl' },
+        { error: 'Employee Name is required.', field: 'ownerName' },
         { status: 400 }
       );
     }
 
-    // 2. Automatically resolve Department from Employee's registered profile on the server
-    let resolvedDeptId: string | null = matchedEmployee?.departmentId || null;
-    let resolvedDeptName = matchedEmployee?.departmentName || '';
+    // (4) Employee Phone Number
+    const ownerPhoneCheck = cleanAndValidatePhone(rawPhone);
+    if (!ownerPhoneCheck.valid) {
+      return NextResponse.json(
+        {
+          error:
+            'Please enter a valid Employee Phone Number (e.g., 03001234567).',
+          field: 'ownerPhone',
+        },
+        { status: 400 }
+      );
+    }
+    const cleanedPhone = ownerPhoneCheck.cleaned;
 
-    if (!resolvedDeptName && departmentIdInput) {
+    // (5) Employee Department — Validate against departments configured in Admin Panel
+    let resolvedDeptId: string | null = null;
+    let resolvedDeptName = '';
+
+    if (departmentIdInput) {
       const deptRows = await prisma.$queryRaw<
         Array<{ id: string; name: string }>
       >`
         SELECT "id", "name"
         FROM "departments"
         WHERE "id" = ${departmentIdInput}
+          AND "active" = true
         LIMIT 1
       `;
       if (deptRows.length > 0) {
@@ -346,19 +349,98 @@ export async function POST(request: NextRequest) {
         SELECT "id", "name"
         FROM "departments"
         WHERE "normalizedName" = ${normalized}
+          AND "active" = true
         LIMIT 1
       `;
       if (deptRows.length > 0) {
         resolvedDeptId = deptRows[0].id;
         resolvedDeptName = deptRows[0].name;
-      } else {
-        resolvedDeptName = departmentNameInput;
       }
     }
 
-    if (!resolvedDeptName) {
-      resolvedDeptName = 'General';
+    if (!resolvedDeptId || !resolvedDeptName) {
+      return NextResponse.json(
+        {
+          error: 'Please select a valid Employee Department.',
+          field: 'departmentId',
+        },
+        { status: 400 }
+      );
     }
+
+    // (6) Parcel From
+    if (!senderPlatform) {
+      return NextResponse.json(
+        {
+          error: 'Parcel From is required.',
+          field: 'senderPlatform',
+        },
+        { status: 400 }
+      );
+    }
+
+    // (7) Parcel Photo
+    if (!photoUrl) {
+      return NextResponse.json(
+        { error: 'Please capture a Parcel Photo.', field: 'photoUrl' },
+        { status: 400 }
+      );
+    }
+
+    let storedPhotoUrl: string | null = null;
+    try {
+      storedPhotoUrl = await ensureImageStoredAsFileUrl(photoUrl, 'parcels', 'parcel');
+    } catch (imgErr: any) {
+      return NextResponse.json(
+        { error: imgErr?.message || 'Invalid Parcel Photo format.', field: 'photoUrl' },
+        { status: 400 }
+      );
+    }
+
+    // Optional Employee account matching (for in-app notification & Employee Portal linkage)
+    interface EmployeeProfileRow {
+      id: string;
+      name: string;
+    }
+
+    let matchedEmployee: EmployeeProfileRow | null = null;
+
+    if (explicitEmployeeId) {
+      const empRows = await prisma.$queryRaw<EmployeeProfileRow[]>`
+        SELECT u."id", u."name"
+        FROM "users" u
+        WHERE u."id" = ${explicitEmployeeId}
+          AND u."role"::text = 'EMPLOYEE'
+          AND COALESCE(u."approvalStatus"::text, 'PENDING') = 'APPROVED'
+          AND u."active" = true
+        LIMIT 1
+      `;
+      if (empRows.length > 0) {
+        matchedEmployee = empRows[0];
+      }
+    }
+
+    if (!matchedEmployee) {
+      const empRows = await prisma.$queryRaw<EmployeeProfileRow[]>`
+        SELECT u."id", u."name"
+        FROM "users" u
+        WHERE u."role"::text = 'EMPLOYEE'
+          AND COALESCE(u."approvalStatus"::text, 'PENDING') = 'APPROVED'
+          AND u."active" = true
+          AND (
+            u."phoneNumber" = ${cleanedPhone}
+            OR LOWER(u."name") = ${ownerNameInput.toLowerCase()}
+          )
+        ORDER BY CASE WHEN u."phoneNumber" = ${cleanedPhone} THEN 0 ELSE 1 END ASC
+        LIMIT 1
+      `;
+      if (empRows.length > 0) {
+        matchedEmployee = empRows[0];
+      }
+    }
+
+    const resolvedEmployeeId = matchedEmployee ? matchedEmployee.id : null;
+    const ownerName = ownerNameInput;
 
     // 3. Automatically resolve Receiving Gate from the authenticated Operator's assigned gate on the server
     // Never allow the frontend to override an Operator's assigned gate.
@@ -417,6 +499,8 @@ export async function POST(request: NextRequest) {
         "ownerPhone",
         "departmentId",
         "departmentName",
+        "senderName",
+        "senderPhone",
         "senderPlatform",
         "source",
         "status",
@@ -438,10 +522,12 @@ export async function POST(request: NextRequest) {
         ${cleanedPhone},
         ${resolvedDeptId},
         ${resolvedDeptName},
+        ${senderNameInput},
+        ${cleanedSenderPhone},
         ${senderPlatform},
         'UNEXPECTED'::"ParcelSource",
         'RECEIVED'::"ParcelStatus",
-        ${photoUrl},
+        ${storedPhotoUrl},
         ${notes},
         ${receivingGateId},
         ${receivingGateName},
@@ -460,7 +546,7 @@ export async function POST(request: NextRequest) {
         recipientRole: 'EMPLOYEE',
         type: 'PARCEL_RECEIVED',
         title: 'Parcel Received at Gate',
-        message: `Your parcel from ${senderPlatform} has been received at ${receivingGateName} by ${user.name}.`,
+        message: `Your parcel from ${senderPlatform} (Sender: ${senderNameInput}) has been received at ${receivingGateName} by ${user.name}.`,
         parcelId: newId,
         targetUrl: '/employee?section=parcels&tab=arrived',
         dedupeKey: `prc_received_${newId}`,
@@ -473,8 +559,11 @@ export async function POST(request: NextRequest) {
       entityId: newId,
       details: {
         parcelNumber,
+        senderName: senderNameInput,
+        senderPhone: cleanedSenderPhone,
         ownerName,
         ownerPhone: cleanedPhone,
+        departmentId: resolvedDeptId,
         departmentName: resolvedDeptName,
         senderPlatform,
         receivingGateId,
@@ -494,11 +583,13 @@ export async function POST(request: NextRequest) {
       ownerPhone: cleanedPhone,
       departmentId: resolvedDeptId,
       departmentName: resolvedDeptName,
+      senderName: senderNameInput,
+      senderPhone: cleanedSenderPhone,
       senderPlatform,
       expectedArrivalDate: null,
       source: 'UNEXPECTED',
       status: 'RECEIVED',
-      photoUrl,
+      photoUrl: storedPhotoUrl,
       notes,
       receivingGateId,
       receivingGateName,

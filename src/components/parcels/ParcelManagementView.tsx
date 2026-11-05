@@ -298,6 +298,8 @@ export default function ParcelManagementView({
       p.ownerName.toLowerCase().includes(q) ||
       p.ownerPhone.toLowerCase().includes(q) ||
       p.departmentName.toLowerCase().includes(q) ||
+      Boolean(p.senderName && p.senderName.toLowerCase().includes(q)) ||
+      Boolean(p.senderPhone && p.senderPhone.toLowerCase().includes(q)) ||
       p.senderPlatform.toLowerCase().includes(q) ||
       Boolean(p.receivingGateName && p.receivingGateName.toLowerCase().includes(q)) ||
       Boolean(p.deliveryGateName && p.deliveryGateName.toLowerCase().includes(q)) ||
@@ -306,50 +308,139 @@ export default function ParcelManagementView({
   });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       {/* Top Action Header */}
-      <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-start sm:items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0">
-            <Package className="w-6 h-6" />
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-xs flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0">
+            <Package className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div className={isUrdu ? 'text-right' : 'text-left'}>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
+          <div className={`min-w-0 ${isUrdu ? 'text-right' : 'text-left'}`}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white truncate">
                 {t('parcel_tracker_title', 'Parcel Tracker')}
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300 shrink-0">
                 {parcels.length} {isUrdu ? 'کل' : 'Total'}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Hidden on mobile per Requirement 1; preserved on desktop */}
           <button
             type="button"
             onClick={() => setIsUnexpectedOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-md shadow-blue-500/20 flex items-center gap-2 cursor-pointer transition-all"
+            className="hidden sm:inline-flex px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-md shadow-blue-500/20 items-center gap-2 cursor-pointer transition-all"
           >
-            <Plus className="w-4 h-4" />
-            <span>{t('register_unexpected_parcel', 'Register Unexpected Parcel')}</span>
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>{t('register_unexpected_parcel', 'Unexpected Parcel')}</span>
           </button>
 
           {isModal && onCloseModal && (
             <button
               type="button"
               onClick={onCloseModal}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
-              title="Close"
+              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-300 cursor-pointer shrink-0 transition-colors"
+              title={t('close', 'Close')}
+              aria-label={t('close', 'Close')}
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           )}
         </div>
       </div>
 
-      {/* 4 Navigation Tabs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Mobile Compact Single-Line Category Filter Tabs (< lg) */}
+      <div className="grid grid-cols-4 gap-1.5 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-100/90 dark:bg-slate-900/90 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setActiveTab('expected')}
+          className={`px-1.5 py-2 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1 min-w-0 ${
+            activeTab === 'expected'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-slate-800'
+          }`}
+        >
+          <span className="truncate">{t('parcel_tab_expected_short', 'Expected')}</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black shrink-0 ${
+              activeTab === 'expected'
+                ? 'bg-white/20 text-white'
+                : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+            }`}
+          >
+            {expectedCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('received')}
+          className={`px-1.5 py-2 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1 min-w-0 ${
+            activeTab === 'received'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-slate-800'
+          }`}
+        >
+          <span className="truncate">{t('parcel_tab_received_short', 'Received')}</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black shrink-0 ${
+              activeTab === 'received'
+                ? 'bg-white/20 text-white'
+                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+            }`}
+          >
+            {receivedCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('delivered')}
+          className={`px-1.5 py-2 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1 min-w-0 ${
+            activeTab === 'delivered'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-slate-800'
+          }`}
+        >
+          <span className="truncate">{t('parcel_tab_delivered_short', 'Delivered')}</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black shrink-0 ${
+              activeTab === 'delivered'
+                ? 'bg-white/20 text-white'
+                : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+            }`}
+          >
+            {deliveredCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('history')}
+          className={`px-1.5 py-2 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1 min-w-0 ${
+            activeTab === 'history'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-slate-800'
+          }`}
+        >
+          <span className="truncate">{t('parcel_tab_all_short', 'History')}</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black shrink-0 ${
+              activeTab === 'history'
+                ? 'bg-white/20 text-white'
+                : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+            }`}
+          >
+            {parcels.length}
+          </span>
+        </button>
+      </div>
+
+      {/* Desktop 4 Navigation Cards (lg+) */}
+      <div className="hidden lg:grid lg:grid-cols-4 gap-3">
         <button
           type="button"
           onClick={() => setActiveTab('expected')}
@@ -455,8 +546,8 @@ export default function ParcelManagementView({
         </div>
       )}
 
-      {/* Search & Filter Bar */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Search & Filter Bar (Simple search bar on mobile; All Sources hidden on mobile) */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -465,14 +556,15 @@ export default function ParcelManagementView({
             onChange={(e) => setSearch(e.target.value)}
             placeholder={
               isUrdu
-                ? 'ملازم کا نام، فون نمبر، شعبہ، پلیٹ فارم یا گیٹ تلاش کریں...'
-                : 'Search by employee/owner name, phone number, department, delivery platform, or gate...'
+                ? 'نام، فون نمبر، شعبہ، یا پارسل تلاش کریں...'
+                : 'Search by owner name, phone, department, or sender...'
             }
             className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Hidden on mobile per Requirement 4 */}
+        <div className="hidden sm:flex flex-wrap items-center gap-2">
           <select
             value={sourceFilter}
             onChange={(e) =>
@@ -504,14 +596,14 @@ export default function ParcelManagementView({
         </div>
       </div>
 
-      {/* Parcel Records Table / Cards */}
-      <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+      {/* Parcel Records Table (Desktop) / Full-Width Cards (Mobile) */}
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-xs text-slate-400">
             {isUrdu ? 'پارسل ریکارڈ لوڈ ہو رہے ہیں...' : 'Loading parcel records...'}
           </div>
         ) : filteredParcels.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
+          <div className="p-10 sm:p-12 text-center space-y-3">
             <Package className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700" />
             <div>
               <p className="text-sm font-extrabold text-slate-700 dark:text-slate-300">
@@ -543,8 +635,252 @@ export default function ParcelManagementView({
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[920px]">
+          <>
+            {/* ================================================================= */}
+            {/* MOBILE FULL-WIDTH PARCEL CARDS (< md) — No Horizontal Scrolling   */}
+            {/* ================================================================= */}
+            <div className="md:hidden p-3 space-y-3">
+              {filteredParcels.map((prc) => (
+                <div
+                  key={prc.id}
+                  className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 p-3.5 space-y-3 shadow-2xs"
+                >
+                  {/* Card Top Row: Photo/Icon + Owner Name, Phone, Department + Status Badge */}
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => prc.photoUrl && setPhotoPreviewParcel(prc)}
+                        className={`w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 overflow-hidden flex items-center justify-center shrink-0 ${
+                          prc.photoUrl ? 'cursor-pointer ring-2 ring-blue-500/20' : 'cursor-default'
+                        }`}
+                        title={prc.photoUrl ? 'Tap to view parcel photo' : undefined}
+                      >
+                        {prc.photoUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={prc.photoUrl}
+                            alt={prc.ownerName}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        )}
+                      </button>
+
+                      <div className="min-w-0">
+                        <p className="font-extrabold text-slate-900 dark:text-white text-sm leading-tight break-words">
+                          {prc.ownerName}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[11px] text-slate-600 dark:text-slate-300">
+                          <span className="inline-flex items-center gap-1 font-mono">
+                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                            {prc.ownerPhone}
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200">
+                            <Building2 className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
+                            <span className="truncate max-w-[140px]">{prc.departmentName}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status & Source Badges */}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                          prc.status === 'RECEIVED'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                            : prc.status === 'DELIVERED'
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                        }`}
+                      >
+                        {prc.status === 'RECEIVED' ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3" />
+                            {t('parcel_status_received', 'Received')}
+                          </>
+                        ) : prc.status === 'DELIVERED' ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3" />
+                            {t('parcel_status_delivered', 'Delivered')}
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-3 h-3" />
+                            {t('parcel_status_expected', 'Expected')}
+                          </>
+                        )}
+                      </span>
+
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider ${
+                          prc.source === 'EXPECTED'
+                            ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300'
+                            : 'bg-slate-200/80 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                        }`}
+                      >
+                        {prc.source === 'EXPECTED'
+                          ? t('parcel_status_expected', 'Expected')
+                          : isUrdu
+                          ? 'غیر متوقع'
+                          : 'Unexpected'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Details Grid: Sender/Platform, Expected Date, Receiving Info, Delivery Info */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/80 dark:border-slate-700/70 text-xs">
+                    <div className="p-2 rounded-xl bg-white dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800">
+                      <span className="block text-[10px] font-bold uppercase text-slate-400">
+                        {t('parcel_from', 'Parcel From')}
+                      </span>
+                      <span className="mt-0.5 inline-flex items-center gap-1 font-extrabold text-blue-700 dark:text-blue-300 break-words">
+                        <Truck className="w-3.5 h-3.5 shrink-0" />
+                        <span>{prc.senderPlatform}</span>
+                      </span>
+                      {(prc.senderName || prc.senderPhone) && (
+                        <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300 break-words">
+                          <span className="font-semibold">{prc.senderName}</span>
+                          {prc.senderName && prc.senderPhone ? ' • ' : ''}
+                          {prc.senderPhone && <span className="font-mono">{prc.senderPhone}</span>}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="p-2 rounded-xl bg-white dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800">
+                      <span className="block text-[10px] font-bold uppercase text-slate-400">
+                        {t('parcel_expected_date', 'Arrival Date')}
+                      </span>
+                      <span className="mt-0.5 inline-flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>
+                          {prc.expectedArrivalDate
+                            ? new Date(prc.expectedArrivalDate).toLocaleDateString([], {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })
+                            : prc.receivedAt
+                            ? new Date(prc.receivedAt).toLocaleDateString([], {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })
+                            : '—'}
+                        </span>
+                      </span>
+                    </div>
+
+                    {prc.receivedAt && (
+                      <div className="p-2 rounded-xl bg-white dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800 col-span-2 sm:col-span-1">
+                        <span className="block text-[10px] font-bold uppercase text-slate-400">
+                          {t('parcel_receiving_gate', 'Receiving Gate')}
+                        </span>
+                        <div className="mt-0.5 flex flex-wrap items-center justify-between gap-1">
+                          <span className="font-bold text-slate-900 dark:text-white inline-flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
+                            {prc.receivingGateName || 'Gate'}
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            {new Date(prc.receivedAt).toLocaleString([], {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {prc.deliveredAt && (
+                      <div className="p-2 rounded-xl bg-white dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800 col-span-2 sm:col-span-1">
+                        <span className="block text-[10px] font-bold uppercase text-slate-400">
+                          {isUrdu ? 'حوالگی کا گیٹ اور وقت' : 'Delivery Gate & Time'}
+                        </span>
+                        <div className="mt-0.5 flex flex-wrap items-center justify-between gap-1">
+                          <span className="font-bold text-slate-900 dark:text-white inline-flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            {prc.deliveryGateName || prc.receivingGateName || 'Gate'}
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            {new Date(prc.deliveredAt).toLocaleString([], {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notes (if any) */}
+                  {prc.notes && (
+                    <div className="px-2.5 py-1.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-800/60 text-[11px] text-slate-600 dark:text-slate-300">
+                      <span className="font-bold text-slate-700 dark:text-slate-200">
+                        {t('notes_label', 'Notes')}:{' '}
+                      </span>
+                      <span className="break-words">{prc.notes}</span>
+                    </div>
+                  )}
+
+                  {/* Card Actions Row */}
+                  {(prc.photoUrl || prc.status === 'EXPECTED' || prc.status === 'RECEIVED') && (
+                    <div className="flex items-center gap-2 pt-1">
+                      {prc.photoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setPhotoPreviewParcel(prc)}
+                          className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>{isUrdu ? 'تصویر' : 'Photo'}</span>
+                        </button>
+                      )}
+
+                      {prc.status === 'EXPECTED' && (
+                        <button
+                          type="button"
+                          onClick={() => openReceiveModal(prc)}
+                          className="flex-1 py-2.5 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Camera className="w-3.5 h-3.5 shrink-0" />
+                          <span>{t('receive_parcel_btn', 'Receive Parcel')}</span>
+                        </button>
+                      )}
+
+                      {prc.status === 'RECEIVED' && (
+                        <button
+                          type="button"
+                          disabled={deliveringId === prc.id}
+                          onClick={() => handleDeliverParcel(prc)}
+                          className="flex-1 py-2.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-extrabold shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          <span>
+                            {deliveringId === prc.id
+                              ? isUrdu
+                                ? 'حوالے ہو رہا ہے...'
+                                : 'Delivering...'
+                              : t('deliver_parcel_btn', 'Deliver Parcel')}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* ================================================================= */}
+            {/* DESKTOP TABLE (md+)                                               */}
+            {/* ================================================================= */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[920px]">
               <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-5 py-3.5">{t('parcel_owner_name', 'Owner Name')}</th>
@@ -600,6 +936,13 @@ export default function ParcelManagementView({
                         <Truck className="w-3.5 h-3.5" />
                         {prc.senderPlatform}
                       </span>
+                      {(prc.senderName || prc.senderPhone) && (
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">
+                          <span className="font-semibold">{prc.senderName}</span>
+                          {prc.senderName && prc.senderPhone ? ' • ' : ''}
+                          {prc.senderPhone && <span className="font-mono">{prc.senderPhone}</span>}
+                        </p>
+                      )}
                       {prc.notes && (
                         <p className="text-[11px] text-slate-400 italic mt-1 max-w-[180px] truncate">
                           {prc.notes}
@@ -760,6 +1103,7 @@ export default function ParcelManagementView({
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
@@ -1017,6 +1361,18 @@ export default function ParcelManagementView({
                     {confirmationModal.parcel.senderPlatform}
                   </span>
                 </div>
+                {(confirmationModal.parcel.senderName || confirmationModal.parcel.senderPhone) && (
+                  <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
+                    <span className="text-slate-500">Parcel Sender</span>
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      {confirmationModal.parcel.senderName}
+                      {confirmationModal.parcel.senderName && confirmationModal.parcel.senderPhone
+                        ? ' • '
+                        : ''}
+                      {confirmationModal.parcel.senderPhone}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
                   <span className="text-slate-500">Receiving Gate</span>
                   <span className="font-bold text-slate-900 dark:text-white">

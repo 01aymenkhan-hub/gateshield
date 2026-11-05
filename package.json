@@ -4,7 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "next build",
+    "dev:backend": "node --env-file=backend/.env scripts/start-ocr.cjs",
+    "dev:db": "node --env-file=.env scripts/start-database.cjs",
+    "db:seed": "node --env-file=.env prisma/seed.js",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
@@ -14,7 +17,7 @@
     "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.49.0",
-    "next": "16.3.6",
+    "next": "16.4.3",
     "nodemailer": "^10.2.1",
     "prisma": "^6.19.3",
     "qrcode": "^1.5.4",
@@ -31,8 +34,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.6",
+    "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.0",
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2"
   }
 }

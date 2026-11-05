@@ -1,12 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useLayout } from '@/context/LayoutContext';
 import {
   Users,
   UserCheck,
+  UserCog,
+  Building2,
+  CheckCircle2,
   Briefcase,
   Award,
   DoorOpen,
@@ -24,6 +29,7 @@ import {
   X,
   Package,
   Crown,
+  Plus,
 } from 'lucide-react';
 import {
   IconRegisterVisitor,
@@ -46,9 +52,11 @@ import { playSelectSound } from '@/utils/interactionSound';
 import type { GuestInvitationRecord } from '@/app/api/employee/invitations/route';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { user, currentGate } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
   const { t, language } = useLanguage();
+  const { pendingEmployeeCount, pendingOperatorCount } = useLayout();
 
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -110,6 +118,8 @@ export default function DashboardPage() {
   const [expectedParcelCount, setExpectedParcelCount] = useState(0);
   const [receivedParcelCount, setReceivedParcelCount] = useState(0);
   const [isVipGuestsOpen, setIsVipGuestsOpen] = useState(false);
+  const [isInviteVipFormOpen, setIsInviteVipFormOpen] = useState(false);
+  const [vipSavedToast, setVipSavedToast] = useState<string | null>(null);
   const [upcomingVipCount, setUpcomingVipCount] = useState(0);
 
   // Operator-only Category Records Modal state
@@ -219,6 +229,22 @@ export default function DashboardPage() {
         /* (Retains exact original layout, typography, cards, tables, buttons & responsive behavior) */
         /* ========================================================================= */
         <div className="space-y-6">
+          {vipSavedToast && (
+            <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-800 dark:text-emerald-200 flex items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span dir="auto">{vipSavedToast}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVipSavedToast(null)}
+                className="p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Welcome & Quick Action Banner */}
           <div className="rounded-2xl bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 p-6 sm:p-8 text-white shadow-xl shadow-blue-500/10 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-5 sm:gap-6">
             <div className={`space-y-1 ${language === 'ur' ? 'text-right' : 'text-left'}`}>
@@ -236,63 +262,45 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full xl:w-auto">
-              {/* Mobile Row 1: Check Status (50%) + Check Out (50%) | Tablet/Desktop: inline flex buttons */}
-              <div className="grid grid-cols-2 gap-2.5 w-full sm:w-auto sm:flex sm:items-center">
-                <button
-                  type="button"
-                  onClick={() => setIsUpcomingGuestsOpen(true)}
-                  className="w-full sm:w-auto sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-sm text-xs font-bold transition-all border border-white/20 cursor-pointer min-h-[42px] whitespace-nowrap"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
-                  <span>{t('guest_option_title', 'Upcoming Guests')}</span>
-                  {upcomingPendingCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-400 text-slate-950">
-                      {upcomingPendingCount}
-                    </span>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsCheckStatusOpen(true)}
-                  className="w-full sm:w-auto sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-sm text-xs font-bold transition-all border border-white/20 cursor-pointer min-h-[42px] whitespace-nowrap"
-                >
-                  <Search className="w-4 h-4 shrink-0" />
-                  <span>{t('check_status', 'Check Status')}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCheckoutVisit(null);
-                    setIsCheckOutOpen(true);
-                  }}
-                  className="w-full sm:w-auto sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-md transition-all cursor-pointer min-h-[42px] whitespace-nowrap"
-                >
-                  <DoorClosed className="w-4 h-4 shrink-0" />
-                  <span>{t('checkout_btn', 'Check Out')}</span>
-                </button>
-              </div>
-
-              {/* Add Vendor (Desktop & Tablet only, hidden on mobile action layout) */}
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2.5 w-full xl:w-auto">
+              {/* 1. Employee Requests */}
               <button
                 type="button"
-                onClick={() => openCheckIn('VENDOR')}
-                className="hidden sm:flex sm:flex-initial items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold shadow-md transition-all cursor-pointer min-h-[42px] whitespace-nowrap"
+                onClick={() => router.push('/employees?tab=requests')}
+                className="w-full sm:w-auto sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-sm text-xs font-bold transition-all border border-white/20 cursor-pointer min-h-[42px] whitespace-nowrap"
               >
-                <Briefcase className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>+ {t('vendors', 'Vendor')}</span>
+                <UserCheck className="w-4 h-4 text-blue-200 shrink-0" />
+                <span>{t('admin_qa_employee_requests', 'Employee Requests')}</span>
+                {pendingEmployeeCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-400 text-slate-950">
+                    {pendingEmployeeCount}
+                  </span>
+                )}
               </button>
 
-              {/* Mobile Row 2: Add Visitor (100% full width on mobile) | Tablet/Desktop: inline flex button */}
+              {/* 2. Operator Requests */}
               <button
                 type="button"
-                onClick={() => openCheckIn('VISITOR')}
-                className="w-full sm:w-auto sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold shadow-md transition-all cursor-pointer min-h-[42px] whitespace-nowrap"
+                onClick={() => router.push('/access?tab=requests')}
+                className="w-full sm:w-auto sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-sm text-xs font-bold transition-all border border-white/20 cursor-pointer min-h-[42px] whitespace-nowrap"
               >
-                <UserPlus className="w-4 h-4 shrink-0" />
-                <span>{t('add_visitor_btn', '+ Add Visitor')}</span>
+                <UserCog className="w-4 h-4 text-blue-200 shrink-0" />
+                <span>{t('admin_qa_operator_requests', 'Operator Requests')}</span>
+                {pendingOperatorCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-400 text-slate-950">
+                    {pendingOperatorCount}
+                  </span>
+                )}
+              </button>
+
+              {/* 3. Invite VIP Guest */}
+              <button
+                type="button"
+                onClick={() => setIsInviteVipFormOpen(true)}
+                className="col-span-2 sm:col-span-1 w-full sm:w-auto sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 active:bg-blue-100 text-xs font-extrabold shadow-md transition-all cursor-pointer min-h-[42px] whitespace-nowrap"
+              >
+                <Crown className="w-4 h-4 shrink-0" />
+                <span>{t('admin_qa_invite_vip', 'Invite VIP Guest')}</span>
               </button>
             </div>
           </div>
@@ -1170,7 +1178,7 @@ export default function DashboardPage() {
                       gateId: currentGate?.id,
                     })
                   }
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm shadow-emerald-600/20 shrink-0"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm shadow-blue-600/20 shrink-0"
                   title="View all visitors currently inside in full-screen modal"
                 >
                   <IconCurrentlyInside className="w-5 h-5 shrink-0" />
@@ -1511,6 +1519,21 @@ export default function DashboardPage() {
             />
           </div>
         </div>
+      )}
+
+      {/* Direct Invite VIP Guest Form Modal (Opened from Admin Dashboard Quick Action) */}
+      {isAdmin && isInviteVipFormOpen && (
+        <VipGuestManagementView
+          onlyFormModal
+          onCloseModal={() => {
+            setIsInviteVipFormOpen(false);
+            void fetchUpcomingInvitations();
+          }}
+          onSuccessSave={(msg) => {
+            setVipSavedToast(msg);
+            setTimeout(() => setVipSavedToast(null), 5000);
+          }}
+        />
       )}
     </AppLayout>
   );

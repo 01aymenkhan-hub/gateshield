@@ -22,6 +22,9 @@ import {
   Bell,
   CheckCheck,
   X,
+  Plus,
+  Settings,
+  UserCog,
 } from 'lucide-react';
 import { IconLogoutDoor } from '@/components/icons/OperatorTaskIcons';
 
@@ -85,6 +88,10 @@ export default function Header({
         const newestUnseen = fetched.find((n) => !n.isRead && !seenNotifIdsRef.current.has(n.id));
         fetched.forEach((n) => seenNotifIdsRef.current.add(n.id));
         if (newestUnseen) {
+          if (typeof window !== 'undefined' && user.role === 'ADMIN') {
+            window.dispatchEvent(new Event('gk:refresh-employee-badge'));
+            window.dispatchEvent(new Event('gk:refresh-operator-badge'));
+          }
           setLiveToast(newestUnseen);
           setTimeout(() => {
             setLiveToast((curr) => (curr?.id === newestUnseen.id ? null : curr));
@@ -239,71 +246,109 @@ export default function Header({
       </button>
 
       {isNotifOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl z-50 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
-          <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850/60 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-extrabold text-slate-900 dark:text-white">
-                {t('notifications_title', 'Notifications')}
-              </span>
-              {unreadCount > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
-                  {unreadCount}
+        <>
+          <div
+            className="fixed inset-0 bg-slate-950/35 backdrop-blur-[1px] z-40 sm:hidden"
+            onClick={() => setIsNotifOpen(false)}
+          />
+          <div
+            dir="ltr"
+            className="fixed left-3 right-3 top-16 z-50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 max-h-[75vh] sm:max-h-[24rem] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150"
+          >
+            <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850/60 flex items-center justify-between gap-2 shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  dir="auto"
+                  className="text-xs font-extrabold text-slate-900 dark:text-white truncate"
+                >
+                  {t('notifications_title', 'Notifications')}
                 </span>
+                {unreadCount > 0 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 shrink-0">
+                    {unreadCount}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => void handleMarkNotificationsRead()}
+                    className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <CheckCheck className="w-3.5 h-3.5 shrink-0" />
+                    <span dir="auto" className="truncate">
+                      {t('mark_all_read', 'Mark all read')}
+                    </span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsNotifOpen(false)}
+                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-300 cursor-pointer shrink-0 transition-colors"
+                  title={t('close', 'Close')}
+                  aria-label={t('close', 'Close')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto overflow-x-hidden divide-y divide-slate-100 dark:divide-slate-800/80">
+              {notifications.length === 0 ? (
+                <div
+                  dir="auto"
+                  className="p-8 text-center text-xs text-slate-400 dark:text-slate-500"
+                >
+                  {t('no_notifications', 'No notifications yet.')}
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => void handleClickNotification(n)}
+                    className={`p-3.5 transition-colors cursor-pointer ${
+                      !n.isRead
+                        ? 'bg-blue-50/50 dark:bg-blue-950/30 hover:bg-blue-50 dark:hover:bg-blue-950/50'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p
+                        dir="auto"
+                        className="text-xs font-bold text-slate-900 dark:text-white leading-snug break-words"
+                      >
+                        {n.title}
+                      </p>
+                      {!n.isRead && (
+                        <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1" />
+                      )}
+                    </div>
+                    <p
+                      dir="auto"
+                      className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 leading-relaxed break-words"
+                    >
+                      {n.message}
+                    </p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5">
+                      {new Date(n.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                ))
               )}
             </div>
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={() => void handleMarkNotificationsRead()}
-                className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <CheckCheck className="w-3.5 h-3.5" />
-                {t('mark_all_read', 'Mark all read')}
-              </button>
-            )}
           </div>
-
-          <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
-            {notifications.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500">
-                {t('no_notifications', 'No notifications yet.')}
-              </div>
-            ) : (
-              notifications.map((n) => (
-                <div
-                  key={n.id}
-                  onClick={() => void handleClickNotification(n)}
-                  className={`p-3.5 transition-colors cursor-pointer ${
-                    !n.isRead
-                      ? 'bg-blue-50/50 dark:bg-blue-950/30 hover:bg-blue-50 dark:hover:bg-blue-950/50'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
-                      {n.title}
-                    </p>
-                    {!n.isRead && (
-                      <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1" />
-                    )}
-                  </div>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                    {n.message}
-                  </p>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5">
-                    {new Date(n.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
 
   return (
-    <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-[#0c121e]/90 backdrop-blur-md px-3 sm:px-4 md:px-5 lg:px-6 flex items-center justify-between gap-2 sm:gap-3 md:gap-4 sticky top-0 z-30 no-print transition-colors">
+    <header
+      dir="ltr"
+      className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-[#0c121e]/90 backdrop-blur-md px-3 sm:px-4 md:px-5 lg:px-6 flex items-center justify-between gap-2 sm:gap-3 md:gap-4 sticky top-0 z-30 no-print transition-colors"
+    >
       {/* Live Real-Time Notification Toast Banner */}
       {liveToast && (
         <div
@@ -312,7 +357,7 @@ export default function Header({
             setLiveToast(null);
             void handleClickNotification(toastNotif);
           }}
-          className="fixed top-20 right-4 z-50 max-w-sm w-full p-4 rounded-2xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 shadow-2xl cursor-pointer animate-in fade-in slide-in-from-top-3 duration-200"
+          className="fixed top-20 left-3 right-3 sm:left-auto sm:right-4 z-50 sm:max-w-sm p-4 rounded-2xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 shadow-2xl cursor-pointer animate-in fade-in slide-in-from-top-3 duration-200"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-2.5 min-w-0">
@@ -369,8 +414,8 @@ export default function Header({
             </div>
 
             {/* Desktop label & full name */}
-            <div className={`hidden sm:block min-w-0 pr-1 ${!isAdmin && language === 'ur' ? 'text-right' : 'text-left'}`}>
-              <div className={`flex items-center gap-1.5 leading-none mb-0.5 ${!isAdmin && language === 'ur' ? 'justify-end' : 'justify-start'}`}>
+            <div className="hidden sm:block min-w-0 pr-1 text-left">
+              <div className="flex items-center justify-start gap-1.5 leading-none mb-0.5">
                 <span
                   className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                     !isAdmin && !currentGate
@@ -378,19 +423,28 @@ export default function Header({
                       : 'bg-emerald-500 animate-pulse'
                   }`}
                 />
-                <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
+                <span
+                  dir="auto"
+                  className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider"
+                >
                   {isAdmin ? 'Active Gate' : t('active_gate', 'Active Gate')}
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate max-w-[110px] sm:max-w-[130px] md:max-w-[150px] lg:max-w-[130px] xl:max-w-[200px]">
+              <div
+                dir="auto"
+                className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate max-w-[110px] sm:max-w-[130px] md:max-w-[150px] lg:max-w-[130px] xl:max-w-[200px]"
+              >
                 {currentGate?.name ||
                   (isAdmin ? 'All Gates' : t('no_gate_assigned', 'No Gate Assigned'))}
               </div>
             </div>
 
             {/* Mobile compact label */}
-            <div className="sm:hidden flex items-center gap-1 pr-0.5">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate max-w-[85px]">
+            <div className="sm:hidden flex items-center gap-1 pr-0.5 text-left">
+              <span
+                dir="auto"
+                className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate max-w-[85px]"
+              >
                 {currentGate?.name?.split(' ')[0] ||
                   (isAdmin ? 'All Gates' : t('no_gate_assigned', 'No Gate'))}
               </span>
@@ -560,7 +614,7 @@ export default function Header({
 
       {/* Right: Actions Scoped by Role */}
       {isAdmin ? (
-        /* ================= ORIGINAL ADMIN HEADER CONTROLS ================= */
+        /* ================= ADMIN HEADER CONTROLS ================= */
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {renderNotificationBell()}
 
@@ -592,48 +646,127 @@ export default function Header({
             <span className="hidden xl:inline text-[11px] capitalize">{theme}</span>
           </button>
 
-          {/* Check Status Button */}
+          {/* Check Visitor Status Button */}
           <button
             onClick={onOpenCheckStatus}
             type="button"
-            className="p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
-            title={t('check_status', 'Check Status')}
+            className="p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+            title={t('check_status', 'Check Visitor Status')}
           >
-            <Search className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline">{t('check_status', 'Status')}</span>
+            <Search className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+            <span dir="auto" className="hidden sm:inline">
+              {t('check_status', 'Check Visitor Status')}
+            </span>
           </button>
 
-          {/* Check Out Button */}
-          <button
-            onClick={onOpenCheckOut}
-            type="button"
-            className="p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
-            title={t('checkout_btn', 'Check Out')}
-          >
-            <DoorClosed className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-            <span className="hidden sm:inline">{t('checkout_btn', 'Exit')}</span>
-          </button>
+          {/* Top-Right Admin Profile Icon & Dropdown Menu */}
+          <div ref={profileDropdownRef} className="relative">
+            <button
+              onClick={() => setIsProfileOpen((prev) => !prev)}
+              type="button"
+              className="flex items-center gap-2 p-1.5 sm:pl-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer shadow-2xs"
+              aria-expanded={isProfileOpen}
+              aria-label={t('admin_profile_label', 'Admin Profile')}
+              title={t('admin_profile_label', 'Admin Profile')}
+            >
+              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                {user?.name ? user.name[0].toUpperCase() : <User className="w-3.5 h-3.5" />}
+              </div>
+              <div className="hidden lg:block text-left pr-1 min-w-0">
+                <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate max-w-[115px]">
+                  {user?.name || 'Admin'}
+                </p>
+                <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold leading-none mt-0.5">
+                  {t('role_admin', 'Administrator')}
+                </p>
+              </div>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${
+                  isProfileOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
 
-          {/* Add Vendor (Desktop only) */}
-          <button
-            onClick={() => onOpenCheckIn && onOpenCheckIn('VENDOR')}
-            type="button"
-            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer"
-          >
-            <Briefcase className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-            <span>+ {t('vendors', 'Vendor')}</span>
-          </button>
+            {isProfileOpen && (
+              <div
+                dir="ltr"
+                className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl z-50 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150"
+              >
+                <div className="p-3.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-850/60 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      dir="auto"
+                      className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider"
+                    >
+                      {t('role_admin', 'Administrator')}
+                    </span>
+                    <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300">
+                      ADMIN
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    {user?.name}
+                  </p>
+                  <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+                </div>
 
-          {/* Add Visitor (Primary Action) */}
-          <button
-            onClick={() => onOpenCheckIn && onOpenCheckIn('VISITOR')}
-            type="button"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs shadow-blue-500/20 transition-all cursor-pointer"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{t('add_visitor_btn', '+ Visitor')}</span>
-            <span className="inline sm:hidden">+</span>
-          </button>
+                <div className="p-2 space-y-1">
+                  <div className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between rounded-xl bg-slate-50/60 dark:bg-slate-800/40">
+                    <span dir="auto" className="text-[11px] text-slate-400">
+                      {t('active_gate', 'Active Gate')}
+                    </span>
+                    <span
+                      dir="auto"
+                      className="font-bold text-slate-900 dark:text-white truncate max-w-[125px]"
+                    >
+                      {currentGate?.name || t('all_gates', 'All Gates')}
+                    </span>
+                  </div>
+
+                  {/* Admin Profile / Access Management Option */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      router.push('/access');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-left"
+                  >
+                    <UserCog className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span dir="auto">{t('admin_profile_label', 'Admin Profile & Access')}</span>
+                  </button>
+
+                  {/* Settings Option */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      router.push('/settings');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-left"
+                  >
+                    <Settings className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
+                    <span dir="auto">{t('nav_settings', 'Settings')}</span>
+                  </button>
+
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+
+                  {/* Logout Action */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      void logout();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer text-left"
+                  >
+                    <IconLogoutDoor className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span dir="auto">{t('logout', 'Logout')}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         /* ================= OPERATOR HEADER CONTROLS (Point 2) ================= */
@@ -716,8 +849,13 @@ export default function Header({
 
                 <div className="p-2 space-y-1">
                   <div className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between rounded-xl bg-slate-50/60 dark:bg-slate-800/40">
-                    <span className="text-[11px] text-slate-400">{t('active_gate', 'Gate')}</span>
-                    <span className="font-bold text-slate-900 dark:text-white truncate max-w-[120px]">
+                    <span dir="auto" className="text-[11px] text-slate-400">
+                      {t('active_gate', 'Gate')}
+                    </span>
+                    <span
+                      dir="auto"
+                      className="font-bold text-slate-900 dark:text-white truncate max-w-[120px]"
+                    >
                       {currentGate?.name || t('no_gate_assigned', 'No Gate Assigned')}
                     </span>
                   </div>
@@ -732,7 +870,7 @@ export default function Header({
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer text-left"
                   >
                     <IconLogoutDoor className="w-4 h-4 text-rose-500" />
-                    <span>{t('logout', 'Logout')}</span>
+                    <span dir="auto">{t('logout', 'Logout')}</span>
                   </button>
                 </div>
               </div>
@@ -754,8 +892,8 @@ export default function Header({
             }
             className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-xs shadow-blue-500/20 transition-all cursor-pointer"
           >
-            <UserPlus className="w-3.5 h-3.5" />
-            <span>{t('add_visitor_btn', '+ Add Visitor')}</span>
+            <Plus className="w-3.5 h-3.5 shrink-0" />
+            <span dir="auto">{t('add_visitor_btn', 'Add Visitor')}</span>
           </button>
 
           {/* MOBILE HEADER ONLY: Prominent Red Logout Button (Replaces standalone Add button as requested) */}
@@ -767,7 +905,7 @@ export default function Header({
             aria-label={t('logout', 'Logout')}
           >
             <IconLogoutDoor className="w-4 h-4 text-white" />
-            <span>{language === 'ur' ? 'لاگ آؤٹ' : 'Exit'}</span>
+            <span dir="auto">{language === 'ur' ? 'لاگ آؤٹ' : 'Exit'}</span>
           </button>
         </div>
       )}

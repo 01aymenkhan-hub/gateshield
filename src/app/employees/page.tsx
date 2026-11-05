@@ -23,6 +23,7 @@ import {
   X,
   Power,
   ExternalLink,
+  Plus,
 } from 'lucide-react';
 import type { AdminEmployeeRow } from '@/app/api/admin/employees/route';
 
@@ -334,6 +335,46 @@ export default function AdminEmployeesPage() {
     }
   };
 
+  const handleUpdateEmployeeDepartment = async (
+    emp: AdminEmployeeRow,
+    departmentId: string
+  ) => {
+    if (!departmentId || departmentId === emp.departmentId) return;
+    setActionBusyId(emp.id);
+    setBannerMessage(null);
+    try {
+      const res = await fetch(`/api/admin/employees/${emp.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'UPDATE_DEPARTMENT',
+          departmentId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBannerMessage({
+          type: 'error',
+          text: data.error || 'Failed to update employee department.',
+        });
+        return;
+      }
+
+      setBannerMessage({
+        type: 'success',
+        text: data.message || 'Employee department updated.',
+      });
+      await fetchEmployeesData();
+    } catch {
+      setBannerMessage({
+        type: 'error',
+        text: 'Network error while updating employee department.',
+      });
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
   const filteredRequests = requests.filter((r) => {
     if (requestStatusFilter !== 'ALL' && r.approvalStatus !== requestStatusFilter) {
       return false;
@@ -396,9 +437,9 @@ export default function AdminEmployeesPage() {
                 <button
                   type="button"
                   onClick={openAddEmployeeModal}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-emerald-950/20 flex items-center gap-1.5 cursor-pointer transition-all"
+                  className="px-4 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 active:bg-blue-100 text-xs font-extrabold shadow-lg shadow-blue-950/20 flex items-center gap-1.5 cursor-pointer transition-all"
                 >
-                  <UserPlus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 shrink-0" />
                   <span>Add Employee</span>
                 </button>
                 <a
@@ -691,7 +732,7 @@ export default function AdminEmployeesPage() {
                     onClick={openAddEmployeeModal}
                     className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
                   >
-                    <UserPlus className="w-3.5 h-3.5" />
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
                     <span>Add Employee</span>
                   </button>
                 </div>
@@ -729,10 +770,53 @@ export default function AdminEmployeesPage() {
                             </td>
 
                             <td className="px-4 py-3.5">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-semibold">
-                                <Building2 className="w-3 h-3" />
-                                {emp.departmentName || 'General'}
-                              </span>
+                              {departments.length > 0 ? (
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-semibold">
+                                  <Building2 className="w-3 h-3 shrink-0" />
+                                  <select
+                                    value={
+                                      emp.departmentId ||
+                                      departments.find(
+                                        (d) =>
+                                          d.name.toLowerCase() ===
+                                          (emp.departmentName || '').toLowerCase()
+                                      )?.id ||
+                                      ''
+                                    }
+                                    disabled={actionBusyId === emp.id}
+                                    onChange={(e) =>
+                                      void handleUpdateEmployeeDepartment(emp, e.target.value)
+                                    }
+                                    aria-label={`Change department for ${emp.name}`}
+                                    className="bg-transparent text-xs font-bold text-blue-700 dark:text-blue-300 focus:outline-none cursor-pointer"
+                                  >
+                                    {!emp.departmentId &&
+                                      !departments.some(
+                                        (d) =>
+                                          d.name.toLowerCase() ===
+                                          (emp.departmentName || '').toLowerCase()
+                                      ) && (
+                                        <option value="" disabled>
+                                          {emp.departmentName || 'Assign Department'}
+                                        </option>
+                                      )}
+                                    {departments.map((d) => (
+                                      <option
+                                        key={d.id}
+                                        value={d.id}
+                                        className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                                      >
+                                        {d.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-semibold">
+                                  <Building2 className="w-3 h-3" />
+                                  {emp.departmentName || 'General'}
+                                </span>
+                              )}
                             </td>
 
                             <td className="px-4 py-3.5 text-slate-700 dark:text-slate-300 font-medium">
@@ -978,7 +1062,7 @@ export default function AdminEmployeesPage() {
                   <button
                     type="submit"
                     disabled={addSubmitting}
-                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-extrabold shadow-md cursor-pointer flex items-center gap-1.5"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white font-extrabold shadow-md shadow-blue-500/20 cursor-pointer flex items-center gap-1.5"
                   >
                     <UserPlus className="w-3.5 h-3.5" />
                     <span>{addSubmitting ? 'Creating Employee...' : 'Create Employee Account'}</span>

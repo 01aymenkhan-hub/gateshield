@@ -1,4 +1,5 @@
 import { DlsData } from "../types/dls";
+import { OcrApiError, RawOcrResponse } from './cnicApi';
 
 export interface RawDlsResponse {
   success: boolean;
@@ -6,6 +7,7 @@ export interface RawDlsResponse {
   results: Array<{ text: string; confidence: number; bbox: number[][] }>;
   details: Array<{ text: string; confidence: number; bbox: number[][] }>;
   parsed?: DlsData;
+  quality?: RawOcrResponse['quality'];
 }
 
 const MOCK_DLS_DATA: DlsData = {
@@ -40,8 +42,7 @@ export async function scanDlsReal(imageFile: File): Promise<RawDlsResponse> {
   });
 
   if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`DLS OCR error (${res.status}): ${errorText}`);
+    throw new OcrApiError(res.status);
   }
 
   return (await res.json()) as RawDlsResponse;

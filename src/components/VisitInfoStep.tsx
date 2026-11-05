@@ -22,6 +22,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   playSelectSound,
+  playContinueSound,
   playAutoAdvanceSound,
   playBackSound,
 } from "@/utils/interactionSound";
@@ -264,9 +265,12 @@ export default function VisitInfoStep({
       .slice(0, 4);
   }, [recentHosts, data.meetName]);
 
+  const isDelivery = category === "DELIVERY";
+  const deliverySourceValue = (data.deliverySource ?? data.meetName ?? "").trim();
+  const isDeliverySourceValid = deliverySourceValue.length > 0;
   const isMeetNameValid = data.meetName.trim().length > 0;
   const isDepartmentValid = data.department.trim().length > 0;
-  const isFormValid = isMeetNameValid && isDepartmentValid;
+  const isFormValid = isDelivery ? isDeliverySourceValid : isMeetNameValid && isDepartmentValid;
 
   const triggerSafeNext = (withAutoAdvanceSound = false) => {
     if (isAdvancingRef.current) return;
@@ -280,16 +284,110 @@ export default function VisitInfoStep({
     onNext();
   };
 
+  const handleDeliverySourceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    onChange({
+      ...data,
+      deliverySource: val,
+      meetName: val,
+      department: data.department?.trim() ? data.department : "Delivery",
+    });
+  };
+
   const handleAdminChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     onChange({ ...data, [name]: value });
   };
 
-  /* ================= ORIGINAL ADMIN VISIT INFO STEP (100% UNCHANGED) ================= */
+  /* ================= ORIGINAL ADMIN VISIT INFO STEP ================= */
   if (isAdmin) {
     const labelClass = "block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5";
     const inputClass =
       "block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors shadow-2xs";
+
+    if (isDelivery) {
+      return (
+        <div className="space-y-6">
+          <section className="bg-white dark:bg-slate-900 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-800 p-6 sm:p-7">
+            <div className="mb-6">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+                {t("delivery_source_title", "Delivery Source / Company Name")}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {t(
+                  "delivery_source_subtitle",
+                  "Enter the name of the cargo company, courier service, or source from which the delivery arrived"
+                )}
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="deliverySource" className={labelClass}>
+                {t("delivery_source_label", "Delivery Source / Company Name")}{" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="deliverySource"
+                name="deliverySource"
+                type="text"
+                value={data.deliverySource ?? data.meetName}
+                onChange={handleDeliverySourceChange}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (isDeliverySourceValid) {
+                      onNext();
+                    }
+                  }
+                }}
+                placeholder={t(
+                  "delivery_source_placeholder",
+                  "e.g. TCS, DHL, Leopards, Daraz, Supplier Name"
+                )}
+                className={inputClass}
+                autoFocus
+              />
+            </div>
+          </section>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={onNext}
+              disabled={!isDeliverySourceValid}
+              className={`w-full py-3.5 px-6 rounded-xl text-sm font-semibold shadow-xs flex items-center justify-center gap-2 transition-all ${
+                isDeliverySourceValid
+                  ? "bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white cursor-pointer"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none"
+              }`}
+            >
+              <span>{t("next_btn", "Next")}</span>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M14 5l7 7m0 0l-7 7m7-7H3"
+                />
+              </svg>
+            </button>
+            {!isDeliverySourceValid && (
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-2">
+                {t(
+                  "delivery_source_required_hint",
+                  "Please enter Delivery Source / Company Name to continue"
+                )}
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-6">
@@ -456,6 +554,129 @@ export default function VisitInfoStep({
   }
 
   /* ================= OPERATOR STEP 2: VISIT INFORMATION ================= */
+  if (isDelivery) {
+    return (
+      <div className="space-y-3.5">
+        <div className={textAlignClass}>
+          <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+            {t("delivery_source_title", "Delivery Source / Company Name")}
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {t(
+              "delivery_source_subtitle",
+              "Enter the name of the cargo company, courier service, or source from which the delivery arrived"
+            )}
+          </p>
+        </div>
+
+        <div className="bg-slate-50/70 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 space-y-2.5">
+          <label
+            htmlFor="operatorDeliverySource"
+            className={`block text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 ${textAlignClass}`}
+          >
+            {t("delivery_source_label", "Delivery Source / Company Name")}{" "}
+            <span className="text-red-500">*</span>
+          </label>
+
+          <div className="relative">
+            <Truck className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              id="operatorDeliverySource"
+              name="deliverySource"
+              type="text"
+              autoComplete="off"
+              autoFocus
+              value={data.deliverySource ?? data.meetName}
+              onChange={handleDeliverySourceChange}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (isDeliverySourceValid) {
+                    playContinueSound();
+                    triggerSafeNext(false);
+                  }
+                }
+              }}
+              placeholder={t(
+                "delivery_source_placeholder",
+                "e.g. TCS, DHL, Leopards, Daraz, Supplier Name"
+              )}
+              className={`block w-full rounded-xl border-2 pl-10 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 bg-white dark:bg-slate-900 focus:outline-none transition-colors ${textAlignClass} ${
+                isDeliverySourceValid
+                  ? "border-emerald-500/80 dark:border-emerald-500/70"
+                  : "border-slate-200 dark:border-slate-700 focus:border-blue-500"
+              }`}
+            />
+          </div>
+        </div>
+
+        {!isDeliverySourceValid && (
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 text-amber-800 dark:text-amber-200 text-xs font-bold ${
+              isUr ? "text-right" : "text-left"
+            }`}
+          >
+            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span dir="auto" className="flex-1">
+              {t(
+                "delivery_source_required_hint",
+                "Please enter Delivery Source / Company Name to continue"
+              )}
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2.5 pt-1">
+          {onBack ? (
+            <button
+              type="button"
+              onClick={() => {
+                playBackSound();
+                onBack();
+              }}
+              className="py-2.5 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{t("back_btn", "Back")}</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
+          <button
+            type="button"
+            disabled={!isDeliverySourceValid}
+            onClick={() => {
+              if (!isDeliverySourceValid) return;
+              playContinueSound();
+              triggerSafeNext(false);
+            }}
+            className={`flex-1 sm:flex-initial sm:min-w-[160px] py-2.5 px-5 rounded-xl text-xs sm:text-sm font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all ${
+              isDeliverySourceValid
+                ? "bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white cursor-pointer"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none"
+            }`}
+          >
+            <span>{t("next_btn", "Next")}</span>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M14 5l7 7m0 0l-7 7m7-7H3"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const handleMeetNameInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const nextMeetName = e.target.value;
     const updated = { ...data, meetName: nextMeetName };
@@ -566,12 +787,15 @@ export default function VisitInfoStep({
                     e.preventDefault();
                     handleSelectHostOption(host);
                   }}
-                  className={`w-full px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors cursor-pointer ${
-                    isUr ? "flex-row-reverse text-right" : "flex-row text-left"
-                  }`}
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors cursor-pointer"
                 >
                   <User className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                  <span className="truncate">{host}</span>
+                  <span
+                    dir="auto"
+                    className={`truncate flex-1 ${isUr ? "text-right" : "text-left"}`}
+                  >
+                    {host}
+                  </span>
                 </button>
               ))}
             </div>
@@ -643,11 +867,11 @@ export default function VisitInfoStep({
       {!isFormValid && (
         <div
           className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 text-amber-800 dark:text-amber-200 text-xs font-bold ${
-            isUr ? "flex-row-reverse text-right" : "flex-row text-left"
+            isUr ? "text-right" : "text-left"
           }`}
         >
           <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-          <span>
+          <span dir="auto" className="flex-1">
             {!isMeetNameValid
               ? t("missing_meet_name_hint", "Please enter or select Visitor to Meet")
               : t("missing_department_hint", "Please select a Department to continue")}

@@ -141,12 +141,20 @@ model Person {
   presentAddress     String?
   permanentAddress   String?
   phoneNumber        String?
-  photoUrl           String?
-  cnicImageData      String?
-  cnicImageMime      String?
-  dlsImageData       String?
-  dlsImageMime       String?
-  company            String?
+  photoUrl             String?
+  cnicImageData        String?
+  cnicImageMime        String?
+  cnicImagePath        String?
+  cnicImageSize        Int?
+  dlsImageData         String?
+  dlsImageMime         String?
+  dlsImagePath         String?
+  dlsImageSize         Int?
+  deliveryDocImageData String?
+  deliveryDocImageMime String?
+  deliveryDocImagePath String?
+  deliveryDocImageSize Int?
+  company              String?
   belongings         String?
   isVip              Boolean        @default(false)
   isBlacklisted      Boolean        @default(false)
@@ -174,28 +182,39 @@ model Visit {
   departmentId   String?
   departmentRef  Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   purpose        String?
-  visitorCardNo  String?
-  vehicleNo      String?
-  belongings     String?
-  status         VisitStatus @default(CHECKED_IN)
-  checkInTime    DateTime    @default(now())
-  checkOutTime   DateTime?
-  entryGateId    String
-  entryGate      Gate        @relation("EntryGate", fields: [entryGateId], references: [id])
-  exitGateId     String?
-  exitGate       Gate?       @relation("ExitGate", fields: [exitGateId], references: [id])
-  checkedInById  String
-  checkedInBy    User        @relation("CheckedInBy", fields: [checkedInById], references: [id])
-  checkedOutById String?
-  checkedOutBy   User?       @relation("CheckedOutBy", fields: [checkedOutById], references: [id])
-  notes          String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  visitorCardNo         String?
+  vehicleNo             String?
+  vehicleNoNormalized   String?
+  incomingDocPath       String?
+  incomingDocMime       String?
+  incomingDocSize       Int?
+  incomingDocCapturedAt DateTime?
+  outgoingDocPath       String?
+  outgoingDocMime       String?
+  outgoingDocSize       Int?
+  outgoingDocCapturedAt DateTime?
+  belongings            String?
+  status                VisitStatus @default(CHECKED_IN)
+  checkInTime           DateTime    @default(now())
+  checkOutTime          DateTime?
+  entryGateId           String
+  entryGate             Gate        @relation("EntryGate", fields: [entryGateId], references: [id])
+  exitGateId            String?
+  exitGate              Gate?       @relation("ExitGate", fields: [exitGateId], references: [id])
+  checkedInById         String
+  checkedInBy           User        @relation("CheckedInBy", fields: [checkedInById], references: [id])
+  checkedOutById        String?
+  checkedOutBy          User?       @relation("CheckedOutBy", fields: [checkedOutById], references: [id])
+  notes                 String?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
   @@index([personId])
   @@index([status])
   @@index([checkInTime])
   @@index([visitorCardNo])
+  @@index([vehicleNo])
+  @@index([vehicleNoNormalized])
   @@index([passCode])
   @@index([hostName])
   @@index([department])
@@ -314,6 +333,8 @@ model Parcel {
   ownerPhone          String
   departmentId        String?
   departmentName      String
+  senderName          String?
+  senderPhone         String?
   senderPlatform      String?
   expectedArrivalDate String?
   photoUrl            String?
