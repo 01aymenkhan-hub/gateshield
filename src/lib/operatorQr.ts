@@ -124,3 +124,76 @@ export function checkQrLoginRateLimit(ip: string): { allowed: boolean; remaining
 export function resetQrLoginRateLimit(ip: string): void {
   loginAttempts.delete(ip);
 }
+
+let operatorSchemaReady = false;
+
+/**
+ * Ensures all operator/admin columns exist on the "users" table.
+ * Safe and idempotent on databases where migrations or db push were not re-run.
+ */
+export async function ensureOperatorUserSchema(prismaClient: any): Promise<void> {
+  if (operatorSchemaReady) return;
+  try {
+    await prismaClient.$executeRawUnsafe(`
+      DO $$ BEGIN
+        CREATE TYPE "EmployeeApprovalStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `);
+    await prismaClient.$executeRawUnsafe(`
+      ALTER TABLE "users"
+        ADD COLUMN IF NOT EXISTS "approvalStatus" "EmployeeApprovalStatus" NOT NULL DEFAULT 'APPROVED',
+        ADD COLUMN IF NOT EXISTS "position" TEXT,
+        ADD COLUMN IF NOT EXISTS "phoneNumber" TEXT,
+        ADD COLUMN IF NOT EXISTS "operatorNumber" TEXT,
+        ADD COLUMN IF NOT EXISTS "qrLoginHash" TEXT,
+        ADD COLUMN IF NOT EXISTS "qrLoginEncrypted" TEXT,
+        ADD COLUMN IF NOT EXISTS "qrLoginCreatedAt" TIMESTAMP(3),
+        ADD COLUMN IF NOT EXISTS "qrLoginRevokedAt" TIMESTAMP(3),
+        ADD COLUMN IF NOT EXISTS "approvedAt" TIMESTAMP(3),
+        ADD COLUMN IF NOT EXISTS "approvedById" TEXT,
+        ADD COLUMN IF NOT EXISTS "rejectedAt" TIMESTAMP(3),
+        ADD COLUMN IF NOT EXISTS "rejectionReason" TEXT,
+        ADD COLUMN IF NOT EXISTS "passwordChangedAt" TIMESTAMP(3);
+    `);
+    operatorSchemaReady = true;
+  } catch (err) {
+    console.warn('[Operator Schema] Non-fatal schema check notice:', err);
+  }
+}
+
+/**
+ * Generates a guaranteed collision-free Operator Number (e.g., OP-1006)
+ * by inspecting all existing operatorNumber values in "users".
+ */
+export async function generateUniqueOperatorNumber(prismaClient: any): Promise<string> {
+  const rows = await prismaClient.$queryRaw<Array<{ operatorNumber: string | null }>>`
+    SELECT "operatorNumber"
+    FROM "users"
+    WHERE "operatorNumber" IS NOT NULL
+  `;
+  const existingSet = new Set<string>();
+  let maxNumber = 1000;
+
+  for (const row of rows) {
+    if (row.operatorNumber) {
+      const normalized = row.operatorNumber.trim().toUpperCase();
+      existingSet.add(normalized);
+      const match = /^OP-(\d+)$/i.exec(normalized);
+      if (match) {
+        const parsed = parseInt(match[1], 10);
+        if (!Number.isNaN(parsed) && parsed > maxNumber) {
+          maxNumber = parsed;
+        }
+      }
+    }
+  }
+
+  let nextNum = maxNumber + 1;
+  while (existingSet.has(`OP-${String(nextNum).padStart(4, '0')}`)) {
+    nextNum += 1;
+  }
+  return `OP-${String(nextNum).padStart(4, '0')}`;
+}
+

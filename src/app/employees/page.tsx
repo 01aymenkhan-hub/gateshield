@@ -1564,7 +1564,7 @@ function AdminEmployeesContent() {
                 </p>
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Optional Note / Reason for Applicant
+                    Reason for Rejection
                   </label>
                   <textarea
                     rows={3}
@@ -1619,7 +1619,7 @@ function AdminEmployeesContent() {
                 </p>
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Optional Note / Reason for Employee
+                    Reason for Rejection
                   </label>
                   <textarea
                     rows={3}

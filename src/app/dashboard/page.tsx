@@ -24,20 +24,28 @@ import {
   Calendar,
   ChevronRight,
   TrendingUp,
-  Truck,
   Sparkles,
   X,
-  Package,
   Crown,
   Plus,
 } from 'lucide-react';
+import { IconCurrentlyInside } from '@/components/icons/OperatorTaskIcons';
 import {
-  IconRegisterVisitor,
-  IconCheckoutVisitor,
-  IconCheckStatus,
-  IconAddVendor,
-  IconCurrentlyInside,
-} from '@/components/icons/OperatorTaskIcons';
+  OpSvgRegister,
+  OpSvgCheckout,
+  OpSvgCheckStatus,
+  OpSvgGuest,
+  OpSvgParcelTracker,
+  OpSvgVipGuest,
+  OpSvgTotalVisitors,
+  OpSvgCurrentlyInside,
+  OpSvgTotalCheckouts,
+  OpSvgOverstayAlerts,
+  OpSvgTotalVendors,
+  OpSvgTotalInterviews,
+  OpSvgTotalGuests,
+  OpSvgTotalDeliveries,
+} from '@/components/icons/OperatorDashboardSvgIcons';
 import CheckInModal from '@/components/modals/CheckInModal';
 import CheckOutModal from '@/components/modals/CheckOutModal';
 import CheckStatusModal from '@/components/modals/CheckStatusModal';
@@ -763,7 +771,7 @@ export default function DashboardPage() {
               className="group relative p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-white to-emerald-500/5 dark:from-emerald-950/40 dark:via-slate-900 dark:to-emerald-950/20 border-2 border-emerald-500/30 hover:border-emerald-500 dark:border-emerald-800 dark:hover:border-emerald-500 shadow-sm hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-200 text-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center gap-3 min-h-[150px] sm:min-h-[170px]"
             >
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/30 shrink-0">
-                <IconRegisterVisitor className="w-10 h-10 sm:w-11 sm:h-11 text-white" />
+                <OpSvgRegister className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
                 <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
@@ -785,7 +793,7 @@ export default function DashboardPage() {
               className="group relative p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-white to-amber-500/5 dark:from-amber-950/40 dark:via-slate-900 dark:to-amber-950/20 border-2 border-amber-500/30 hover:border-amber-500 dark:border-amber-800 dark:hover:border-amber-500 shadow-sm hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-200 text-center cursor-pointer flex flex-col items-center justify-center gap-3 min-h-[150px] sm:min-h-[170px]"
             >
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30 shrink-0">
-                <IconCheckoutVisitor className="w-10 h-10 sm:w-11 sm:h-11 text-white" />
+                <OpSvgCheckout className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
                 <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
@@ -804,7 +812,7 @@ export default function DashboardPage() {
               className="group relative p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-500/10 via-white to-blue-500/5 dark:from-blue-950/40 dark:via-slate-900 dark:to-blue-950/20 border-2 border-blue-500/30 hover:border-blue-500 dark:border-blue-800 dark:hover:border-blue-500 shadow-sm hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 text-center cursor-pointer flex flex-col items-center justify-center gap-3 min-h-[150px] sm:min-h-[170px]"
             >
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/30 shrink-0">
-                <IconCheckStatus className="w-10 h-10 sm:w-11 sm:h-11 text-white" />
+                <OpSvgCheckStatus className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
                 <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
@@ -835,7 +843,7 @@ export default function DashboardPage() {
                 </span>
               )}
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/30 shrink-0">
-                <IconAddVendor className="w-10 h-10 sm:w-11 sm:h-11 text-white" />
+                <OpSvgGuest className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
                 <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
@@ -865,7 +873,7 @@ export default function DashboardPage() {
                 </span>
               )}
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-md shadow-orange-500/30 shrink-0">
-                <Package className="w-8 h-8 sm:w-9 sm:h-9 text-white" />
+                <OpSvgParcelTracker className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
                 <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
@@ -895,7 +903,7 @@ export default function DashboardPage() {
                 </span>
               )}
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-md shadow-purple-500/30 shrink-0">
-                <Crown className="w-8 h-8 sm:w-9 sm:h-9 text-white" />
+                <OpSvgVipGuest className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
                 <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
@@ -910,7 +918,7 @@ export default function DashboardPage() {
 
           {/* Operator KPI Grid (Two Columns on Mobile, Four on Desktop) */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {/* 1. Total Today */}
+            {/* 1. Total Visitors */}
             <button
               type="button"
               onClick={() =>
@@ -925,11 +933,11 @@ export default function DashboardPage() {
               className="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md transition-all cursor-pointer flex flex-col items-center justify-center text-center group min-h-[150px] sm:min-h-[165px]"
               title="Click to view all visitor records today"
             >
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2.5 shrink-0">
-                <Users className="w-7 h-7 sm:w-8 sm:h-8" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2.5 shrink-0">
+                <OpSvgTotalVisitors className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
-                {t('total_visitors_today')}
+                {language === 'ur' ? 'کل وزیٹرز' : 'Total Visitors'}
               </span>
               <span className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-none">
                 {stats?.totalToday || 0}
@@ -955,11 +963,11 @@ export default function DashboardPage() {
               className="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-emerald-400 dark:hover:border-emerald-600 hover:shadow-md transition-all cursor-pointer flex flex-col items-center justify-center text-center group min-h-[150px] sm:min-h-[165px]"
               title="Click to view all visitors currently inside"
             >
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5 shrink-0">
-                <DoorOpen className="w-7 h-7 sm:w-8 sm:h-8" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5 shrink-0">
+                <OpSvgCurrentlyInside className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">
-                {t('currently_inside')}
+                {language === 'ur' ? 'اس وقت اندر موجود' : 'Currently Inside'}
               </span>
               <span className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-none">
                 {stats?.currentlyInside || 0}
@@ -970,7 +978,7 @@ export default function DashboardPage() {
               </span>
             </button>
 
-            {/* 3. Check-outs */}
+            {/* 3. Total Checkouts */}
             <button
               type="button"
               onClick={() =>
@@ -986,11 +994,11 @@ export default function DashboardPage() {
               className="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-md transition-all cursor-pointer flex flex-col items-center justify-center text-center group min-h-[150px] sm:min-h-[165px]"
               title="Click to view checked-out visitors"
             >
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center mb-2.5 shrink-0">
-                <DoorClosed className="w-7 h-7 sm:w-8 sm:h-8" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center mb-2.5 shrink-0">
+                <OpSvgTotalCheckouts className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-slate-100 transition-colors leading-snug">
-                {t('total_checkouts')}
+                {language === 'ur' ? 'کل چھٹی (باہر گئے)' : 'Total Checkouts'}
               </span>
               <span className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-none">
                 {stats?.totalCheckOutsToday || 0}
@@ -1000,7 +1008,7 @@ export default function DashboardPage() {
               </span>
             </button>
 
-            {/* 4. Overstay Alert */}
+            {/* 4. Overstay Alerts */}
             <button
               type="button"
               onClick={() =>
@@ -1016,11 +1024,11 @@ export default function DashboardPage() {
               className="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-rose-400 dark:hover:border-rose-600 hover:shadow-md transition-all cursor-pointer flex flex-col items-center justify-center text-center group min-h-[150px] sm:min-h-[165px]"
               title="Click to view overstay visitors"
             >
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-2.5 shrink-0">
-                <AlertTriangle className="w-7 h-7 sm:w-8 sm:h-8" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-2.5 shrink-0">
+                <OpSvgOverstayAlerts className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors leading-snug">
-                {t('overstay_alerts')}
+                {language === 'ur' ? 'وقت سے زیادہ اندر موجود' : 'Overstay Alerts'}
               </span>
               <span className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-none">
                 {stats?.overstayCount || 0}
@@ -1033,7 +1041,7 @@ export default function DashboardPage() {
 
           {/* Secondary Category Metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            {/* Vendors */}
+            {/* Total Vendors */}
             <button
               type="button"
               onClick={() =>
@@ -1048,18 +1056,18 @@ export default function DashboardPage() {
               className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-purple-400 dark:hover:border-purple-600 hover:shadow-sm flex flex-col items-center justify-center text-center shadow-2xs cursor-pointer group transition-all min-h-[130px] sm:min-h-[140px]"
               title="Click to view vendors"
             >
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-2 shrink-0">
-                <Briefcase className="w-7 h-7 sm:w-8 sm:h-8" />
+              <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-2 shrink-0">
+                <OpSvgTotalVendors className="w-8 h-8 sm:w-9 sm:h-9" />
               </div>
               <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors leading-snug">
-                {t('vendors')}
+                {language === 'ur' ? 'کل وینڈرز' : 'Total Vendors'}
               </span>
               <span className="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-none">
                 {stats?.vendorsToday || 0}
               </span>
             </button>
 
-            {/* Interviews */}
+            {/* Total Interviews */}
             <button
               type="button"
               onClick={() =>
@@ -1074,18 +1082,18 @@ export default function DashboardPage() {
               className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-sm flex flex-col items-center justify-center text-center shadow-2xs cursor-pointer group transition-all min-h-[130px] sm:min-h-[140px]"
               title="Click to view interviews"
             >
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 shrink-0">
-                <UserCheck className="w-7 h-7 sm:w-8 sm:h-8" />
+              <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 shrink-0">
+                <OpSvgTotalInterviews className="w-8 h-8 sm:w-9 sm:h-9" />
               </div>
               <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
-                {t('interviews')}
+                {language === 'ur' ? 'کل انٹرویوز' : 'Total Interviews'}
               </span>
               <span className="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-none">
                 {stats?.interviewsToday || 0}
               </span>
             </button>
 
-            {/* Special Guests */}
+            {/* Total Guests */}
             <button
               type="button"
               onClick={() =>
@@ -1100,18 +1108,18 @@ export default function DashboardPage() {
               className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-amber-400 dark:hover:border-amber-600 hover:shadow-sm flex flex-col items-center justify-center text-center shadow-2xs cursor-pointer group transition-all min-h-[130px] sm:min-h-[140px]"
               title="Click to view special guests"
             >
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2 shrink-0">
-                <Award className="w-7 h-7 sm:w-8 sm:h-8" />
+              <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2 shrink-0">
+                <OpSvgTotalGuests className="w-8 h-8 sm:w-9 sm:h-9" />
               </div>
               <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-snug">
-                {t('special_guests')}
+                {language === 'ur' ? 'کل مہمان' : 'Total Guests'}
               </span>
               <span className="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-none">
                 {stats?.specialGuestsToday || 0}
               </span>
             </button>
 
-            {/* Deliveries */}
+            {/* Total Deliveries */}
             <button
               type="button"
               onClick={() =>
@@ -1126,11 +1134,11 @@ export default function DashboardPage() {
               className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-400 dark:hover:border-emerald-600 hover:shadow-sm flex flex-col items-center justify-center text-center shadow-2xs cursor-pointer group transition-all min-h-[130px] sm:min-h-[140px]"
               title="Click to view deliveries"
             >
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 shrink-0">
-                <Truck className="w-7 h-7 sm:w-8 sm:h-8" />
+              <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 shrink-0">
+                <OpSvgTotalDeliveries className="w-8 h-8 sm:w-9 sm:h-9" />
               </div>
               <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">
-                {t('deliveries')}
+                {language === 'ur' ? 'کل ڈلیوریز' : 'Total Deliveries'}
               </span>
               <span className="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-none">
                 {stats?.deliveriesToday || 0}

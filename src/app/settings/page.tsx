@@ -265,7 +265,7 @@ function SettingsContent() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-1">Description (Optional)</label>
+              <label className="block text-xs font-semibold mb-1">Description</label>
               <input
                 type="text"
                 placeholder="e.g. Warehouse & Logistics side"

@@ -353,19 +353,15 @@ export default function VisitorStep({
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                   Photo Attached ✓
                 </span>
-              ) : isDelivery ? (
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
-                  Optional
-                </span>
-              ) : (
+              ) : !isDelivery ? (
                 <span className="text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800 px-2.5 py-1 rounded-full">
                   Required
                 </span>
-              )}
+              ) : null}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {isDelivery
-                ? "Capture or upload a photo of the delivery person (optional)"
+                ? "Capture or upload a photo of the delivery person"
                 : "Capture or upload a clear portrait photo of the visitor"}
             </p>
           </div>
@@ -637,7 +633,7 @@ export default function VisitorStep({
               htmlFor="visitorPhoneNumber"
               className="block text-base font-bold text-slate-900 dark:text-white tracking-tight"
             >
-              Phone Number <span className="text-red-500">*</span>
+              Phone Number
             </label>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Format: 11-digit Pakistani mobile number starting with 03 (e.g. 03001234567)
@@ -782,9 +778,6 @@ export default function VisitorStep({
                 <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
                   Carrying Items / Belongings
                 </h2>
-                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                  Optional
-                </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Is the visitor carrying bags, laptops, toolkits, or other equipment into the facility?
@@ -1003,15 +996,11 @@ export default function VisitorStep({
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
                 {t("photo_attached_badge", "Photo Attached ✓")}
               </span>
-            ) : isDelivery ? (
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-0.5 rounded-full shrink-0">
-                {t("optional_badge", "Optional")}
-              </span>
-            ) : (
+            ) : !isDelivery ? (
               <span className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800 px-2.5 py-0.5 rounded-full shrink-0">
                 {t("photo_required_badge", "Required")}
               </span>
-            )}
+            ) : null}
           </div>
 
           {!visitorData.photoPreview ? (
@@ -1044,7 +1033,7 @@ export default function VisitorStep({
                 {isDelivery
                   ? t(
                       "capture_image_optional_sub",
-                      "Capture a photo of the delivery person (optional) or tap Next to continue"
+                      "Capture a photo of the delivery person or tap Next to continue"
                     )
                   : t(
                       "capture_visitor_photo_sub",
@@ -1396,12 +1385,6 @@ export default function VisitorStep({
             >
               {t("phone_number_label", "Phone Number")}
             </label>
-            <span
-              dir="auto"
-              className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0"
-            >
-              {t("optional_badge", "Optional")}
-            </span>
           </div>
           <p
             dir="auto"
@@ -1640,12 +1623,6 @@ export default function VisitorStep({
               >
                 {t("carrying_items_title", "Carrying Items")}
               </h2>
-              <span
-                dir="auto"
-                className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0"
-              >
-                {t("optional_badge", "Optional")}
-              </span>
             </div>
             <p
               dir="auto"

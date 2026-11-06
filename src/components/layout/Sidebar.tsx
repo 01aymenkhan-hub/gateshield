@@ -237,7 +237,7 @@ export default function Sidebar() {
 
           <button
             onClick={logout}
-            className={`flex items-center justify-center gap-1 text-xs font-semibold rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer ${
+            className={`flex items-center justify-center gap-1 text-xs font-semibold rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors cursor-pointer ${
               isCollapsed ? 'p-2 w-full' : 'px-2 py-1.5'
             }`}
             title={t('logout', 'Sign out')}

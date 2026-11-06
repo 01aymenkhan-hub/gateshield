@@ -93,6 +93,15 @@ function getTodayDateString(): string {
   return `${y}-${m}-${d}`;
 }
 
+function formatEmployeeDisplayName(name?: string | null): string {
+  if (!name) return '';
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ''))
+    .join(' ');
+}
+
 export default function EmployeePortalPage() {
   const { theme, toggleTheme } = useAuth();
   const { language, toggleLanguage, t } = useLanguage();
@@ -726,14 +735,6 @@ export default function EmployeePortalPage() {
           >
             <GateShieldLogo variant="full" size="md" />
           </button>
-          <div className="min-w-0">
-            <span
-              dir="auto"
-              className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 inline-block truncate max-w-full"
-            >
-              {t('emp_portal_title', 'Employee Portal')}
-            </span>
-          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -877,8 +878,8 @@ export default function EmployeePortalPage() {
 
               <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
                 <div className="text-left">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
-                    {employee.name}
+                  <p className="text-xs font-bold text-blue-600 dark:text-blue-400 leading-tight capitalize">
+                    {formatEmployeeDisplayName(employee.name)}
                   </p>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-none mt-0.5">
                     {employee.departmentName} &bull; {employee.position}
@@ -889,7 +890,7 @@ export default function EmployeePortalPage() {
               <button
                 type="button"
                 onClick={handleEmployeeLogout}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{t('logout', 'Logout')}</span>
@@ -1319,26 +1320,13 @@ export default function EmployeePortalPage() {
                 {/* LANDING VIEW: TWO PROMINENT CLICKABLE CARDS                     */}
                 {/* =============================================================== */}
                 {activeSection === 'HOME' && (
-                  <div className="space-y-6 py-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-                      <div className={isUrdu ? 'text-right' : 'text-left'}>
-                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                          {isUrdu ? `خوش آمدید، ${employee?.name}` : `Welcome Back, ${employee?.name}`}
-                        </span>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mt-0.5">
-                          {t('emp_dashboard_heading', 'Employee Self-Service Dashboard')}
-                        </h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                          {isUrdu
-                            ? 'مہمانوں کے انتظام یا پارسل ٹریکنگ کے لیے نیচে سے انتخاب کریں۔'
-                            : 'Select an option below to manage your invited guests or track expected and arrived parcels.'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 self-start sm:self-center">
-                        <span className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          {employee?.departmentName} &bull; {employee?.position}
-                        </span>
-                      </div>
+                  <div className="space-y-4 py-1">
+                    <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-3.5 shadow-xs ${isUrdu ? 'text-right' : 'text-left'}`}>
+                      <h1 className="text-base sm:text-lg font-extrabold text-blue-600 dark:text-blue-400 capitalize">
+                        {isUrdu
+                          ? `خوش آمدید، ${formatEmployeeDisplayName(employee?.name)}`
+                          : `Welcome Back, ${formatEmployeeDisplayName(employee?.name)}`}
+                      </h1>
                     </div>
 
                     {/* Two Prominent Clickable Cards: Card A (Guest Management) & Card B (Parcel Management) */}
@@ -1375,15 +1363,7 @@ export default function EmployeePortalPage() {
                           </p>
                         </div>
 
-                        <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
-                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
-                              1. {t('emp_action_invite_guest', 'Invite Guest')}
-                            </span>
-                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
-                              2. {t('emp_action_visited_guests', 'Visited Guests')}
-                            </span>
-                          </div>
+                        <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end">
                           <span className="inline-flex items-center gap-1 text-xs font-extrabold text-blue-600 dark:text-blue-400 group-hover:translate-x-1 transition-transform">
                             {isUrdu ? 'کھولیں' : 'Open'} <ArrowRight className="w-4 h-4" />
                           </span>
@@ -1429,15 +1409,7 @@ export default function EmployeePortalPage() {
                           </p>
                         </div>
 
-                        <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
-                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
-                              1. {t('emp_tab_add_parcel_reminder', 'Add Parcel Reminder')}
-                            </span>
-                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
-                              2. {t('emp_tab_arrived_parcels', 'Arrived Parcels')}
-                            </span>
-                          </div>
+                        <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end">
                           <span className="inline-flex items-center gap-1 text-xs font-extrabold text-blue-600 dark:text-blue-400 group-hover:translate-x-1 transition-transform">
                             {isUrdu ? 'کھولیں' : 'Open'} <ArrowRight className="w-4 h-4" />
                           </span>
@@ -1773,15 +1745,15 @@ export default function EmployeePortalPage() {
                             </h3>
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-2">
-                            <div className="relative">
+                          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                            <div className="relative w-full sm:w-64">
                               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                               <input
                                 type="text"
                                 value={historySearch}
                                 onChange={(e) => setHistorySearch(e.target.value)}
                                 placeholder={isUrdu ? 'مہمان، کارڈ یا گیٹ تلاش کریں...' : 'Search guest, card, gate...'}
-                                className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full pl-8 pr-3 py-2 sm:py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                             </div>
 

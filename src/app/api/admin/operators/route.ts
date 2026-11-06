@@ -8,6 +8,8 @@ import {
   generateOperatorQrToken,
   hashOperatorQrToken,
   encryptOperatorQrToken,
+  ensureOperatorUserSchema,
+  generateUniqueOperatorNumber,
 } from '@/lib/operatorQr';
 import {
   ensurePasswordResetSchema,
@@ -61,6 +63,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const summaryOnly = searchParams.get('summaryOnly') === 'true';
 
+    await ensureOperatorUserSchema(prisma);
     await ensurePasswordResetSchema();
     await expireStalePasswordResetRequests();
     const tenantId = getTenantId();
@@ -261,7 +264,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    await ensureOperatorUserSchema(prisma);
+
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid request payload. Please check the entered fields.' },
+        { status: 400 }
+      );
+    }
+
     const rawName =
       typeof body.fullName === 'string' && body.fullName.trim()
         ? body.fullName.trim()
@@ -272,48 +286,100 @@ export async function POST(request: NextRequest) {
     const rawEmail =
       typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     const rawPhone =
-      typeof body.phoneNumber === 'string' ? body.phoneNumber.trim() : '';
+      typeof body.phoneNumber === 'string' && body.phoneNumber.trim()
+        ? body.phoneNumber.trim()
+        : typeof body.phone === 'string' && body.phone.trim()
+        ? body.phone.trim()
+        : '';
     const position =
       typeof body.position === 'string' && body.position.trim()
         ? body.position.trim().replace(/\s+/g, ' ')
+        : body.role === 'ADMIN'
+        ? 'Administrator'
         : 'Gate Operator';
-    const role = body.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR';
-    const gateIds: string[] = Array.isArray(body.gateIds)
-      ? body.gateIds.filter((g: unknown): g is string => typeof g === 'string' && g.trim().length > 0)
-      : [];
 
-    // Support either Admin-entered password or auto-generated temporary password
-    const autoGeneratePassword = Boolean(body.autoGeneratePassword);
-    let plainPassword =
-      typeof body.password === 'string' ? body.password.trim() : '';
-
-    if (autoGeneratePassword || !plainPassword) {
-      plainPassword = `GS-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    if (
+      body.role !== undefined &&
+      body.role !== 'OPERATOR' &&
+      body.role !== 'ADMIN'
+    ) {
+      return NextResponse.json(
+        { error: 'Invalid role selected. Role must be Operator or Administrator.' },
+        { status: 400 }
+      );
     }
+
+    const role: 'ADMIN' | 'OPERATOR' = body.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR';
+    const gateIds: string[] = Array.isArray(body.gateIds)
+      ? Array.from(
+          new Set(
+            body.gateIds.filter(
+              (g: unknown): g is string => typeof g === 'string' && g.trim().length > 0
+            ).map((g) => g.trim())
+          )
+        )
+      : [];
 
     if (!fullName) {
       return NextResponse.json(
-        { error: 'Operator Full Name is required.' },
+        { error: 'Full Name is required.' },
+        { status: 400 }
+      );
+    }
+
+    if (!rawEmail) {
+      return NextResponse.json(
+        { error: 'Email Address is required.' },
         { status: 400 }
       );
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!rawEmail || !emailRegex.test(rawEmail)) {
+    if (!emailRegex.test(rawEmail)) {
       return NextResponse.json(
         { error: 'Please enter a valid Email Address.' },
         { status: 400 }
       );
     }
 
-    if (plainPassword.length < 6) {
+    // Support either Admin-entered password or auto-generated temporary password
+    const autoGeneratePassword = Boolean(body.autoGeneratePassword);
+    const enteredPassword =
+      typeof body.password === 'string' ? body.password.trim() : '';
+
+    if (!autoGeneratePassword && enteredPassword.length > 0 && enteredPassword.length < 6) {
       return NextResponse.json(
         { error: 'Password must be at least 6 characters long.' },
         { status: 400 }
       );
     }
 
+    const plainPassword =
+      autoGeneratePassword || !enteredPassword
+        ? `GS-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
+        : enteredPassword;
+
     const cleanedPhone = rawPhone ? rawPhone.replace(/[\s\-()]/g, '') : null;
+    if (cleanedPhone && !/^\+?[0-9]{7,15}$/.test(cleanedPhone)) {
+      return NextResponse.json(
+        { error: 'Please enter a valid phone number (7 to 15 digits).' },
+        { status: 400 }
+      );
+    }
+
+    // Validate gateIds against existing gates before creating the user
+    if (gateIds.length > 0) {
+      const existingGates = await prisma.gate.findMany({
+        where: { id: { in: gateIds } },
+        select: { id: true },
+      });
+      if (existingGates.length !== gateIds.length) {
+        return NextResponse.json(
+          { error: 'Invalid gate selection. One or more selected gates do not exist.' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Check duplicate email
     const existingUsers = await prisma.$queryRaw<Array<{ id: string }>>`
@@ -341,8 +407,7 @@ export async function POST(request: NextRequest) {
     let rawToken: string | null = null;
 
     if (isOperator) {
-      const opCount = await prisma.user.count({ where: { role: 'OPERATOR' } });
-      operatorNumber = `OP-${String(1001 + opCount).padStart(4, '0')}`;
+      operatorNumber = await generateUniqueOperatorNumber(prisma);
       rawToken = generateOperatorQrToken();
       qrLoginHash = hashOperatorQrToken(rawToken);
       qrLoginEncrypted = encryptOperatorQrToken(rawToken);
@@ -351,53 +416,56 @@ export async function POST(request: NextRequest) {
     const newId = `opr_${crypto.randomBytes(12).toString('hex')}`;
     const now = new Date();
 
-    await prisma.$executeRaw`
-      INSERT INTO "users" (
-        "id",
-        "email",
-        "passwordHash",
-        "name",
-        "role",
-        "active",
-        "approvalStatus",
-        "position",
-        "phoneNumber",
-        "operatorNumber",
-        "qrLoginHash",
-        "qrLoginEncrypted",
-        "qrLoginCreatedAt",
-        "approvedAt",
-        "approvedById",
-        "createdAt",
-        "updatedAt"
-      )
-      VALUES (
-        ${newId},
-        ${rawEmail},
-        ${passwordHash},
-        ${fullName},
-        ${role}::"Role",
-        true,
-        'APPROVED'::"EmployeeApprovalStatus",
-        ${position},
-        ${cleanedPhone},
-        ${operatorNumber},
-        ${qrLoginHash},
-        ${qrLoginEncrypted},
-        ${isOperator ? now : null},
-        ${now},
-        ${user.id},
-        ${now},
-        ${now}
-      )
-    `;
+    // Create user and gate assignments atomically in a transaction
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`
+        INSERT INTO "users" (
+          "id",
+          "email",
+          "passwordHash",
+          "name",
+          "role",
+          "active",
+          "approvalStatus",
+          "position",
+          "phoneNumber",
+          "operatorNumber",
+          "qrLoginHash",
+          "qrLoginEncrypted",
+          "qrLoginCreatedAt",
+          "approvedAt",
+          "approvedById",
+          "createdAt",
+          "updatedAt"
+        )
+        VALUES (
+          ${newId},
+          ${rawEmail},
+          ${passwordHash},
+          ${fullName},
+          ${role}::"Role",
+          true,
+          'APPROVED'::"EmployeeApprovalStatus",
+          ${position},
+          ${cleanedPhone},
+          ${operatorNumber},
+          ${qrLoginHash},
+          ${qrLoginEncrypted},
+          ${isOperator ? now : null},
+          ${now},
+          ${user.id},
+          ${now},
+          ${now}
+        )
+      `;
 
-    if (isOperator && gateIds.length > 0) {
-      await prisma.userGateAccess.createMany({
-        data: gateIds.map((gateId) => ({ userId: newId, gateId })),
-        skipDuplicates: true,
-      });
-    }
+      if (isOperator && gateIds.length > 0) {
+        await tx.userGateAccess.createMany({
+          data: gateIds.map((gateId) => ({ userId: newId, gateId })),
+          skipDuplicates: true,
+        });
+      }
+    });
 
     const assignedGateRows = await prisma.userGateAccess.findMany({
       where: { userId: newId },
@@ -440,6 +508,17 @@ export async function POST(request: NextRequest) {
       };
     }
 
+    const credentialPayload = {
+      name: fullName,
+      email: rawEmail,
+      phone: cleanedPhone,
+      phoneNumber: cleanedPhone,
+      temporaryPassword: plainPassword,
+      operatorNumber,
+      role,
+      assignedGates: assignedGateRows.map((ga) => ga.gate.name),
+    };
+
     return NextResponse.json(
       {
         success: true,
@@ -451,6 +530,7 @@ export async function POST(request: NextRequest) {
           role,
           active: true,
           approvalStatus: 'APPROVED',
+          phone: cleanedPhone,
           phoneNumber: cleanedPhone,
           position,
           operatorNumber,
@@ -460,21 +540,35 @@ export async function POST(request: NextRequest) {
         },
         qrCard,
         // Returned ONCE in the creation response for explicit Admin copying/sharing; never stored in plaintext
-        oneTimeCredentials: {
-          name: fullName,
-          email: rawEmail,
-          temporaryPassword: plainPassword,
-          operatorNumber,
-          role,
-          assignedGates: assignedGateRows.map((ga) => ga.gate.name),
-        },
+        credentials: credentialPayload,
+        oneTimeCredentials: credentialPayload,
       },
       { status: 201 }
     );
   } catch (error: unknown) {
     console.error('[Admin Operators POST] Error:', error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (
+      errMsg.includes('users_email_key') ||
+      (errMsg.includes('23505') && errMsg.toLowerCase().includes('email')) ||
+      (errMsg.includes('P2002') && errMsg.toLowerCase().includes('email'))
+    ) {
+      return NextResponse.json(
+        {
+          error: 'An account with this email address already exists.',
+          code: 'DUPLICATE_EMAIL',
+        },
+        { status: 409 }
+      );
+    }
+    if (errMsg.includes('23503') || errMsg.includes('P2003')) {
+      return NextResponse.json(
+        { error: 'Invalid gate selection. One or more selected gates do not exist.' },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Failed to create operator account.' },
+      { error: 'Unable to create account due to a server or database error. Please try again.' },
       { status: 500 }
     );
   }

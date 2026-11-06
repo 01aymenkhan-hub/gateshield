@@ -334,79 +334,78 @@ function AccessManagementContent() {
 
     try {
       if (modalMode === 'create') {
-        if (!name.trim() || !email.trim()) {
-          throw new Error('Name and email are required.');
+        if (!name.trim()) {
+          throw new Error('Full Name is required.');
+        }
+        if (!email.trim()) {
+          throw new Error('Email Address is required.');
+        }
+        if (password.trim().length > 0 && password.trim().length < 6) {
+          throw new Error('Password must be at least 6 characters long.');
         }
 
-        if (role === 'OPERATOR') {
-          // Use Admin Operator endpoint which supports auto/custom password + one-time credential display + QR card
-          const res = await fetch('/api/admin/operators', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: name.trim(),
-              email: email.trim(),
-              phone: phone.trim() || null,
-              password: password.trim() || undefined,
-              gateIds: selectedGates,
-            }),
+        const res = await fetch('/api/admin/operators', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: name.trim(),
+            fullName: name.trim(),
+            email: email.trim(),
+            phone: phone.trim() || null,
+            phoneNumber: phone.trim() || null,
+            password: password.trim() || undefined,
+            role,
+            gateIds: role === 'OPERATOR' ? selectedGates : [],
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(
+            data.error ||
+              'Unable to create account due to a server or database error. Please try again.'
+          );
+        }
+
+        setIsModalOpen(false);
+        showNotification(
+          role === 'ADMIN'
+            ? 'Administrator account created and activated immediately.'
+            : 'Operator account created and approved immediately.'
+        );
+        await loadData();
+
+        const creds = data.credentials || data.oneTimeCredentials;
+        if (creds) {
+          setCredentialsModalData({
+            name: creds.name,
+            email: creds.email,
+            phone: creds.phone ?? creds.phoneNumber ?? (phone.trim() || null),
+            operatorNumber: creds.operatorNumber,
+            temporaryPassword: creds.temporaryPassword,
+            qrCard: data.qrCard || null,
           });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Failed to create operator account');
-
-          setIsModalOpen(false);
-          showNotification('Operator account created and approved immediately.');
-          await loadData();
-
-          if (data.credentials) {
-            setCredentialsModalData({
-              name: data.credentials.name,
-              email: data.credentials.email,
-              phone: data.credentials.phone,
-              operatorNumber: data.credentials.operatorNumber,
-              temporaryPassword: data.credentials.temporaryPassword,
-              qrCard: data.qrCard || null,
-            });
-          } else if (data.qrCard) {
-            setActiveQrCard(data.qrCard);
-            setIsQrModalOpen(true);
-          }
-        } else {
-          // Admin account creation
-          if (!password || password.length < 6) {
-            throw new Error('Password must be at least 6 characters.');
-          }
-          const res = await fetch('/api/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: name.trim(),
-              email: email.trim(),
-              password,
-              role: 'ADMIN',
-              gateIds: [],
-            }),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Failed to create administrator');
-
-          setIsModalOpen(false);
-          showNotification('Administrator account created successfully.');
-          await loadData();
+        } else if (data.qrCard) {
+          setActiveQrCard(data.qrCard);
+          setIsQrModalOpen(true);
         }
       } else {
         // Edit Mode
-        if (!name.trim() || !email.trim()) {
-          throw new Error('Name and email are required.');
+        if (!name.trim()) {
+          throw new Error('Full Name is required.');
         }
-        if (password && password.trim().length < 6) {
-          throw new Error('New password must be at least 6 characters.');
+        if (!email.trim()) {
+          throw new Error('Email Address is required.');
+        }
+        if (password && password.trim().length > 0 && password.trim().length < 6) {
+          throw new Error('Password must be at least 6 characters long.');
         }
 
         const payload: any = {
           id: editingUserId,
           name: name.trim(),
           email: email.trim(),
+          phone: phone.trim() || null,
+          phoneNumber: phone.trim() || null,
           role,
           gateIds: role === 'OPERATOR' ? selectedGates : [],
         };
@@ -452,13 +451,14 @@ function AccessManagementContent() {
       if (!res.ok) throw new Error(data.error || 'Failed to reset operator password');
 
       showNotification(`Password reset for ${operatorUser.name}.`);
-      if (data.credentials) {
+      const creds = data.credentials || data.oneTimeCredentials;
+      if (creds) {
         setCredentialsModalData({
           name: operatorUser.name,
-          email: data.credentials.email,
-          phone: operatorUser.phone,
+          email: creds.email,
+          phone: operatorUser.phone ?? operatorUser.phoneNumber ?? null,
           operatorNumber: operatorUser.operatorNumber,
-          temporaryPassword: data.credentials.temporaryPassword,
+          temporaryPassword: creds.temporaryPassword,
           qrCard: null,
         });
       }
@@ -1409,37 +1409,25 @@ function AccessManagementContent() {
                   />
                 </div>
 
-                {/* 3. Phone (for Operators) */}
-                {modalMode === 'create' && role === 'OPERATOR' && (
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
-                      Phone Number (Optional)
-                    </label>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="0300-1234567"
-                      className="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                    />
-                  </div>
-                )}
+                {/* 3. Phone Number */}
+                <div>
+                  <label className="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="0300-1234567"
+                    className="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  />
+                </div>
 
                 {/* 4. Password with Generate button */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      {modalMode === 'create' ? (
-                        role === 'OPERATOR' ? (
-                          'Temporary Password (Optional — auto-generated if blank)'
-                        ) : (
-                          <>
-                            Password <span className="text-rose-500">*</span>
-                          </>
-                        )
-                      ) : (
-                        'Change Password (Optional)'
-                      )}
+                      {modalMode === 'create' ? 'Password' : 'Change Password'}
                     </label>
                     <button
                       type="button"
@@ -1451,18 +1439,20 @@ function AccessManagementContent() {
                     </button>
                   </div>
                   <PasswordInput
-                    required={modalMode === 'create' && role === 'ADMIN'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={
                       modalMode === 'create'
-                        ? role === 'OPERATOR'
-                          ? 'Leave blank to auto-generate temporary password'
-                          : 'Minimum 6 characters'
+                        ? 'Leave blank to generate automatically'
                         : 'Leave blank to keep existing password'
                     }
                     className="w-full p-2.5 text-xs font-mono rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
+                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    {modalMode === 'create'
+                      ? 'Leave blank to generate automatically.'
+                      : 'Leave blank to keep existing password.'}
+                  </p>
                 </div>
 
                 {/* 5. Role */}
@@ -1903,7 +1893,7 @@ function AccessManagementContent() {
 
               <div>
                 <label className="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
-                  Reason for Rejection (Optional)
+                  Reason for Rejection
                 </label>
                 <textarea
                   rows={3}
@@ -1976,7 +1966,7 @@ function AccessManagementContent() {
 
               <div>
                 <label className="block text-xs font-semibold mb-1 text-slate-700 dark:text-slate-300">
-                  Reason for Rejection (Optional)
+                  Reason for Rejection
                 </label>
                 <textarea
                   rows={3}

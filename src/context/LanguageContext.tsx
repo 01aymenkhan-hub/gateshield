@@ -860,8 +860,8 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
     ur: 'تصویر لیں',
   },
   capture_image_optional_sub: {
-    en: 'Capture a photo of the delivery person (optional) or tap Next to continue',
-    ur: 'ڈلیوری لانے والے شخص کی تصویر لیں (اختیاری) یا آگے بڑھنے کے لیے اگلا بٹن دبائیں',
+    en: 'Capture a photo of the delivery person or tap Next to continue',
+    ur: 'ڈلیوری لانے والے شخص کی تصویر لیں یا آگے بڑھنے کے لیے اگلا بٹن دبائیں',
   },
   capture_document_title: {
     en: 'Capture Document',

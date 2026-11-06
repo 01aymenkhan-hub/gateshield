@@ -9,6 +9,8 @@ import {
   generateOperatorQrToken,
   hashOperatorQrToken,
   encryptOperatorQrToken,
+  ensureOperatorUserSchema,
+  generateUniqueOperatorNumber,
 } from '@/lib/operatorQr';
 
 export async function PATCH(
@@ -38,6 +40,8 @@ export async function PATCH(
     const { id } = await context.params;
     const body = await request.json();
     const action = typeof body.action === 'string' ? body.action.toUpperCase() : 'UPDATE';
+
+    await ensureOperatorUserSchema(prisma);
 
     const targetRows = await prisma.$queryRaw<
       Array<{
@@ -90,8 +94,7 @@ export async function PATCH(
       let rawToken: string | null = null;
 
       if (!operatorNumber) {
-        const opCount = await prisma.user.count({ where: { role: 'OPERATOR' } });
-        operatorNumber = `OP-${String(1001 + opCount).padStart(4, '0')}`;
+        operatorNumber = await generateUniqueOperatorNumber(prisma);
       }
 
       if (!qrLoginHash) {
@@ -283,16 +286,21 @@ export async function PATCH(
         performedById: user.id,
       });
 
+      const resetCreds = {
+        name: target.name,
+        email: target.email,
+        phone: target.phoneNumber,
+        phoneNumber: target.phoneNumber,
+        temporaryPassword: newPassword,
+        operatorNumber: target.operatorNumber,
+        role: target.role,
+      };
+
       return NextResponse.json({
         success: true,
         message: `Password reset successfully for ${target.name}.`,
-        oneTimeCredentials: {
-          name: target.name,
-          email: target.email,
-          temporaryPassword: newPassword,
-          operatorNumber: target.operatorNumber,
-          role: target.role,
-        },
+        credentials: resetCreds,
+        oneTimeCredentials: resetCreds,
       });
     }
 
@@ -339,6 +347,8 @@ export async function PATCH(
     const nextPhone =
       typeof body.phoneNumber === 'string'
         ? body.phoneNumber.trim() || null
+        : typeof body.phone === 'string'
+        ? body.phone.trim() || null
         : target.phoneNumber;
     const nextPosition =
       typeof body.position === 'string'

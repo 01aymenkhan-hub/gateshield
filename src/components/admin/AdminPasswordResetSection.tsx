@@ -486,7 +486,7 @@ export default function AdminPasswordResetSection({
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Reason (Optional)
+                  Reason
                 </label>
                 <input
                   type="text"

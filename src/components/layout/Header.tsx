@@ -832,9 +832,9 @@ export default function Header({
                       setIsProfileOpen(false);
                       void logout();
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors cursor-pointer text-left"
                   >
-                    <IconLogoutDoor className="w-4 h-4 text-rose-500 shrink-0" />
+                    <IconLogoutDoor className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                     <span dir="auto">{t('logout', 'Logout')}</span>
                   </button>
                 </div>
@@ -934,16 +934,16 @@ export default function Header({
                     </span>
                   </div>
 
-                  {/* Red Logout Action */}
+                  {/* Primary Theme Logout Action */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsProfileOpen(false);
                       handleConfirmLogout();
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors cursor-pointer text-left"
                   >
-                    <IconLogoutDoor className="w-4 h-4 text-rose-500" />
+                    <IconLogoutDoor className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     <span dir="auto">{t('logout', 'Logout')}</span>
                   </button>
                 </div>
@@ -970,11 +970,11 @@ export default function Header({
             <span dir="auto">{t('add_visitor_btn', 'Add Visitor')}</span>
           </button>
 
-          {/* MOBILE HEADER ONLY: Prominent Red Logout Button (Replaces standalone Add button as requested) */}
+          {/* MOBILE HEADER ONLY: Primary Brand Logout / Exit Button */}
           <button
             onClick={handleConfirmLogout}
             type="button"
-            className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs shadow-rose-600/30 transition-all cursor-pointer shrink-0 active:scale-95"
+            className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs shadow-blue-600/30 transition-all cursor-pointer shrink-0 active:scale-95"
             title={t('logout', 'Logout')}
             aria-label={t('logout', 'Logout')}
           >
