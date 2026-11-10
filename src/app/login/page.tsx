@@ -399,7 +399,7 @@ export default function OperatorLoginPage() {
                 <button
                   type="button"
                   onClick={handleStartScanning}
-                  className="w-full group flex flex-col items-center justify-center p-6 sm:p-8 rounded-2xl border-2 border-dashed border-blue-400/60 dark:border-blue-500/40 hover:border-blue-600 dark:hover:border-blue-400 bg-gradient-to-b from-blue-50/60 to-white dark:from-slate-850 dark:to-slate-900 hover:from-blue-100/50 dark:hover:from-slate-800 transition-all cursor-pointer text-center space-y-4 shadow-sm hover:shadow-md active:scale-[0.98]"
+                  className="w-full group flex flex-col items-center justify-center p-6 sm:p-8 rounded-2xl border-2 border-dashed border-blue-400/60 dark:border-blue-500/40 hover:border-blue-600 dark:hover:border-blue-400 bg-gradient-to-b from-blue-50/60 to-white dark:from-slate-800/80 dark:to-slate-900 hover:from-blue-100/50 dark:hover:from-slate-800 transition-all cursor-pointer text-center space-y-4 shadow-sm hover:shadow-md active:scale-[0.98]"
                 >
                   <div className="relative">
                     <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-blue-600 group-hover:bg-blue-700 text-white flex items-center justify-center shadow-xl shadow-blue-600/30 transition-all duration-300 group-hover:scale-105">

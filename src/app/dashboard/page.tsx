@@ -774,10 +774,10 @@ export default function DashboardPage() {
                 <OpSvgRegister className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
-                <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
+                <p className={`${language === 'ur' ? 'text-[17px] sm:text-[18px] leading-[1.6]' : 'text-sm sm:text-base leading-snug'} font-extrabold text-slate-900 dark:text-white`}>
                   {t('register_visitor')}
                 </p>
-                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 leading-snug">
+                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">
                   {t('register_visitor_desc')}
                 </p>
               </div>
@@ -796,10 +796,10 @@ export default function DashboardPage() {
                 <OpSvgCheckout className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
-                <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
+                <p className={`${language === 'ur' ? 'text-[17px] sm:text-[18px] leading-[1.6]' : 'text-sm sm:text-base leading-snug'} font-extrabold text-slate-900 dark:text-white`}>
                   {t('checkout_visitor')}
                 </p>
-                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 leading-snug">
+                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">
                   {t('checkout_visitor_desc')}
                 </p>
               </div>
@@ -815,10 +815,10 @@ export default function DashboardPage() {
                 <OpSvgCheckStatus className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
-                <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
+                <p className={`${language === 'ur' ? 'text-[17px] sm:text-[18px] leading-[1.6]' : 'text-sm sm:text-base leading-snug'} font-extrabold text-slate-900 dark:text-white`}>
                   {t('check_status')}
                 </p>
-                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 leading-snug">
+                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">
                   {t('check_status_desc')}
                 </p>
               </div>
@@ -846,10 +846,10 @@ export default function DashboardPage() {
                 <OpSvgGuest className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
-                <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
+                <p className={`${language === 'ur' ? 'text-[17px] sm:text-[18px] leading-[1.6]' : 'text-sm sm:text-base leading-snug'} font-extrabold text-slate-900 dark:text-white`}>
                   {t('guest_option_title', 'Guest')}
                 </p>
-                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 leading-snug">
+                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">
                   {t('guest_option_desc', 'Invited Guests Check-In')}
                 </p>
               </div>
@@ -876,10 +876,10 @@ export default function DashboardPage() {
                 <OpSvgParcelTracker className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
-                <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
+                <p className={`${language === 'ur' ? 'text-[17px] sm:text-[18px] leading-[1.6]' : 'text-sm sm:text-base leading-snug'} font-extrabold text-slate-900 dark:text-white`}>
                   {t('parcel_tracker_title', 'Parcel Tracker')}
                 </p>
-                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 leading-snug">
+                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">
                   {t('parcel_tracker_desc', 'Expected, Received & Delivered Parcels')}
                 </p>
               </div>
@@ -906,10 +906,10 @@ export default function DashboardPage() {
                 <OpSvgVipGuest className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-1 text-center">
-                <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
+                <p className={`${language === 'ur' ? 'text-[17px] sm:text-[18px] leading-[1.6]' : 'text-sm sm:text-base leading-snug'} font-extrabold text-slate-900 dark:text-white`}>
                   {t('vip_guest_title', 'VIP Guest')}
                 </p>
-                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 leading-snug">
+                <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">
                   {t('vip_guest_desc', 'VIP Name & Vehicle Fast Check-In')}
                 </p>
               </div>
@@ -936,14 +936,14 @@ export default function DashboardPage() {
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2.5 shrink-0">
                 <OpSvgTotalVisitors className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
-              <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
+              <span className={`${language === 'ur' ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-bold text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors`}>
                 {language === 'ur' ? 'کل وزیٹرز' : 'Total Visitors'}
               </span>
               <span className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-none">
                 {stats?.totalToday || 0}
               </span>
               <span className="mt-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
-                <TrendingUp className="w-3.5 h-3.5" /> {t('live_indicator')}
+                <TrendingUp className="w-3 h-3" /> {t('live_indicator')}
               </span>
             </button>
 
@@ -966,7 +966,7 @@ export default function DashboardPage() {
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5 shrink-0">
                 <OpSvgCurrentlyInside className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
-              <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">
+              <span className={`${language === 'ur' ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-bold text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors`}>
                 {language === 'ur' ? 'اس وقت اندر موجود' : 'Currently Inside'}
               </span>
               <span className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-none">
@@ -997,7 +997,7 @@ export default function DashboardPage() {
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center mb-2.5 shrink-0">
                 <OpSvgTotalCheckouts className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
-              <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-slate-100 transition-colors leading-snug">
+              <span className={`${language === 'ur' ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-bold text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors`}>
                 {language === 'ur' ? 'کل چھٹی (باہر گئے)' : 'Total Checkouts'}
               </span>
               <span className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-none">
@@ -1027,7 +1027,7 @@ export default function DashboardPage() {
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-2.5 shrink-0">
                 <OpSvgOverstayAlerts className="w-9 h-9 sm:w-10 sm:h-10" />
               </div>
-              <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors leading-snug">
+              <span className={`${language === 'ur' ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-bold text-slate-500 dark:text-slate-400 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors`}>
                 {language === 'ur' ? 'وقت سے زیادہ اندر موجود' : 'Overstay Alerts'}
               </span>
               <span className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-none">
@@ -1059,7 +1059,7 @@ export default function DashboardPage() {
               <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-2 shrink-0">
                 <OpSvgTotalVendors className="w-8 h-8 sm:w-9 sm:h-9" />
               </div>
-              <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors leading-snug">
+              <span className={`${language === 'ur' ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-bold text-slate-500 dark:text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors`}>
                 {language === 'ur' ? 'کل وینڈرز' : 'Total Vendors'}
               </span>
               <span className="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-none">
@@ -1085,7 +1085,7 @@ export default function DashboardPage() {
               <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 shrink-0">
                 <OpSvgTotalInterviews className="w-8 h-8 sm:w-9 sm:h-9" />
               </div>
-              <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
+              <span className={`${language === 'ur' ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-bold text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors`}>
                 {language === 'ur' ? 'کل انٹرویوز' : 'Total Interviews'}
               </span>
               <span className="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-none">
@@ -1111,7 +1111,7 @@ export default function DashboardPage() {
               <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2 shrink-0">
                 <OpSvgTotalGuests className="w-8 h-8 sm:w-9 sm:h-9" />
               </div>
-              <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-snug">
+              <span className={`${language === 'ur' ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-bold text-slate-500 dark:text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors`}>
                 {language === 'ur' ? 'کل مہمان' : 'Total Guests'}
               </span>
               <span className="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-none">
@@ -1137,7 +1137,7 @@ export default function DashboardPage() {
               <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 shrink-0">
                 <OpSvgTotalDeliveries className="w-8 h-8 sm:w-9 sm:h-9" />
               </div>
-              <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">
+              <span className={`${language === 'ur' ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-bold text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors`}>
                 {language === 'ur' ? 'کل ڈلیوریز' : 'Total Deliveries'}
               </span>
               <span className="mt-1 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-none">
@@ -1161,7 +1161,7 @@ export default function DashboardPage() {
                   </div>
                   <div className={`text-center ${language === 'ur' ? 'sm:text-right' : 'sm:text-left'}`}>
                     <div className={`flex flex-wrap items-center justify-center gap-2 ${language === 'ur' ? 'sm:justify-end' : 'sm:justify-start'}`}>
-                      <h2 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white leading-snug">
+                      <h2 className={`font-extrabold ${language === 'ur' ? 'text-[18px] sm:text-xl leading-[1.6]' : 'text-base sm:text-lg leading-tight'} text-slate-900 dark:text-white`}>
                         {t('currently_inside_facility')}
                       </h2>
                       <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-sm sm:text-base font-extrabold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
@@ -1186,7 +1186,7 @@ export default function DashboardPage() {
                       gateId: currentGate?.id,
                     })
                   }
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-sm shadow-blue-600/20 shrink-0"
+                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white ${language === 'ur' ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-bold transition-all cursor-pointer shadow-sm shadow-blue-600/20 shrink-0`}
                   title="View all visitors currently inside in full-screen modal"
                 >
                   <IconCurrentlyInside className="w-5 h-5 shrink-0" />
@@ -1328,7 +1328,7 @@ export default function DashboardPage() {
                     <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center text-slate-400">
                       <IconCurrentlyInside className="w-7 h-7" />
                     </div>
-                    <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                       {t('no_visitors_inside')}
                     </p>
                   </div>
@@ -1343,7 +1343,7 @@ export default function DashboardPage() {
                   <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                     <Clock className="w-6 h-6" />
                   </div>
-                  <h2 className={`font-extrabold text-sm sm:text-base text-slate-900 dark:text-white flex-1 ${language === 'ur' ? 'text-right' : 'text-left'}`}>
+                  <h2 className={`font-extrabold ${language === 'ur' ? 'text-[17px] leading-[1.6]' : 'text-sm'} text-slate-900 dark:text-white flex-1 ${language === 'ur' ? 'text-right' : 'text-left'}`}>
                     {t('recent_activity')}
                   </h2>
                 </div>

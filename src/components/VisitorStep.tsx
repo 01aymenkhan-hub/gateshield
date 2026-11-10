@@ -938,7 +938,7 @@ export default function VisitorStep({
         <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-2xs">
           <div className="grid grid-cols-2 gap-2.5 text-xs">
             <div className={isUr ? "text-right" : "text-left"}>
-              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
+              <span className={`${isUr ? "text-xs leading-[1.6]" : "text-[11px]"} font-bold text-slate-500 dark:text-slate-400 block`}>
                 {isDelivery
                   ? t("delivery_source_label", "Delivery Source / Company Name")
                   : t("host_summary_label", "Visitor to Meet")}
@@ -959,7 +959,7 @@ export default function VisitorStep({
             </div>
 
             <div className={isUr ? "text-right" : "text-left"}>
-              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
+              <span className={`${isUr ? "text-xs leading-[1.6]" : "text-[11px]"} font-bold text-slate-500 dark:text-slate-400 block`}>
                 {documentType === "cnic"
                   ? t("cnic_title", "Pakistani CNIC")
                   : t("dls_title", "Driving Licence")}
@@ -978,7 +978,7 @@ export default function VisitorStep({
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2
-              className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight ${
+              className={`${isUr ? "text-[17px] sm:text-lg leading-[1.6]" : "text-sm sm:text-base"} font-extrabold text-slate-900 dark:text-white tracking-tight ${
                 isUr ? "text-right flex-1" : "text-left flex-1"
               }`}
             >
@@ -1020,7 +1020,7 @@ export default function VisitorStep({
                 <Camera className="w-10 h-10 sm:w-12 sm:h-12 stroke-[2]" />
               </div>
 
-              <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white mb-1">
+              <p className={`${isUr ? "text-[17px] sm:text-lg leading-[1.6]" : "text-sm sm:text-base"} font-extrabold text-slate-900 dark:text-white mb-1`}>
                 {isDelivery
                   ? t("capture_image_title", "Capture Image")
                   : t("capture_visitor_photo", "Capture Visitor Photo")}
@@ -1044,7 +1044,7 @@ export default function VisitorStep({
                   playSelectSound();
                   setIsCameraOpen(true);
                 }}
-                className="py-3 px-7 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-sm sm:text-base font-extrabold shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className={`py-3 px-7 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white ${isUr ? "text-base sm:text-[17px] leading-[1.6]" : "text-sm sm:text-base"} font-extrabold shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer`}
               >
                 <Camera className="w-5 h-5" />
                 <span>{t("capture_photo_btn", "Capture Photo")}</span>
@@ -1104,7 +1104,7 @@ export default function VisitorStep({
               playBackSound();
               onBack();
             }}
-            className="py-3 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
+            className={`py-3 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs`}
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{t("back_btn", "Back")}</span>
@@ -1119,7 +1119,7 @@ export default function VisitorStep({
               }
             }}
             disabled={!isPhotoValid}
-            className={`flex-1 max-w-xs py-3 px-6 rounded-xl text-xs sm:text-sm font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all ${
+            className={`flex-1 max-w-xs py-3 px-6 rounded-xl ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all ${
               isPhotoValid
                 ? "bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white cursor-pointer"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none"
@@ -1153,7 +1153,7 @@ export default function VisitorStep({
         <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-2xs">
           <div className="grid grid-cols-2 gap-2.5 text-xs">
             <div className={isUr ? "text-right" : "text-left"}>
-              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
+              <span className={`${isUr ? "text-xs leading-[1.6]" : "text-[11px]"} font-bold text-slate-500 dark:text-slate-400 block`}>
                 {t("delivery_source_label", "Delivery Source / Company Name")}
               </span>
               <p className="font-extrabold text-slate-900 dark:text-white truncate text-xs sm:text-sm">
@@ -1162,7 +1162,7 @@ export default function VisitorStep({
             </div>
 
             <div className={isUr ? "text-right" : "text-left"}>
-              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
+              <span className={`${isUr ? "text-xs leading-[1.6]" : "text-[11px]"} font-bold text-slate-500 dark:text-slate-400 block`}>
                 {documentType === "cnic"
                   ? t("cnic_title", "Pakistani CNIC")
                   : t("dls_title", "Driving Licence")}
@@ -1181,7 +1181,7 @@ export default function VisitorStep({
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2
-              className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight ${
+              className={`${isUr ? "text-[17px] sm:text-lg leading-[1.6]" : "text-sm sm:text-base"} font-extrabold text-slate-900 dark:text-white tracking-tight ${
                 isUr ? "text-right flex-1" : "text-left flex-1"
               }`}
             >
@@ -1224,7 +1224,7 @@ export default function VisitorStep({
                 <FileText className="w-10 h-10 sm:w-12 sm:h-12 stroke-[2]" />
               </div>
 
-              <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white mb-1">
+              <p className={`${isUr ? "text-[17px] sm:text-lg leading-[1.6]" : "text-sm sm:text-base"} font-extrabold text-slate-900 dark:text-white mb-1`}>
                 {t("capture_document_title", "Capture Document")}
               </p>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-4 max-w-xs">
@@ -1242,7 +1242,7 @@ export default function VisitorStep({
                     playSelectSound();
                     setIsDocCameraOpen(true);
                   }}
-                  className="py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-sm sm:text-base font-extrabold shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className={`py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white ${isUr ? "text-base sm:text-[17px] leading-[1.6]" : "text-sm sm:text-base"} font-extrabold shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer`}
                 >
                   <Camera className="w-5 h-5" />
                   <span>{t("capture_document_btn", "Capture Document")}</span>
@@ -1254,7 +1254,7 @@ export default function VisitorStep({
                     e.stopPropagation();
                     docFileInputRef.current?.click();
                   }}
-                  className="py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold shadow-2xs transition-all cursor-pointer"
+                  className={`py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-bold shadow-2xs transition-all cursor-pointer`}
                 >
                   <span>{t("upload_id_image_btn", "Upload Image")}</span>
                 </button>
@@ -1328,7 +1328,7 @@ export default function VisitorStep({
               playBackSound();
               onBack();
             }}
-            className="py-3 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
+            className={`py-3 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs`}
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{t("back_btn", "Back")}</span>
@@ -1342,7 +1342,7 @@ export default function VisitorStep({
                 onNextDeliveryDocStep();
               }
             }}
-            className="flex-1 max-w-xs py-3 px-6 rounded-xl text-xs sm:text-sm font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white cursor-pointer"
+            className={`flex-1 max-w-xs py-3 px-6 rounded-xl ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white cursor-pointer`}
           >
             <span>{t("next_btn", "Next")}</span>
             <ArrowRight className="w-4 h-4" />
@@ -1365,7 +1365,7 @@ export default function VisitorStep({
     <div className="space-y-3.5">
       {/* Heading */}
       <div className={isUr ? "text-right" : "text-left"}>
-        <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+        <h2 className={`${isUr ? "text-[18px] sm:text-xl leading-[1.6]" : "text-base sm:text-lg"} font-extrabold text-slate-900 dark:text-white tracking-tight`}>
           {isDelivery
             ? t("phone_and_vehicle_title", "Phone Number & Vehicle Number")
             : t("registration_details_title", "Registration Details")}
@@ -1379,7 +1379,7 @@ export default function VisitorStep({
             <label
               htmlFor="visitorPhoneNumber"
               dir="auto"
-              className={`block text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white tracking-tight flex-1 ${
+              className={`block ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold text-slate-900 dark:text-white tracking-tight flex-1 ${
                 isUr ? "text-right" : "text-left"
               }`}
             >
@@ -1455,7 +1455,7 @@ export default function VisitorStep({
               <label
                 htmlFor="deliveryVehicleNo"
                 dir="auto"
-                className={`block text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white tracking-tight flex-1 ${
+                className={`block ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold text-slate-900 dark:text-white tracking-tight flex-1 ${
                   isUr ? "text-right" : "text-left"
                 }`}
               >
@@ -1526,7 +1526,7 @@ export default function VisitorStep({
               <label
                 htmlFor="visitorCardNo"
                 dir="auto"
-                className={`block text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white tracking-tight flex-1 ${
+                className={`block ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold text-slate-900 dark:text-white tracking-tight flex-1 ${
                   isUr ? "text-right" : "text-left"
                 }`}
               >
@@ -1617,7 +1617,7 @@ export default function VisitorStep({
             <div className="flex items-center gap-2 flex-wrap">
               <h2
                 dir="auto"
-                className={`text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white tracking-tight flex-1 ${
+                className={`${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold text-slate-900 dark:text-white tracking-tight flex-1 ${
                   isUr ? "text-right" : "text-left"
                 }`}
               >
@@ -1667,7 +1667,7 @@ export default function VisitorStep({
             <label
               htmlFor="carriedItemsInput"
               dir="auto"
-              className={`block text-xs font-bold text-slate-700 dark:text-slate-300 ${
+              className={`block ${isUr ? "text-sm leading-[1.6]" : "text-xs"} font-bold text-slate-700 dark:text-slate-300 ${
                 isUr ? "text-right" : "text-left"
               }`}
             >
@@ -1716,7 +1716,7 @@ export default function VisitorStep({
             onBack();
           }}
           disabled={submissionStatus === "submitting"}
-          className="py-3 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-2xs"
+          className={`py-3 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-bold transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-2xs`}
         >
           <ArrowLeft className="w-4 h-4" />
           <span>{t("back_btn", "Back")}</span>
@@ -1730,7 +1730,7 @@ export default function VisitorStep({
             submissionStatus === "submitting" ||
             submissionStatus === "success"
           }
-          className={`flex-1 max-w-xs py-3 px-6 rounded-xl text-white text-xs sm:text-sm font-extrabold shadow-xs transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 max-w-xs py-3 px-6 rounded-xl text-white ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold shadow-xs transition-all flex items-center justify-center gap-2 ${
             submissionStatus === "submitting"
               ? "bg-blue-500 cursor-not-allowed"
               : submissionStatus === "success"

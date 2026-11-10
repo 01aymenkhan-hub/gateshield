@@ -81,10 +81,56 @@ export default function Sidebar() {
   } = useLayout();
 
   const currentParcelTab = searchParams?.get('tab') || 'expected';
+  const desktopNavRef = React.useRef<HTMLDivElement>(null);
+  const mobileNavRef = React.useRef<HTMLDivElement>(null);
 
-  const renderNavLinks = (isCollapsed: boolean, onLinkClick?: () => void) => {
+  const handleNavScroll = React.useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    try {
+      sessionStorage.setItem('gk_sidebar_scroll', String(e.currentTarget.scrollTop));
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  React.useLayoutEffect(() => {
+    let savedScroll = 0;
+    try {
+      const raw = sessionStorage.getItem('gk_sidebar_scroll');
+      if (raw !== null) savedScroll = Number(raw) || 0;
+    } catch {
+      // ignore storage errors
+    }
+
+    [desktopNavRef.current, mobileNavRef.current].forEach((container) => {
+      if (!container) return;
+      if (savedScroll > 0) {
+        container.scrollTop = savedScroll;
+      }
+      const activeEl = container.querySelector<HTMLElement>('[data-active="true"]');
+      if (!activeEl) return;
+      const containerRect = container.getBoundingClientRect();
+      const activeRect = activeEl.getBoundingClientRect();
+      if (containerRect.height <= 0) return;
+
+      if (activeRect.top < containerRect.top) {
+        container.scrollTop -= containerRect.top - activeRect.top + 12;
+      } else if (activeRect.bottom > containerRect.bottom) {
+        container.scrollTop += activeRect.bottom - containerRect.bottom + 12;
+      }
+    });
+  }, [pathname, currentParcelTab, isMobileSidebarOpen]);
+
+  const renderNavLinks = (
+    isCollapsed: boolean,
+    navRef: React.RefObject<HTMLDivElement | null>,
+    onLinkClick?: () => void
+  ) => {
     return (
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+      <div
+        ref={navRef}
+        onScroll={handleNavScroll}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain sidebar-scroll px-3 py-3 space-y-1"
+      >
         {!isCollapsed && (
           <div className="px-3 pb-2 text-[10px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
             {isUrdu ? 'مینو' : 'Navigation'}
@@ -110,6 +156,7 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               onClick={onLinkClick}
+              data-active={isActive ? 'true' : undefined}
               title={isCollapsed ? displayLabel : undefined}
               className={`relative flex items-center rounded-xl text-sm font-medium transition-all group ${
                 isCollapsed
@@ -178,6 +225,7 @@ export default function Sidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={onLinkClick}
+                data-active={isActive ? 'true' : undefined}
                 title={isCollapsed ? displayLabel : undefined}
                 className={`relative flex items-center rounded-xl text-sm font-medium transition-all group ${
                   isCollapsed
@@ -213,7 +261,7 @@ export default function Sidebar() {
 
   const renderUserFooter = (isCollapsed: boolean) => {
     return (
-      <div className="p-3 border-t border-slate-200 dark:border-slate-800 space-y-2 bg-slate-50/50 dark:bg-slate-900/20">
+      <div className="shrink-0 p-3 border-t border-slate-200 dark:border-slate-800 space-y-2 bg-slate-50/50 dark:bg-slate-900/20">
         <div className={`flex items-center ${isCollapsed ? 'flex-col gap-2' : 'justify-between'} px-1`}>
           <button
             onClick={toggleTheme}
@@ -285,13 +333,13 @@ export default function Sidebar() {
     <>
       {/* 1. Desktop Collapsible Sidebar */}
       <aside
-        className={`hidden lg:flex flex-col shrink-0 no-print transition-all duration-200 ease-in-out border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c121e] ${
+        className={`hidden lg:flex flex-col shrink-0 sticky top-0 h-screen h-dvh max-h-screen max-h-dvh overflow-hidden no-print transition-all duration-200 ease-in-out border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c121e] ${
           isDesktopCollapsed ? 'w-20' : 'w-64'
         }`}
       >
         {/* Brand / Logo Section */}
         <div
-          className={`h-16 border-b border-slate-200 dark:border-slate-800 flex items-center ${
+          className={`h-16 shrink-0 border-b border-slate-200 dark:border-slate-800 flex items-center ${
             isDesktopCollapsed ? 'justify-center px-2' : 'justify-between px-4'
           }`}
         >
@@ -329,7 +377,7 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation items */}
-        {renderNavLinks(isDesktopCollapsed)}
+        {renderNavLinks(isDesktopCollapsed, desktopNavRef)}
 
         {/* Footer */}
         {renderUserFooter(isDesktopCollapsed)}
@@ -348,12 +396,12 @@ export default function Sidebar() {
 
       {/* 3. Mobile Off-Canvas Drawer */}
       <aside
-        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c121e] shadow-2xl transition-transform duration-200 ease-in-out no-print ${
+        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] h-screen h-dvh max-h-screen max-h-dvh overflow-hidden flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c121e] shadow-2xl transition-transform duration-200 ease-in-out no-print ${
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Mobile Brand Header with Close Button */}
-        <div className="h-16 px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+        <div className="h-16 shrink-0 px-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
           <div className="flex items-center min-w-0 overflow-hidden">
             <GateShieldLogo variant="full" size="md" />
           </div>
@@ -369,7 +417,7 @@ export default function Sidebar() {
         </div>
 
         {/* Mobile Navigation */}
-        {renderNavLinks(false, closeMobileSidebar)}
+        {renderNavLinks(false, mobileNavRef, closeMobileSidebar)}
 
         {/* Mobile Footer */}
         {renderUserFooter(false)}

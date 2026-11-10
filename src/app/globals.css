@@ -107,6 +107,7 @@
   --color-primary-subtle: var(--primary-subtle);
   --color-primary-foreground: var(--primary-foreground);
   --color-border: var(--border);
+  --color-slate-850: #172033;
 
   /* Centralized GateShield Primary Brand Scale (#354F96) */
   --color-brand-50: var(--brand-primary-50);
@@ -182,6 +183,34 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(156, 163, 175, 0.7);
+}
+
+/* Subtle scrollbar for sidebar navigation */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+.dark .sidebar-scroll {
+  scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+.sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.6);
+}
+.dark .sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+}
+.dark .sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.65);
 }
 
 /* Print styles for visitor badges and reports */
@@ -424,8 +453,8 @@ body {
  */
 :root {
   --ur-heading-main: clamp(1.55rem, 2vw, 1.85rem);
-  --ur-heading-section: clamp(1.15rem, 1.4vw, 1.3rem);
-  --ur-heading-card: clamp(1.05rem, 1.2vw, 1.15rem);
+  --ur-heading-section: clamp(1.2rem, 1.5vw, 1.375rem);
+  --ur-heading-card: clamp(1.1rem, 1.3vw, 1.225rem);
 }
 
 html[lang="ur"],
@@ -434,6 +463,7 @@ html[lang="ur"] body {
   font-feature-settings: "liga" 1, "clig" 1, "calt" 1, "kern" 1;
   font-variant-ligatures: common-ligatures contextual;
   font-synthesis-weight: none;
+  line-height: 1.55;
 }
 
 html[lang="ur"] h1,
@@ -463,17 +493,20 @@ html[lang="ur"] a {
   unicode-bidi: plaintext;
 }
 
-/* Slightly enlarge only Main Headings in Urdu */
+/* Slightly enlarge Main Headings in Urdu */
 html[lang="ur"] h1 {
   font-size: var(--ur-heading-main);
+  line-height: 1.45;
 }
 
 html[lang="ur"] h2 {
   font-size: var(--ur-heading-section);
+  line-height: 1.5;
 }
 
 html[lang="ur"] h3 {
   font-size: var(--ur-heading-card);
+  line-height: 1.5;
 }
 
 html[lang="ur"] input::placeholder,

@@ -161,7 +161,7 @@ export default function CategoryRecordsModal({
       <div className="w-full h-full max-w-6xl max-h-[96vh] rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden text-slate-900 dark:text-slate-100">
         
         {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850/60 flex items-center justify-between gap-4 shrink-0">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 flex items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="p-2.5 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
               <CategoryIcon className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -293,7 +293,7 @@ export default function CategoryRecordsModal({
               {/* Desktop / Tablet Table View */}
               <div className="hidden md:block rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-850/80 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200 dark:border-slate-800">
+                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200 dark:border-slate-800">
                     <tr>
                       <th className="px-5 py-3.5">{t('visitor', 'Visitor')}</th>
                       <th className="px-4 py-3.5">{t('category', 'Category')}</th>
@@ -510,7 +510,7 @@ export default function CategoryRecordsModal({
 
         {/* Modal Pagination Footer */}
         {totalPages > 1 && (
-          <div className="px-6 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850/60 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 shrink-0">
+          <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 shrink-0">
             <span>
               {t('showing', 'Showing')} {visits.length} of {total} records (Page {page} of {totalPages})
             </span>

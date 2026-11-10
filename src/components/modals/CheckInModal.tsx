@@ -763,7 +763,7 @@ export default function CheckInModal({
             <div className="px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2.5 bg-slate-50 dark:bg-slate-900/50 shrink-0">
               <div className={`min-w-0 ${isUr ? 'text-right' : 'text-left'}`}>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base">
+                  <h2 className={`font-extrabold text-slate-900 dark:text-white ${isUr ? 'text-[17px] sm:text-lg leading-[1.6]' : 'text-sm sm:text-base'}`}>
                     {getOperatorStepTitle(operatorStep)}
                   </h2>
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
@@ -1036,7 +1036,7 @@ export default function CheckInModal({
                   {activeScanStatus !== 'scanning' && (
                     <div className="space-y-3">
                       <div className={isUr ? 'text-right' : 'text-left'}>
-                        <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+                        <h2 className={`${isUr ? 'text-[18px] sm:text-xl leading-[1.6]' : 'text-base sm:text-lg'} font-extrabold text-slate-900 dark:text-white tracking-tight`}>
                           {t('scan_id_card_title', 'Scan ID Card')}
                         </h2>
                         <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
@@ -1057,7 +1057,7 @@ export default function CheckInModal({
                           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mb-3 gk-pulse-emerald transition-transform group-hover:scale-105">
                             <IconPakistaniCnic className="w-12 h-12 sm:w-14 sm:h-14" />
                           </div>
-                          <span className="text-sm sm:text-base font-extrabold text-emerald-950 dark:text-emerald-100 leading-snug">
+                          <span className={`${isUr ? 'text-[17px] sm:text-lg leading-[1.6]' : 'text-sm sm:text-base leading-snug'} font-extrabold text-emerald-950 dark:text-emerald-100`}>
                             {t('scan_cnic_title', 'Scan CNIC')}
                           </span>
                           <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 mt-1 flex items-center justify-center gap-1.5">
@@ -1075,7 +1075,7 @@ export default function CheckInModal({
                           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 flex items-center justify-center mb-3 gk-pulse-blue transition-transform group-hover:scale-105">
                             <IconDrivingLicence className="w-12 h-12 sm:w-14 sm:h-14" />
                           </div>
-                          <span className="text-sm sm:text-base font-extrabold text-blue-950 dark:text-blue-100 leading-snug">
+                          <span className={`${isUr ? 'text-[17px] sm:text-lg leading-[1.6]' : 'text-sm sm:text-base leading-snug'} font-extrabold text-blue-950 dark:text-blue-100`}>
                             {t('scan_dls_title', 'Scan Driving Licence')}
                           </span>
                           <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 mt-1 flex items-center justify-center gap-1.5">
@@ -1096,7 +1096,7 @@ export default function CheckInModal({
                         setOperatorStep(2);
                       }}
                       disabled={activeScanStatus === 'scanning'}
-                      className="py-2.5 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-2 disabled:opacity-50"
+                      className={`py-2.5 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 ${isUr ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-2 disabled:opacity-50`}
                     >
                       <ArrowLeft className="w-4 h-4" />
                       <span>{t('back_btn', 'Back')}</span>
@@ -1131,7 +1131,7 @@ export default function CheckInModal({
                         playBackSound();
                         setOperatorStep(3);
                       }}
-                      className="py-3 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-2"
+                      className={`py-3 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 ${isUr ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-2`}
                     >
                       <ArrowLeft className="w-4 h-4" />
                       <span>{t('back_btn', 'Back')}</span>
@@ -1145,7 +1145,7 @@ export default function CheckInModal({
                         setOperatorStep(5);
                       }}
                       disabled={!isDocumentValid}
-                      className={`flex-1 max-w-xs py-3 px-6 rounded-xl text-xs sm:text-sm font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all ${
+                      className={`flex-1 max-w-xs py-3 px-6 rounded-xl ${isUr ? 'text-[15px] sm:text-base leading-[1.6]' : 'text-xs sm:text-sm'} font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all ${
                         isDocumentValid
                           ? 'bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white cursor-pointer'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none'

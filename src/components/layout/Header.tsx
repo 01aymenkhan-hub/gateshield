@@ -329,7 +329,7 @@ export default function Header({
             dir="ltr"
             className="fixed left-3 right-3 top-16 z-50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 max-h-[75vh] sm:max-h-[24rem] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150"
           >
-            <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850/60 flex items-center justify-between gap-2 shrink-0">
+            <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 flex items-center justify-between gap-2 shrink-0">
               <div className="flex items-center gap-2 min-w-0">
                 <span
                   dir="auto"
@@ -534,7 +534,7 @@ export default function Header({
           {/* Gate Selector Dropdown Floating Panel */}
           {isGateOpen && (
             <div className="absolute left-0 mt-2 w-72 sm:w-80 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl z-50 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
-              <div className="p-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-850/60 flex items-center justify-between">
+              <div className="p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                   {isAdmin ? 'Switch Active Gate' : t('active_gate', 'Assigned Gate')}
                 </span>
@@ -766,7 +766,7 @@ export default function Header({
                 dir="ltr"
                 className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl z-50 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150"
               >
-                <div className="p-3.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-850/60 space-y-1">
+                <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 space-y-1">
                   <div className="flex items-center justify-between gap-2">
                     <span
                       dir="auto"
@@ -774,19 +774,21 @@ export default function Header({
                     >
                       {t('role_admin', 'Administrator')}
                     </span>
-                    <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300">
+                    <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800">
                       ADMIN
                     </span>
                   </div>
                   <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                     {user?.name}
                   </p>
-                  <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+                    {user?.email}
+                  </p>
                 </div>
 
                 <div className="p-2 space-y-1">
-                  <div className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between rounded-xl bg-slate-50/60 dark:bg-slate-800/40">
-                    <span dir="auto" className="text-[11px] text-slate-400">
+                  <div className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between rounded-xl bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
+                    <span dir="auto" className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                       {t('active_gate', 'Active Gate')}
                     </span>
                     <span
@@ -904,26 +906,28 @@ export default function Header({
             {/* Profile Dropdown Panel */}
             {isProfileOpen && (
               <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl z-50 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
-                <div className="p-3.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-850/60 space-y-1">
+                <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
                       {user?.role === 'ADMIN'
                         ? t('role_admin', 'Administrator')
                         : t('role_operator', 'Security Operator')}
                     </span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold">
                       {operatorDisplayNumber}
                     </span>
                   </div>
                   <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                     {user?.name}
                   </p>
-                  <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+                    {user?.email}
+                  </p>
                 </div>
 
                 <div className="p-2 space-y-1">
-                  <div className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between rounded-xl bg-slate-50/60 dark:bg-slate-800/40">
-                    <span dir="auto" className="text-[11px] text-slate-400">
+                  <div className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between rounded-xl bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
+                    <span dir="auto" className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                       {t('active_gate', 'Gate')}
                     </span>
                     <span

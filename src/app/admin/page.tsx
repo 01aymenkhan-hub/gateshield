@@ -10,8 +10,8 @@ import PasswordInput from '@/components/ui/PasswordInput';
 import PasswordRecoveryPanel from '@/components/auth/PasswordRecoveryPanel';
 
 export default function AdminLoginPage() {
-  const [email, setEmail] = useState('admin@gatekeeper.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export default function AdminLoginPage() {
       <div className="absolute top-4 right-4 z-20">
         <button
           onClick={toggleTheme}
-          className="p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+          className="p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
           title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
         >
           {theme === 'dark' ? (
@@ -176,13 +176,6 @@ export default function AdminLoginPage() {
               </button>
             </form>
           )}
-
-          {/* Quick Credential Hint */}
-          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 space-y-1">
-            <span className="font-semibold text-slate-800 dark:text-slate-200 block">Administrator Credentials:</span>
-            <p>Email: <span className="text-blue-600 dark:text-blue-400 font-mono">admin@gatekeeper.com</span></p>
-            <p>Password: <span className="text-blue-600 dark:text-blue-400 font-mono">admin123</span></p>
-          </div>
 
           {/* Switch to Operator Login */}
           <div className="pt-2 text-center border-t border-slate-100 dark:border-slate-800">

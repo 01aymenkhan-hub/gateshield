@@ -497,10 +497,10 @@ export default function VisitInfoStep({
     return (
       <div className="space-y-3">
         <div className={textAlignClass}>
-          <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h2 className={`${isUr ? "text-[18px] sm:text-xl leading-[1.6]" : "text-base sm:text-lg"} font-extrabold text-slate-900 dark:text-white tracking-tight`}>
             {t("select_category_title", "Select Visitor Category")}
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {t("select_category_subtitle", "Tap a category card to continue automatically")}
           </p>
         </div>
@@ -546,7 +546,7 @@ export default function VisitInfoStep({
                 </div>
 
                 <span
-                  className={`text-xs sm:text-sm font-extrabold leading-snug ${
+                  className={`${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm leading-tight"} font-extrabold ${
                     isSelected
                       ? "text-slate-900 dark:text-white"
                       : "text-slate-700 dark:text-slate-300"
@@ -567,10 +567,10 @@ export default function VisitInfoStep({
     return (
       <div className="space-y-3.5">
         <div className={textAlignClass}>
-          <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h2 className={`${isUr ? "text-[18px] sm:text-xl leading-[1.6]" : "text-base sm:text-lg"} font-extrabold text-slate-900 dark:text-white tracking-tight`}>
             {t("delivery_source_title", "Delivery Source / Company Name")}
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {t(
               "delivery_source_subtitle",
               "Enter the name of the cargo company, courier service, or source from which the delivery arrived"
@@ -581,7 +581,7 @@ export default function VisitInfoStep({
         <div className="bg-slate-50/70 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 space-y-2.5">
           <label
             htmlFor="operatorDeliverySource"
-            className={`block text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 ${textAlignClass}`}
+            className={`block ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold text-slate-800 dark:text-slate-100 ${textAlignClass}`}
           >
             {t("delivery_source_label", "Delivery Source / Company Name")}{" "}
             <span className="text-red-500">*</span>
@@ -610,7 +610,7 @@ export default function VisitInfoStep({
                 "delivery_source_placeholder",
                 "e.g. TCS, DHL, Leopards, Daraz, Supplier Name"
               )}
-              className={`block w-full rounded-xl border-2 pl-10 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 bg-white dark:bg-slate-900 focus:outline-none transition-colors ${textAlignClass} ${
+              className={`block w-full rounded-xl border-2 pl-10 pr-3.5 py-2.5 text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 bg-white dark:bg-slate-900 focus:outline-none transition-colors ${textAlignClass} ${
                 isDeliverySourceValid
                   ? "border-emerald-500/80 dark:border-emerald-500/70"
                   : "border-slate-200 dark:border-slate-700 focus:border-blue-500"
@@ -643,7 +643,7 @@ export default function VisitInfoStep({
                 playBackSound();
                 onBack();
               }}
-              className="py-2.5 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-2"
+              className={`py-2.5 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-2`}
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{t("back_btn", "Back")}</span>
@@ -660,7 +660,7 @@ export default function VisitInfoStep({
               playContinueSound();
               triggerSafeNext(false);
             }}
-            className={`flex-1 sm:flex-initial sm:min-w-[160px] py-2.5 px-5 rounded-xl text-xs sm:text-sm font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all ${
+            className={`flex-1 sm:flex-initial sm:min-w-[160px] py-2.5 px-5 rounded-xl ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all ${
               isDeliverySourceValid
                 ? "bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white cursor-pointer"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none"
@@ -746,7 +746,7 @@ export default function VisitInfoStep({
     <div className="space-y-3.5">
       {/* Heading */}
       <div className={textAlignClass}>
-        <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+        <h2 className={`${isUr ? "text-[18px] sm:text-xl leading-[1.6]" : "text-base sm:text-lg"} font-extrabold text-slate-900 dark:text-white tracking-tight`}>
           {t("visit_info_title", "Visit Information")}
         </h2>
       </div>
@@ -755,7 +755,7 @@ export default function VisitInfoStep({
       <div className="bg-slate-50/70 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 space-y-2.5">
         <label
           htmlFor="meetName"
-          className={`block text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 ${textAlignClass}`}
+          className={`block ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold text-slate-800 dark:text-slate-100 ${textAlignClass}`}
         >
           {t("meet_name_label", "Visitor to Meet")} <span className="text-red-500">*</span>
         </label>
@@ -778,7 +778,7 @@ export default function VisitInfoStep({
               "meet_name_placeholder",
               "Search or enter host name (e.g. Muhammad Asif)"
             )}
-            className={`block w-full rounded-xl border-2 pl-10 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 bg-white dark:bg-slate-900 focus:outline-none transition-colors ${textAlignClass} ${
+            className={`block w-full rounded-xl border-2 pl-10 pr-3.5 py-2.5 text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 bg-white dark:bg-slate-900 focus:outline-none transition-colors ${textAlignClass} ${
               isMeetNameValid
                 ? "border-emerald-500/80 dark:border-emerald-500/70"
                 : "border-slate-200 dark:border-slate-700 focus:border-blue-500"
@@ -815,7 +815,7 @@ export default function VisitInfoStep({
       {/* 2. Department (Dynamic from Admin Department Management — no custom text input) */}
       <div className="bg-slate-50/70 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 space-y-2.5">
         <div
-          className={`block text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 ${textAlignClass}`}
+          className={`block ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold text-slate-800 dark:text-slate-100 ${textAlignClass}`}
         >
           {t("department_label", "Department")} <span className="text-red-500">*</span>
         </div>
@@ -841,7 +841,7 @@ export default function VisitInfoStep({
           </div>
         ) : departments.length === 0 ? (
           <div className="p-4 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-center">
-            <p className="text-xs sm:text-sm font-bold text-amber-800 dark:text-amber-200">
+            <p className="text-xs font-bold text-amber-800 dark:text-amber-200">
               {t("no_departments_configured", "Departments have not been configured yet.")}
             </p>
           </div>
@@ -857,14 +857,14 @@ export default function VisitInfoStep({
                   type="button"
                   onClick={() => handleSelectDepartmentCard(dept)}
                   aria-pressed={isSelectedDept}
-                  className={`relative px-3 py-2.5 rounded-xl border-2 text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center gap-1.5 text-center cursor-pointer min-h-[46px] active:scale-[0.98] ${
+                  className={`relative px-3 py-2.5 rounded-xl border-2 ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-extrabold transition-all flex items-center justify-center gap-1.5 text-center cursor-pointer min-h-[48px] active:scale-[0.98] ${
                     isSelectedDept
                       ? "border-blue-600 bg-blue-600 text-white shadow-xs"
                       : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500"
                   }`}
                 >
-                  <Building2 className="w-4 h-4 shrink-0" />
-                  <span className="truncate">{getLocalizedDepartmentLabel(dept.name)}</span>
+                  <Building2 className="w-3.5 h-3.5 shrink-0" />
+                  <span className={isUr ? "leading-[1.6]" : "truncate"}>{getLocalizedDepartmentLabel(dept.name)}</span>
                 </button>
               );
             })}
@@ -897,7 +897,7 @@ export default function VisitInfoStep({
               playBackSound();
               onBack();
             }}
-            className="py-2.5 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-2"
+            className={`py-2.5 px-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-2`}
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{t("back_btn", "Back")}</span>

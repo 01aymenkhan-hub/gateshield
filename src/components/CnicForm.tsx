@@ -210,7 +210,7 @@ export default function CnicForm({ data, onChange, onRescan }: CnicFormProps) {
 
   /* ================= OPERATOR STEP 4: COMPACT REVIEW SCANNED DETAILS (CNIC) ================= */
   const textAlignClass = isUr ? "text-right" : "text-left";
-  const opLabelClass = `block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 mb-1 ${textAlignClass}`;
+  const opLabelClass = `block ${isUr ? "text-[15px] sm:text-base leading-[1.6]" : "text-xs sm:text-sm"} font-bold text-slate-700 dark:text-slate-200 mb-1 ${textAlignClass}`;
   const opInputClass =
     "block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-colors shadow-2xs";
 
@@ -239,7 +239,7 @@ export default function CnicForm({ data, onChange, onRescan }: CnicFormProps) {
           )}
         </div>
         <h2
-          className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5 ${textAlignClass}`}
+          className={`${isUr ? "text-[17px] sm:text-lg leading-[1.6]" : "text-sm sm:text-base"} font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5 ${textAlignClass}`}
         >
           {t("review_scanned_details_title", "Review Scanned Details")}
         </h2>
