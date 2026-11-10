@@ -41,6 +41,22 @@ async function keepPersonFiles(id) {
   const gate = await prisma.gate.findFirst({ where: { active: true } });
   const department = await prisma.department.findFirst({ where: { active: true } });
   assert.ok(gate && department, 'Existing active gate and department required');
+  const member = { fullName: marker + ' Operator', email: marker.toLowerCase() + '-operator@example.invalid', password, role: 'OPERATOR', gateIds: [gate.id] };
+  await call('/api/admin/operators', { ...member, gateIds: ['nonexistent-test-gate'] }, 400);
+  record('Operator creation validates assigned gates');
+  const operator = await call('/api/admin/operators', member, 201);
+  users.push(operator.operator.id);
+  assert.match(operator.operator.operatorNumber, /^OP-\d+$/);
+  assert.equal(operator.operator.hasActiveQr, true);
+  assert.equal(operator.operator.gateAccess.length, 1);
+  record('Operator creation assigns a number, QR credentials and gate access');
+  await call('/api/admin/operators', member, 409);
+  record('Duplicate operator email is rejected');
+  const operatorLogin = await fetch(base + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: member.email, password }) });
+  assert.equal(operatorLogin.status, 200);
+  const operatorCookie = operatorLogin.headers.getSetCookie().map(x => x.split(';')[0]).join('; ');
+  await call('/api/admin/operators', { ...member, email: 'another-' + member.email }, 403, 'POST', operatorCookie);
+  record('Created operator can log in but cannot create accounts');
   for (const route of ['/api/dashboard/stats', '/api/parcels', '/api/vip-guests', '/api/visitors']) {
     await call(route); record(`Existing staff route ${route}`);
   }
@@ -80,6 +96,10 @@ async function keepPersonFiles(id) {
   const revisitDoc = await fetch(base + `/api/visitors/${revisit.visit.personId}/document-image?type=delivery_in&visitId=${revisit.visit.id}`, { headers: { Cookie: cookie } });
   assert.equal(revisitDoc.status, 404);
   record('A new delivery visit never exposes the previous incoming document');
+  const qrStatus = await call('/api/visits/qr-lookup?code=' + encodeURIComponent(revisit.visit.passCode || revisit.visit.visitNumber));
+  assert.equal(qrStatus.found, true);
+  assert.equal(qrStatus.visit.hasIncomingDoc, false);
+  record('QR lookup exposes current visit-specific document flags');
   await call('/api/visits/check-out', { visitId: revisit.visit.id, exitGateId: gate.id });
   const standard = await call('/api/visits/check-in', { fullName: marker + ' Visitor', category: 'VISITOR', hostName: marker, departmentId: department.id, visitorCardNo: marker, entryGateId: gate.id, cnicImageData: image });
   people.push(standard.visit.personId); await keepPersonFiles(standard.visit.personId);
