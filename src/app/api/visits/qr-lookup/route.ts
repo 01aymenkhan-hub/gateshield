@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { extractPassCode } from '@/lib/qrUtils';
+import { sanitizeVisitsWithDbFlags } from '@/lib/personSanitizer';
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,11 +49,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const [sanitizedVisit] = await sanitizeVisitsWithDbFlags([visit]);
+
     return NextResponse.json({
       found: true,
-      visit,
-      isCurrentlyInside: visit.status === 'CHECKED_IN',
-      person: visit.person,
+      visit: sanitizedVisit,
+      isCurrentlyInside: sanitizedVisit.status === 'CHECKED_IN',
+      person: sanitizedVisit.person,
     });
   } catch (error: any) {
     console.error('QR Lookup error:', error);

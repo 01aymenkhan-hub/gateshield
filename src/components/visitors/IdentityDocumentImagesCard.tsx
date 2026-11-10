@@ -182,17 +182,25 @@ export default function IdentityDocumentImagesCard({
     (visitId && Array.isArray(person.visits)
       ? person.visits.find((v) => v.id === visitId)
       : null) ||
-    (Array.isArray(person.visits) && person.visits.length > 0 ? person.visits[0] : null);
+    (Array.isArray(person.visits) && person.visits.length > 0
+      ? person.visits.find((v) => v.status === 'CHECKED_IN') || person.visits[0]
+      : null);
 
   const resolvedVisitId = visitId || latestVisit?.id || person.latestDeliveryVisitId || null;
-  const hasIncomingDoc =
-    Boolean(latestVisit?.hasIncomingDoc) || Boolean(person.hasDeliveryDocImage);
-  const hasOutgoingDoc =
-    Boolean(latestVisit?.hasOutgoingDoc) || Boolean(person.hasOutgoingDocImage);
+  const isDelivery = String(person.category || '').toUpperCase() === 'DELIVERY';
+  const hasIncomingDoc = isDelivery
+    ? latestVisit && typeof latestVisit.hasIncomingDoc === 'boolean'
+      ? latestVisit.hasIncomingDoc
+      : Boolean(person.hasDeliveryDocImage)
+    : false;
+  const hasOutgoingDoc = isDelivery
+    ? latestVisit && typeof latestVisit.hasOutgoingDoc === 'boolean'
+      ? latestVisit.hasOutgoingDoc
+      : Boolean(person.hasOutgoingDocImage)
+    : false;
 
   const hasCnicRecord = hasCnicImage || Boolean(person.cnicNumber);
   const hasDlsRecord = hasDlsImage || Boolean(person.dlsNumber);
-  const isDelivery = String(person.category || '').toUpperCase() === 'DELIVERY';
 
   // Determine which document slots to display:
   // - If both CNIC and DLS images exist (or both document numbers/images exist and at least one has an image), show the applicable slots.
@@ -260,7 +268,7 @@ export default function IdentityDocumentImagesCard({
     });
   }
 
-  if (hasIncomingDoc || hasOutgoingDoc || isDelivery) {
+  if (isDelivery) {
     const incomingTime = latestVisit?.incomingDocCapturedAt || latestVisit?.checkInTime;
     const outgoingTime = latestVisit?.outgoingDocCapturedAt || latestVisit?.checkOutTime;
     const vehicleSubtitle = latestVisit?.vehicleNo

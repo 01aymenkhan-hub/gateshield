@@ -102,6 +102,7 @@ export function sanitizePersonForClient<T extends Record<string, any> | null | u
 ): T {
   if (!person || typeof person !== 'object') return person;
 
+  const isDelivery = String(person.category || '').toUpperCase() === 'DELIVERY';
   const hasCnicImage =
     typeof person.hasCnicImage === 'boolean'
       ? person.hasCnicImage
@@ -110,14 +111,16 @@ export function sanitizePersonForClient<T extends Record<string, any> | null | u
     typeof person.hasDlsImage === 'boolean'
       ? person.hasDlsImage
       : Boolean(person.dlsImagePath || person.dlsImageData);
-  const hasDeliveryDocImage =
-    typeof person.hasDeliveryDocImage === 'boolean'
+  const hasDeliveryDocImage = isDelivery
+    ? typeof person.hasDeliveryDocImage === 'boolean'
       ? person.hasDeliveryDocImage
-      : Boolean(person.deliveryDocImagePath || person.deliveryDocImageData);
-  const hasOutgoingDocImage =
-    typeof person.hasOutgoingDocImage === 'boolean'
+      : Boolean(person.deliveryDocImagePath || person.deliveryDocImageData)
+    : false;
+  const hasOutgoingDocImage = isDelivery
+    ? typeof person.hasOutgoingDocImage === 'boolean'
       ? person.hasOutgoingDocImage
-      : false;
+      : false
+    : false;
 
   const clone = { ...person };
   delete clone.cnicImageData;
@@ -189,38 +192,52 @@ export async function getPersonImageFlagsMap(
         p."id",
         ((p."cnicImagePath" IS NOT NULL AND LENGTH(p."cnicImagePath") > 0) OR (p."cnicImageData" IS NOT NULL AND LENGTH(p."cnicImageData") > 0)) AS "hasCnicImage",
         ((p."dlsImagePath" IS NOT NULL AND LENGTH(p."dlsImagePath") > 0) OR (p."dlsImageData" IS NOT NULL AND LENGTH(p."dlsImageData") > 0)) AS "hasDlsImage",
-        (
-          (p."deliveryDocImagePath" IS NOT NULL AND LENGTH(p."deliveryDocImagePath") > 0)
-          OR (p."deliveryDocImageData" IS NOT NULL AND LENGTH(p."deliveryDocImageData") > 0)
-          OR EXISTS (
-            SELECT 1 FROM "visits" v
-            WHERE v."personId" = p."id"
-              AND v."incomingDocPath" IS NOT NULL
-              AND LENGTH(v."incomingDocPath") > 0
+        CASE
+          WHEN p."category"::text <> 'DELIVERY' THEN FALSE
+          WHEN EXISTS (SELECT 1 FROM "visits" v WHERE v."personId" = p."id") THEN COALESCE(
+            (
+              SELECT (v."incomingDocPath" IS NOT NULL AND LENGTH(v."incomingDocPath") > 0)
+              FROM "visits" v
+              WHERE v."personId" = p."id"
+              ORDER BY CASE WHEN v."status"::text = 'CHECKED_IN' THEN 0 ELSE 1 END ASC, v."checkInTime" DESC
+              LIMIT 1
+            ),
+            FALSE
           )
-        ) AS "hasDeliveryDocImage",
-        EXISTS (
-          SELECT 1 FROM "visits" v
-          WHERE v."personId" = p."id"
-            AND v."outgoingDocPath" IS NOT NULL
-            AND LENGTH(v."outgoingDocPath") > 0
-        ) AS "hasOutgoingDocImage",
+          ELSE (
+            (p."deliveryDocImagePath" IS NOT NULL AND LENGTH(p."deliveryDocImagePath") > 0)
+            OR (p."deliveryDocImageData" IS NOT NULL AND LENGTH(p."deliveryDocImageData") > 0)
+          )
+        END AS "hasDeliveryDocImage",
+        CASE
+          WHEN p."category"::text <> 'DELIVERY' THEN FALSE
+          ELSE COALESCE(
+            (
+              SELECT (v."outgoingDocPath" IS NOT NULL AND LENGTH(v."outgoingDocPath") > 0)
+              FROM "visits" v
+              WHERE v."personId" = p."id"
+              ORDER BY CASE WHEN v."status"::text = 'CHECKED_IN' THEN 0 ELSE 1 END ASC, v."checkInTime" DESC
+              LIMIT 1
+            ),
+            FALSE
+          )
+        END AS "hasOutgoingDocImage",
         (
           SELECT v."id" FROM "visits" v
           WHERE v."personId" = p."id"
-          ORDER BY v."checkInTime" DESC
+          ORDER BY CASE WHEN v."status"::text = 'CHECKED_IN' THEN 0 ELSE 1 END ASC, v."checkInTime" DESC
           LIMIT 1
         ) AS "latestDeliveryVisitId",
         (
           SELECT v."incomingDocCapturedAt" FROM "visits" v
-          WHERE v."personId" = p."id" AND v."incomingDocPath" IS NOT NULL
-          ORDER BY v."checkInTime" DESC
+          WHERE v."personId" = p."id"
+          ORDER BY CASE WHEN v."status"::text = 'CHECKED_IN' THEN 0 ELSE 1 END ASC, v."checkInTime" DESC
           LIMIT 1
         ) AS "incomingDocCapturedAt",
         (
           SELECT v."outgoingDocCapturedAt" FROM "visits" v
-          WHERE v."personId" = p."id" AND v."outgoingDocPath" IS NOT NULL
-          ORDER BY v."checkInTime" DESC
+          WHERE v."personId" = p."id"
+          ORDER BY CASE WHEN v."status"::text = 'CHECKED_IN' THEN 0 ELSE 1 END ASC, v."checkInTime" DESC
           LIMIT 1
         ) AS "outgoingDocCapturedAt"
       FROM "persons" p
@@ -324,7 +341,7 @@ export async function sanitizeVisitsWithDbFlags<T extends Record<string, any>>(
 ): Promise<T[]> {
   if (!Array.isArray(visits) || visits.length === 0) return visits;
   const personIds = visits
-    .map((v) => (v?.person?.id ? String(v.person.id) : ''))
+    .map((v) => (v?.person?.id ? String(v.person.id) : v?.personId ? String(v.personId) : ''))
     .filter(Boolean);
   const visitIds = visits.map((v) => (v?.id ? String(v.id) : '')).filter(Boolean);
 
@@ -334,18 +351,42 @@ export async function sanitizeVisitsWithDbFlags<T extends Record<string, any>>(
   ]);
 
   return visits.map((visit) => {
-    if (!visit || !visit.person) return visit;
-    const pid = String(visit.person.id || '');
+    if (!visit) return visit;
+    const pid = String(visit.person?.id || visit.personId || '');
     const vid = String(visit.id || '');
     const dbFlags = flagsMap.get(pid);
     const vFlags = visitFlagsMap.get(vid);
 
+    const hasIncomingDoc = vFlags
+      ? vFlags.hasIncomingDoc
+      : Boolean(visit.incomingDocPath || visit.hasIncomingDoc);
+    const incomingDocCapturedAt =
+      vFlags?.incomingDocCapturedAt ?? visit.incomingDocCapturedAt ?? null;
+    const hasOutgoingDoc = vFlags
+      ? vFlags.hasOutgoingDoc
+      : Boolean(visit.outgoingDocPath || visit.hasOutgoingDoc);
+    const outgoingDocCapturedAt =
+      vFlags?.outgoingDocCapturedAt ?? visit.outgoingDocCapturedAt ?? null;
+
+    if (!visit.person) {
+      return sanitizeVisitForClient({
+        ...visit,
+        hasIncomingDoc,
+        incomingDocCapturedAt,
+        hasOutgoingDoc,
+        outgoingDocCapturedAt,
+      });
+    }
+
+    const isPersonDelivery =
+      String(visit.person.category || '').toUpperCase() === 'DELIVERY';
+
     return sanitizeVisitForClient({
       ...visit,
-      hasIncomingDoc: vFlags ? vFlags.hasIncomingDoc : Boolean(dbFlags?.hasDeliveryDocImage),
-      incomingDocCapturedAt: vFlags?.incomingDocCapturedAt ?? dbFlags?.incomingDocCapturedAt ?? null,
-      hasOutgoingDoc: vFlags ? vFlags.hasOutgoingDoc : false,
-      outgoingDocCapturedAt: vFlags?.outgoingDocCapturedAt ?? null,
+      hasIncomingDoc,
+      incomingDocCapturedAt,
+      hasOutgoingDoc,
+      outgoingDocCapturedAt,
       person: sanitizePersonForClient({
         ...visit.person,
         hasCnicImage: dbFlags
@@ -354,19 +395,13 @@ export async function sanitizeVisitsWithDbFlags<T extends Record<string, any>>(
         hasDlsImage: dbFlags
           ? dbFlags.hasDlsImage
           : Boolean(visit.person.dlsImageData ?? visit.person.hasDlsImage),
-        hasDeliveryDocImage: vFlags?.hasIncomingDoc
-          ? true
-          : dbFlags
-          ? dbFlags.hasDeliveryDocImage
-          : Boolean(visit.person.deliveryDocImageData ?? visit.person.hasDeliveryDocImage),
-        hasOutgoingDocImage: vFlags?.hasOutgoingDoc
-          ? true
-          : dbFlags
-          ? dbFlags.hasOutgoingDocImage
-          : false,
-        latestDeliveryVisitId: vid || dbFlags?.latestDeliveryVisitId || null,
-        incomingDocCapturedAt: vFlags?.incomingDocCapturedAt ?? dbFlags?.incomingDocCapturedAt ?? null,
-        outgoingDocCapturedAt: vFlags?.outgoingDocCapturedAt ?? dbFlags?.outgoingDocCapturedAt ?? null,
+        hasDeliveryDocImage: isPersonDelivery ? hasIncomingDoc : false,
+        hasOutgoingDocImage: isPersonDelivery ? hasOutgoingDoc : false,
+        latestDeliveryVisitId: isPersonDelivery
+          ? vid || dbFlags?.latestDeliveryVisitId || null
+          : null,
+        incomingDocCapturedAt: isPersonDelivery ? incomingDocCapturedAt : null,
+        outgoingDocCapturedAt: isPersonDelivery ? outgoingDocCapturedAt : null,
       }),
     });
   });

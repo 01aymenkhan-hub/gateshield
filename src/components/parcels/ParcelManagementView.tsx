@@ -335,7 +335,7 @@ export default function ParcelManagementView({
             className="hidden sm:inline-flex px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-md shadow-blue-500/20 items-center gap-2 cursor-pointer transition-all"
           >
             <Plus className="w-4 h-4 shrink-0" />
-            <span>{t('register_unexpected_parcel', 'Unexpected Parcel')}</span>
+            <span>{t('register_unexpected_parcel', 'Parcel')}</span>
           </button>
 
           {isModal && onCloseModal && (

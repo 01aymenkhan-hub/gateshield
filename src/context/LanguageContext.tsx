@@ -712,8 +712,8 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
 
   // ── Parcel Management & Unexpected Parcel Form ──
   parcel_management_title: { en: 'Parcel Tracker', ur: 'پارسل ٹریکر' },
-  register_unexpected_parcel: { en: 'Unexpected Parcel', ur: 'غیر متوقع پارسل' },
-  unexpected_parcel_title: { en: 'Unexpected Parcel', ur: 'غیر متوقع پارسل' },
+  register_unexpected_parcel: { en: 'Parcel', ur: 'پارسل' },
+  unexpected_parcel_title: { en: 'Parcel', ur: 'پارسل' },
   parcel_tab_expected_short: { en: 'Expected', ur: 'متوقع' },
   parcel_tab_received_short: { en: 'Received', ur: 'موصول' },
   parcel_tab_delivered_short: { en: 'Delivered', ur: 'حوالے' },

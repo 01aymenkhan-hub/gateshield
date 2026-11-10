@@ -103,17 +103,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Host person name is required' }, { status: 400 });
     }
 
-    // Validate and store required Incoming Delivery Document image to disk for DELIVERY category
+    // Validate and store optional Incoming Delivery Document image to disk for DELIVERY category
     let savedIncomingDoc: StoredFileResult | null = null;
     const hasIncomingDeliveryDoc =
-      typeof deliveryDocImageData === 'string' && deliveryDocImageData.trim().length > 0;
-
-    if (isDelivery && !hasIncomingDeliveryDoc) {
-      return NextResponse.json(
-        { error: 'Incoming delivery document image is required for Delivery registration.' },
-        { status: 400 }
-      );
-    }
+      isDelivery &&
+      typeof deliveryDocImageData === 'string' &&
+      deliveryDocImageData.trim().length > 0;
 
     if (hasIncomingDeliveryDoc) {
       try {

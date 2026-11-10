@@ -343,7 +343,7 @@ export default function UnexpectedParcelModal({
                   ? isUrdu
                     ? 'پارسل وصولی کی تصدیق'
                     : 'Parcel Received'
-                  : t('unexpected_parcel_title', 'Unexpected Parcel')}
+                  : t('unexpected_parcel_title', 'Parcel')}
               </h2>
             </div>
           </div>

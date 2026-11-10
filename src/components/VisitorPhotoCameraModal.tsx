@@ -7,6 +7,7 @@ interface VisitorPhotoCameraModalProps {
   onClose: () => void;
   onCapture: (file: File, previewUrl: string) => void;
   mode?: "face" | "document";
+  instantCapture?: boolean;
 }
 
 export default function VisitorPhotoCameraModal({
@@ -14,6 +15,7 @@ export default function VisitorPhotoCameraModal({
   onClose,
   onCapture,
   mode = "face",
+  instantCapture = false,
 }: VisitorPhotoCameraModalProps) {
   const isDocMode = mode === "document";
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -84,7 +86,7 @@ export default function VisitorPhotoCameraModal({
       if (generation !== cameraGenerationRef.current) return;
       console.error("Visitor camera access error:", err);
       setCameraError(
-        "Unable to access camera. Please verify device permissions or use 'Upload Image'."
+        "Unable to access camera. Please verify camera permissions on your device and try again."
       );
     }
   }, [facingMode, isDocMode, stopCameraStream, attachVideo]);
@@ -146,10 +148,14 @@ export default function VisitorPhotoCameraModal({
                   type: "image/jpeg",
                   lastModified: Date.now(),
                 });
-                setCapturedFile(file);
-                setCapturedPreview(dataUrl);
-                setModalMode("review");
                 stopCameraStream();
+                if (instantCapture) {
+                  onCapture(file, dataUrl);
+                } else {
+                  setCapturedFile(file);
+                  setCapturedPreview(dataUrl);
+                  setModalMode("review");
+                }
               }
             },
             "image/jpeg",
@@ -194,7 +200,7 @@ export default function VisitorPhotoCameraModal({
     } catch (err) {
       console.error("Failed to capture visitor photo:", err);
     }
-  }, [facingMode, isDocMode, stopCameraStream]);
+  }, [facingMode, isDocMode, instantCapture, onCapture, stopCameraStream]);
 
   // Retake from review screen
   const handleReviewRetake = () => {
@@ -221,7 +227,7 @@ export default function VisitorPhotoCameraModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-0 sm:p-4 select-none">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-0 sm:p-4 select-none">
       <div className="relative w-full h-full sm:max-w-md sm:h-[85vh] sm:rounded-2xl overflow-hidden bg-black flex flex-col justify-between">
         {/* Shutter Flash Animation Overlay */}
         {isShutterActive && (

@@ -372,7 +372,11 @@ export default function CheckStatusModal({ isOpen, onClose, initialPerson }: Che
                   <h4 className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     {t('identity_documents_title', 'Scanned ID Card Images')}
                   </h4>
-                  <IdentityDocumentImagesCard person={result.person} compact />
+                  <IdentityDocumentImagesCard
+                    person={result.person}
+                    visitId={result.activeVisit?.id || result.recentVisits?.[0]?.id || null}
+                    compact
+                  />
                 </div>
               </div>
 

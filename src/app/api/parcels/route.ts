@@ -608,7 +608,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: `Unexpected parcel for ${ownerName} received at ${receivingGateName}.`,
+        message: `Parcel for ${ownerName} received at ${receivingGateName}.`,
         parcel: createdParcel,
       },
       { status: 201 }

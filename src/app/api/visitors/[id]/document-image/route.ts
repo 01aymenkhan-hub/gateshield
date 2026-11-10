@@ -135,8 +135,9 @@ export async function GET(
         );
       }
 
-      // Incoming delivery document: check visit.incomingDocPath -> person.deliveryDocImagePath -> legacy Base64
-      const incomingFilePath = visitDoc?.incomingDocPath || person.deliveryDocImagePath;
+      // Incoming delivery document: check visit.incomingDocPath -> (when no visitId specified) person.deliveryDocImagePath -> legacy Base64
+      const incomingFilePath =
+        visitDoc?.incomingDocPath || (!visitId ? person.deliveryDocImagePath : null);
       if (incomingFilePath) {
         const fileData = await readStoredFileBuffer(incomingFilePath);
         if (fileData) {
@@ -152,7 +153,7 @@ export async function GET(
         }
       }
 
-      if (person.deliveryDocImageData) {
+      if (!visitId && person.deliveryDocImageData) {
         const parsed = validateDocumentImageDataUrl(person.deliveryDocImageData);
         const contentType = person.deliveryDocImageMime || parsed.mime || 'image/jpeg';
         return new NextResponse(new Uint8Array(parsed.buffer), {

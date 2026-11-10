@@ -284,14 +284,6 @@ export default function CheckOutModal({
   const handleCheckOut = async () => {
     if (!activeVisit) return;
 
-    if (isActiveDelivery && !outgoingDocPreview) {
-      setDeliveryCheckoutError(
-        'Please capture the outgoing delivery document before confirming checkout.'
-      );
-      setIsDeliveryCheckoutPopupOpen(true);
-      return;
-    }
-
     setSubmitting(true);
     setError(null);
     setDeliveryCheckoutError(null);
@@ -303,7 +295,8 @@ export default function CheckOutModal({
         body: JSON.stringify({
           visitId: activeVisit.id,
           exitGateId: currentGate?.id,
-          outgoingDocImageData: isActiveDelivery ? outgoingDocPreview : undefined,
+          outgoingDocImageData:
+            isActiveDelivery && outgoingDocPreview ? outgoingDocPreview : undefined,
         }),
       });
 
@@ -341,8 +334,27 @@ export default function CheckOutModal({
     }
   };
 
+  const hasActiveIncomingDoc =
+    activeVisit &&
+    (typeof activeVisit.hasIncomingDoc === 'boolean'
+      ? activeVisit.hasIncomingDoc
+      : Boolean(activeVisit.person?.hasDeliveryDocImage));
+
+  const hasCompletedIncomingDoc =
+    alreadyCheckedOutRecord &&
+    (typeof alreadyCheckedOutRecord.hasIncomingDoc === 'boolean'
+      ? alreadyCheckedOutRecord.hasIncomingDoc
+      : Boolean(alreadyCheckedOutRecord.person?.hasDeliveryDocImage));
+
+  const hasCompletedOutgoingDoc =
+    alreadyCheckedOutRecord &&
+    (typeof alreadyCheckedOutRecord.hasOutgoingDoc === 'boolean'
+      ? alreadyCheckedOutRecord.hasOutgoingDoc
+      : Boolean(alreadyCheckedOutRecord.person?.hasOutgoingDocImage));
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150">
+      {!isDeliveryCheckoutPopupOpen && !isOutgoingCameraOpen && (
       <div
         ref={containerRef}
         className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[85vh]"
@@ -728,7 +740,7 @@ export default function CheckOutModal({
                           {t('incoming_delivery_doc_label', 'Incoming Delivery Document (Check-in)')}
                         </span>
                       </div>
-                      {(activeVisit.hasIncomingDoc || activeVisit.person?.hasDeliveryDocImage) && (
+                      {hasActiveIncomingDoc && (
                         <button
                           type="button"
                           onClick={() =>
@@ -752,7 +764,7 @@ export default function CheckOutModal({
                       )}
                     </div>
 
-                    {activeVisit.hasIncomingDoc || activeVisit.person?.hasDeliveryDocImage ? (
+                    {hasActiveIncomingDoc ? (
                       <div
                         onClick={() =>
                           setExpandedDocPreview({
@@ -947,8 +959,7 @@ export default function CheckOutModal({
                         <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block truncate">
                           Incoming Document
                         </span>
-                        {alreadyCheckedOutRecord.hasIncomingDoc ||
-                        alreadyCheckedOutRecord.person?.hasDeliveryDocImage ? (
+                        {hasCompletedIncomingDoc ? (
                           <div
                             onClick={() =>
                               setExpandedDocPreview({
@@ -985,8 +996,7 @@ export default function CheckOutModal({
                         <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block truncate">
                           Outgoing Document
                         </span>
-                        {alreadyCheckedOutRecord.hasOutgoingDoc ||
-                        alreadyCheckedOutRecord.person?.hasOutgoingDocImage ? (
+                        {hasCompletedOutgoingDoc ? (
                           <div
                             onClick={() =>
                               setExpandedDocPreview({
@@ -1051,9 +1061,10 @@ export default function CheckOutModal({
           )}
         </div>
       </div>
+      )}
 
       {/* DELIVERY CHECKOUT POPUP MODAL (Outgoing Document Capture) */}
-      {isDeliveryCheckoutPopupOpen && activeVisit && (
+      {isDeliveryCheckoutPopupOpen && !isOutgoingCameraOpen && activeVisit && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             {/* Popup Header */}
@@ -1099,28 +1110,15 @@ export default function CheckOutModal({
                 </div>
               )}
 
-              <input
-                ref={outgoingFileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleOutgoingDocFileUpload}
-              />
-
               {/* Outgoing Document Capture / Preview */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-900 dark:text-white">
-                    {t('capture_outgoing_doc_label', 'Outgoing Delivery Document')}{' '}
-                    <span className="text-red-500">*</span>
+                    {t('capture_outgoing_doc_label', 'Outgoing Delivery Document')}
                   </span>
-                  {outgoingDocPreview ? (
+                  {outgoingDocPreview && (
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                       {t('outgoing_doc_captured_badge', 'Outgoing Document Captured ✓')}
-                    </span>
-                  ) : (
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                      {t('photo_required_badge', 'Required')}
                     </span>
                   )}
                 </div>
@@ -1133,7 +1131,7 @@ export default function CheckOutModal({
                     <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-4 max-w-xs">
                       Take a picture of the outgoing delivery document, dispatch slip, or gate pass
                     </p>
-                    <div className="flex flex-wrap items-center justify-center gap-2.5 w-full">
+                    <div className="flex items-center justify-center w-full">
                       <button
                         type="button"
                         onClick={() => setIsOutgoingCameraOpen(true)}
@@ -1141,15 +1139,6 @@ export default function CheckOutModal({
                       >
                         <Camera className="w-4 h-4" />
                         <span>{t('capture_outgoing_doc_btn', 'Capture Outgoing Document')}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => outgoingFileInputRef.current?.click()}
-                        className="py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>Upload</span>
                       </button>
                     </div>
                   </div>
@@ -1177,11 +1166,11 @@ export default function CheckOutModal({
                       <button
                         type="button"
                         disabled={submitting}
-                        onClick={() => outgoingFileInputRef.current?.click()}
-                        className="py-2 px-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                        onClick={() => setOutgoingDocPreview(null)}
+                        className="py-2 px-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-semibold text-rose-600 dark:text-rose-400 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
-                        <Upload className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Upload Different</span>
+                        <X className="w-3.5 h-3.5" />
+                        <span>Remove</span>
                       </button>
                     </div>
                   </div>
@@ -1193,9 +1182,9 @@ export default function CheckOutModal({
                 <button
                   type="button"
                   onClick={handleCheckOut}
-                  disabled={!outgoingDocPreview || submitting}
+                  disabled={submitting}
                   className={`w-full py-3 rounded-xl font-bold text-sm shadow-xs transition-all flex items-center justify-center gap-2 ${
-                    outgoingDocPreview && !submitting
+                    !submitting
                       ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                       : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                   }`}
@@ -1233,6 +1222,7 @@ export default function CheckOutModal({
         onClose={() => setIsOutgoingCameraOpen(false)}
         onCapture={handleOutgoingDocCaptured}
         mode="document"
+        instantCapture
       />
 
       {/* Lightbox Modal for Incoming Document Preview */}

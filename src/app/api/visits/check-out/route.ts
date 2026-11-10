@@ -110,19 +110,11 @@ export async function POST(request: NextRequest) {
 
     const isDeliveryCategory = targetVisit.person.category === 'DELIVERY';
     const rawOutgoingDocImage =
-      typeof outgoingDocImageData === 'string' && outgoingDocImageData.trim().length > 0
+      isDeliveryCategory &&
+      typeof outgoingDocImageData === 'string' &&
+      outgoingDocImageData.trim().length > 0
         ? outgoingDocImageData.trim()
         : null;
-
-    if (isDeliveryCategory && !rawOutgoingDocImage) {
-      return NextResponse.json(
-        {
-          error: 'Outgoing delivery document capture is required before checking out a delivery.',
-          code: 'DELIVERY_OUTGOING_DOC_REQUIRED',
-        },
-        { status: 400 }
-      );
-    }
 
     // Resolve and validate exit gate
     let resolvedExitGateId: string | null =

@@ -118,9 +118,9 @@ export default function VisitorStep({
   // 1. Photo is required for standard categories, optional for DELIVERY
   const hasPhotoAttached = Boolean(visitorData.photoPreview);
   const isPhotoValid = isDelivery ? true : hasPhotoAttached;
-  // 1b. Delivery Document is required for DELIVERY only
+  // 1b. Delivery Document is optional for DELIVERY
   const hasDeliveryDoc = Boolean(visitorData.deliveryDocumentPreview);
-  const isDeliveryDocValid = !isDelivery || hasDeliveryDoc;
+  const isDeliveryDocValid = true;
   // 2. Phone is optional; if entered, must be Pakistani format: 11 digits, starts with 03
   const trimmedPhone = visitorData.phoneNumber.trim();
   const hasPhoneValue = trimmedPhone.length > 0;
@@ -518,21 +518,17 @@ export default function VisitorStep({
           )}
         </section>
 
-        {/* ── Delivery Document Capture Section (Required for DELIVERY only) ── */}
+        {/* ── Delivery Document Capture Section (Optional for DELIVERY) ── */}
         {isDelivery && (
           <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs">
             <div className="mb-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                  Capture Document <span className="text-red-500">*</span>
+                  Capture Document
                 </h2>
-                {hasDeliveryDoc ? (
+                {hasDeliveryDoc && (
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                     Document Attached ✓
-                  </span>
-                ) : (
-                  <span className="text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800 px-2.5 py-1 rounded-full">
-                    Required
                   </span>
                 )}
               </div>
@@ -1181,7 +1177,7 @@ export default function VisitorStep({
           </div>
         </div>
 
-        {/* 2. Capture Document Section (Required) */}
+        {/* 2. Capture Document Section (Optional) */}
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2
@@ -1189,17 +1185,12 @@ export default function VisitorStep({
                 isUr ? "text-right flex-1" : "text-left flex-1"
               }`}
             >
-              {t("capture_document_title", "Capture Document")}{" "}
-              <span className="text-red-500">*</span>
+              {t("capture_document_title", "Capture Document")}
             </h2>
 
-            {hasDeliveryDoc ? (
+            {hasDeliveryDoc && (
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
                 {t("document_attached_badge", "Document Attached ✓")}
-              </span>
-            ) : (
-              <span className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800 px-2.5 py-0.5 rounded-full shrink-0">
-                {t("photo_required_badge", "Required")}
               </span>
             )}
           </div>
@@ -1297,7 +1288,7 @@ export default function VisitorStep({
                   </span>
                 </div>
 
-                <div>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -1308,6 +1299,20 @@ export default function VisitorStep({
                   >
                     <RotateCcw className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     <span>{t("retake_document_btn", "Retake Document")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onChangeVisitorData({
+                        ...visitorData,
+                        deliveryDocumentFile: null,
+                        deliveryDocumentPreview: null,
+                      })
+                    }
+                    className="py-2.5 px-4 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-rose-400 dark:hover:border-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400 shadow-2xs inline-flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <span>Remove</span>
                   </button>
                 </div>
               </div>
@@ -1332,17 +1337,12 @@ export default function VisitorStep({
           <button
             type="button"
             onClick={() => {
-              if (hasDeliveryDoc && onNextDeliveryDocStep) {
+              if (onNextDeliveryDocStep) {
                 playContinueSound();
                 onNextDeliveryDocStep();
               }
             }}
-            disabled={!hasDeliveryDoc}
-            className={`flex-1 max-w-xs py-3 px-6 rounded-xl text-xs sm:text-sm font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all ${
-              hasDeliveryDoc
-                ? "bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white cursor-pointer"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none"
-            }`}
+            className="flex-1 max-w-xs py-3 px-6 rounded-xl text-xs sm:text-sm font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white cursor-pointer"
           >
             <span>{t("next_btn", "Next")}</span>
             <ArrowRight className="w-4 h-4" />

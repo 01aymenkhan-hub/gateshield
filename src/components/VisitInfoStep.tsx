@@ -2,10 +2,6 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
-  Users,
-  Briefcase,
-  UserCheck,
-  Package,
   HardHat,
   Truck,
   Check,
@@ -17,6 +13,13 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react";
+import {
+  OpSvgTotalVisitors,
+  OpSvgTotalVendors,
+  OpSvgTotalInterviews,
+  OpSvgParcelTracker,
+  OpSvgTotalDeliveries,
+} from "@/components/icons/OperatorDashboardSvgIcons";
 import { VisitInfoData } from "../types/visitor";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -50,7 +53,7 @@ const CATEGORIES = [
     id: "VISITOR",
     labelKey: "cat_visitor",
     defaultLabel: "Visitor",
-    icon: Users,
+    icon: OpSvgTotalVisitors,
     activeBorder: "border-emerald-500 dark:border-emerald-400",
     activeBg: "bg-emerald-50/80 dark:bg-emerald-950/50",
     iconBg: "bg-emerald-500 text-white",
@@ -60,7 +63,7 @@ const CATEGORIES = [
     id: "VENDOR",
     labelKey: "cat_vendor",
     defaultLabel: "Vendor",
-    icon: Briefcase,
+    icon: OpSvgTotalVendors,
     activeBorder: "border-purple-500 dark:border-purple-400",
     activeBg: "bg-purple-50/80 dark:bg-purple-950/50",
     iconBg: "bg-purple-600 text-white",
@@ -70,7 +73,7 @@ const CATEGORIES = [
     id: "INTERVIEW",
     labelKey: "cat_interview",
     defaultLabel: "Interview",
-    icon: UserCheck,
+    icon: OpSvgTotalInterviews,
     activeBorder: "border-blue-500 dark:border-blue-400",
     activeBg: "bg-blue-50/80 dark:bg-blue-950/50",
     iconBg: "bg-blue-600 text-white",
@@ -80,7 +83,7 @@ const CATEGORIES = [
     id: "PARCEL",
     labelKey: "cat_parcel",
     defaultLabel: "Parcel",
-    icon: Package,
+    icon: OpSvgParcelTracker,
     activeBorder: "border-amber-500 dark:border-amber-400",
     activeBg: "bg-amber-50/80 dark:bg-amber-950/50",
     iconBg: "bg-amber-500 text-white",
@@ -100,7 +103,7 @@ const CATEGORIES = [
     id: "DELIVERY",
     labelKey: "cat_delivery",
     defaultLabel: "Delivery",
-    icon: Truck,
+    icon: OpSvgTotalDeliveries,
     activeBorder: "border-teal-500 dark:border-teal-400",
     activeBg: "bg-teal-50/80 dark:bg-teal-950/50",
     iconBg: "bg-teal-600 text-white",
@@ -533,7 +536,13 @@ export default function VisitInfoStep({
                       : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
                   }`}
                 >
-                  <Icon className="w-6 h-6 sm:w-7 sm:h-7" />
+                  <Icon
+                    className={
+                      cat.id === "CONTRACTOR"
+                        ? "w-6 h-6 sm:w-7 sm:h-7"
+                        : "w-7 h-7 sm:w-8 sm:h-8"
+                    }
+                  />
                 </div>
 
                 <span
