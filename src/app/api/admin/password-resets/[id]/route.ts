@@ -128,9 +128,9 @@ export async function PATCH(
             "resetTokenHash" = ${resetTokenHash},
             "reviewedById" = ${admin.id},
             "reviewedByName" = ${admin.name},
-            "approvedAt" = ${now},
-            "expiresAt" = ${expiresAt},
-            "updatedAt" = ${now}
+            "approvedAt" = (CAST(${now.toISOString()} AS timestamptz) AT TIME ZONE 'UTC'),
+            "expiresAt" = (CAST(${expiresAt.toISOString()} AS timestamptz) AT TIME ZONE 'UTC'),
+            "updatedAt" = (CAST(${now.toISOString()} AS timestamptz) AT TIME ZONE 'UTC')
         WHERE "id" = ${target.id}
           AND "tenantId" = ${tenantId}
           AND "status"::text = 'PENDING'
@@ -197,9 +197,9 @@ export async function PATCH(
           "resetTokenHash" = NULL,
           "reviewedById" = ${admin.id},
           "reviewedByName" = ${admin.name},
-          "rejectedAt" = ${now},
+          "rejectedAt" = (CAST(${now.toISOString()} AS timestamptz) AT TIME ZONE 'UTC'),
           "rejectionReason" = ${rejectionReason},
-          "updatedAt" = ${now}
+          "updatedAt" = (CAST(${now.toISOString()} AS timestamptz) AT TIME ZONE 'UTC')
       WHERE "id" = ${target.id}
         AND "tenantId" = ${tenantId}
         AND "status"::text = 'PENDING'

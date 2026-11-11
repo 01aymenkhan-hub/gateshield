@@ -8,7 +8,14 @@ const root=path.resolve(__dirname,'../..');
 function load(file,mocks={}) {
   const module={exports:{}};
   const source=ts.transpileModule(fs.readFileSync(path.join(root,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
-  const context={module,exports:module.exports,require:name=>name in mocks?mocks[name]:require(name),process,Buffer,console,Date,Map,setTimeout};
+  const context={module,exports:module.exports,require:name=>{
+    if(name in mocks)return mocks[name];
+    if(name.startsWith('@/')||name.startsWith('./')){
+      const relative=name.startsWith('@/')?'src/'+name.slice(2):path.join(path.dirname(file),name);
+      return load(relative+'.ts',mocks);
+    }
+    return require(name);
+  },process,Buffer,console,Date,Map,Request,Response,setTimeout};
   vm.runInNewContext(source,context,{filename:path.join(root,file)});
   return module.exports;
 }
@@ -91,8 +98,24 @@ test('password changes revoke a session issued one second earlier',async()=>{
   const auth=load('src/lib/auth.ts',{
     'next/headers':{cookies:async()=>({get:()=>({value:'signed-test-token'})})},
     './prisma':{$queryRaw:async()=>[{...decoded,active:true,approvalStatus:'APPROVED',passwordChangedAt:new Date(now)}]},
-    './passwordReset':{ensurePasswordResetSchema:async()=>{}},
+    './operatorQr':{ensureOperatorUserSchema:async()=>{}},
     'jsonwebtoken':{verify:()=>decoded},
   });
   assert.equal(await auth.getSessionUser(),null);
+});
+
+test('password login validates UTF-8 bytes and rejects oversized JSON', async()=>{
+  const {passwordLoginSchema,readJson}=load('src/lib/requestValidation.ts');
+  assert.equal(passwordLoginSchema.safeParse({email:'user@example.invalid',password:'é'.repeat(36)}).success,true);
+  assert.equal(passwordLoginSchema.safeParse({email:'user@example.invalid',password:'é'.repeat(37)}).success,false);
+  const body=new Request('http://localhost/login',{method:'POST',headers:{'Content-Type':'application/json'},body:' '.repeat(17000)});
+  await assert.rejects(readJson(body,passwordLoginSchema),error=>error.status===413);
+});
+
+test('DOMPurify removes active HTML and preserves regular email content',()=>{
+  const {sanitizeEmailHtml}=load('src/lib/sanitizeEmailHtml.ts');
+  const safe=sanitizeEmailHtml('<p>GateShield</p><script>bad()</script><img src=x onerror=bad()><a href="javascript:bad()">bad link</a><a href="https://example.invalid">Portal</a>');
+  assert.match(safe,/<p>GateShield<\/p>/);
+  assert.match(safe,/href="https:\/\/example\.invalid"/);
+  assert.doesNotMatch(safe,/<script|onerror|javascript:/i);
 });

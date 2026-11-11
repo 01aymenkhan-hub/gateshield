@@ -1,7 +1,14 @@
+import { passwordLoginSchema, readJson, RequestValidationError } from '@/lib/requestValidation';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import {
-  comparePassword,
+  checkLoginThrottle,
+  getClientIp,
+  deviceCookieName,
+  DEVICE_COOKIE_MAX_AGE,
+} from '@/lib/rateLimit';
+import {
+  comparePasswordConstantTime,
   generateEmployeeToken,
   EMPLOYEE_TOKEN_COOKIE_NAME,
   EMPLOYEE_STATUS_COOKIE_NAME,
@@ -28,15 +35,20 @@ interface EmployeeLoginRow {
 }
 
 export async function POST(request: NextRequest) {
+  let releaseAttempt: (() => void) | undefined;
   try {
-    const body = await request.json();
-    const rawEmail = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-    const password = typeof body.password === 'string' ? body.password : '';
-
-    if (!rawEmail || !password) {
+    const { email: rawEmail, password } = await readJson(request, passwordLoginSchema);
+    const throttle = checkLoginThrottle(
+      'employee',
+      rawEmail,
+      getClientIp(request),
+      request.cookies.get(deviceCookieName('employee'))?.value
+    );
+    releaseAttempt = throttle.release;
+    if (throttle.limited) {
       return NextResponse.json(
-        { error: 'Email and password are required.' },
-        { status: 400 }
+        { error: `Too many failed sign-in attempts. Please try again in ${throttle.retryAfterSeconds} seconds.` },
+        { status: 429, headers: { 'Retry-After': String(throttle.retryAfterSeconds) } }
       );
     }
 
@@ -63,12 +75,15 @@ export async function POST(request: NextRequest) {
     `;
 
     const user = rows[0];
-    if (!user) {
+    // Verify the password before revealing anything about the account (OWASP A07).
+    const isMatch = await comparePasswordConstantTime(password, user?.passwordHash);
+    if (!user || !isMatch) {
       return NextResponse.json(
         { error: 'Invalid email or password.' },
         { status: 401 }
       );
     }
+    const deviceToken = throttle.succeed();
 
     if (user.role !== 'EMPLOYEE') {
       return NextResponse.json(
@@ -77,14 +92,6 @@ export async function POST(request: NextRequest) {
             'This portal is exclusively for Employees. Administrators and Operators must sign in at /login.',
         },
         { status: 403 }
-      );
-    }
-
-    const isMatch = await comparePassword(password, user.passwordHash);
-    if (!isMatch) {
-      return NextResponse.json(
-        { error: 'Invalid email or password.' },
-        { status: 401 }
       );
     }
 
@@ -187,12 +194,24 @@ export async function POST(request: NextRequest) {
       performedById: user.id,
     });
 
+    // Marks this browser as known so attacker lockouts don't block the real user.
+    response.cookies.set(deviceCookieName('employee'), deviceToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: DEVICE_COOKIE_MAX_AGE,
+    });
+
     return response;
   } catch (error: unknown) {
+    if (error instanceof RequestValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('Employee login error:', error);
     return NextResponse.json(
       { error: 'Internal server error during employee login.' },
       { status: 500 }
     );
+  } finally {
+    releaseAttempt?.();
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
+import { canAccessVisit } from '@/lib/gateAccess';
 import { extractPassCode } from '@/lib/qrUtils';
 import { sanitizeVisitsWithDbFlags } from '@/lib/personSanitizer';
 
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest) {
       orderBy: { checkInTime: 'desc' },
     });
 
-    if (!visit) {
+    // Operators may resolve passes only for their gates or visitors still inside.
+    if (!visit || !canAccessVisit(user, visit)) {
       return NextResponse.json(
         {
           found: false,
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('QR Lookup error:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to lookup QR pass' },
+      { error: 'Failed to lookup QR pass' },
       { status: 500 }
     );
   }

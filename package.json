@@ -7,6 +7,8 @@
     "dev:backend": "node --env-file=backend/.env scripts/start-ocr.cjs",
     "dev:db": "node --env-file=.env scripts/start-database.cjs",
     "db:seed": "node --env-file=.env prisma/seed.js",
+    "db:dev-admin": "node --env-file=.env prisma/seed.js --reset-password",
+    "db:sync": "prisma db push --skip-generate",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
@@ -14,7 +16,9 @@
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
+    "dompurify": "^3.4.17",
     "html5-qrcode": "^2.3.8",
+    "isomorphic-dompurify": "^4.7.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.49.0",
     "next": "16.4.3",
@@ -22,7 +26,8 @@
     "prisma": "^6.19.3",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

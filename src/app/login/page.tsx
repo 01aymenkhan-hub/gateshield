@@ -27,6 +27,7 @@ import PasswordInput from '@/components/ui/PasswordInput';
 import PasswordRecoveryPanel from '@/components/auth/PasswordRecoveryPanel';
 
 type LoginTab = 'qr' | 'email';
+
 type ScreenMode = 'login' | 'register' | 'applicant_status' | 'forgot';
 
 interface ApplicantData {

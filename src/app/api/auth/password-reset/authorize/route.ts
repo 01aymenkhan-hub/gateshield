@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     await prisma.$executeRaw`
       UPDATE "password_reset_requests"
       SET "trackerTokenHash" = ${newTrackerHash},
-          "updatedAt" = NOW()
+          "updatedAt" = (NOW() AT TIME ZONE 'UTC')
       WHERE "id" = ${reqRow.id}
     `;
 

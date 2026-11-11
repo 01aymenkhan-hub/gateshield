@@ -230,12 +230,13 @@ export async function saveImageDataUrlToFile(
 
 /**
  * If the incoming value is a base64 `data:image/...` string, saves it to disk and returns `/api/files/<key>`.
- * If it is already a `/api/files/...` URL or empty, returns it unchanged.
+ * Keeps the record's current stored photo when an edit resubmits it.
  */
 export async function ensureImageStoredAsFileUrl(
   rawUrlOrData: string | null | undefined,
   category: StorageCategory,
-  prefix = 'img'
+  prefix = 'img',
+  currentReference?: string | null
 ): Promise<string | null> {
   if (!rawUrlOrData || typeof rawUrlOrData !== 'string') return null;
   const trimmed = rawUrlOrData.trim();
@@ -246,7 +247,13 @@ export async function ensureImageStoredAsFileUrl(
     return saved.publicApiUrl;
   }
 
-  return trimmed;
+  // Only images already stored by this app may be referenced. External URLs would act as
+  // tracking pixels (leaking staff IPs/timing) and javascript:/data: tricks are rejected.
+  if (trimmed === currentReference && /^\/api\/files\/[A-Za-z0-9/_\-.]+$/.test(trimmed) && !trimmed.includes('..')) {
+    return trimmed;
+  }
+
+  throw new Error('Photo must be an uploaded image.');
 }
 
 /**

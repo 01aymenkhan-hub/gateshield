@@ -7,8 +7,11 @@ const { PrismaClient } = require('@prisma/client');
 const { hash } = require('bcryptjs');
 const prisma = new PrismaClient();
 const base = process.argv[2] || 'http://127.0.0.1:3004';
-const database = new URL(process.env.DATABASE_URL).pathname;
-assert.ok(database.includes('candidate') || process.argv.includes('--production'), 'Use an isolated candidate database unless explicitly testing production.');
+const database = new URL(process.env.DATABASE_URL);
+const local = process.argv.includes('--local') && new URL(base).hostname === '127.0.0.1' &&
+  database.hostname === '127.0.0.1' && database.pathname === '/gatekeeper_local';
+assert.ok(local || database.pathname.includes('candidate') || process.argv.includes('--production'), 'Use a candidate database or explicitly select the test target.');
+assert.equal(process.env.EMAIL_ENABLED, 'false', 'Synthetic tests must not send email');
 const marker = `UpgradeTest${crypto.randomBytes(5).toString('hex')}`;
 const image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
 const rows = [], users = [], people = [], parcels = [], storedFiles = new Set();

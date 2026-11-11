@@ -2,7 +2,9 @@
 const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs');
 const {PrismaClient}=require('@prisma/client'),{hash}=require('bcryptjs');
 const prisma=new PrismaClient(),base=process.argv[2]||'http://127.0.0.1:3005';
-assert.ok(new URL(process.env.DATABASE_URL).pathname.includes('candidate')||process.argv.includes('--production'));
+const database=new URL(process.env.DATABASE_URL);
+const local=process.argv.includes('--local')&&new URL(base).hostname==='127.0.0.1'&&database.hostname==='127.0.0.1'&&database.pathname==='/gatekeeper_local';
+assert.ok(local||database.pathname.includes('candidate')||process.argv.includes('--production'));
 assert.equal(process.env.EMAIL_ENABLED,'false','Synthetic tests must not send email');
 const marker='ResetTest'+crypto.randomBytes(6).toString('hex'),users=[],requestIds=[],rows=[];
 const password=crypto.randomBytes(24).toString('hex'),newPassword=crypto.randomBytes(24).toString('hex');

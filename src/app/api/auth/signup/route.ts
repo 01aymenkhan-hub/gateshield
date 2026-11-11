@@ -1,3 +1,4 @@
+import { RequestValidationError } from '@/lib/requestValidation';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { hashPassword, generateToken, TOKEN_COOKIE_NAME } from '@/lib/auth';
@@ -5,51 +6,66 @@ import { logAudit } from '@/lib/audit';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, email, password, role } = body;
+    // Public self-signup is only for first-run bootstrap of the very first ADMIN.
+    // Afterwards, staff accounts are created by an ADMIN (/api/users) or requested
+    // through /api/operator/register, which requires ADMIN approval (OWASP A01).
+    if ((await prisma.user.count()) > 0) {
+      return NextResponse.json(
+        {
+          error:
+            'Public sign-up is disabled. Ask an administrator for an account or submit an operator registration request from the login page.',
+          code: 'SIGNUP_DISABLED',
+        },
+        { status: 403 }
+      );
+    }
 
-    if (!name || !email || !password) {
+    const body = await request.json().catch(() => null);
+    const name = typeof body?.name === 'string' ? body.name.trim() : '';
+    const email = typeof body?.email === 'string' ? body.email : '';
+    const password = typeof body?.password === 'string' ? body.password : '';
+
+    if (!name || !email || !password || name.length > 120 || email.length > 254) {
       return NextResponse.json(
         { error: 'Name, email, and password are required' },
         { status: 400 }
       );
     }
 
-    if (password.length < 6) {
+    if (password.length < 8 || password.length > 256) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
+        { error: 'Password must be between 8 and 256 characters' },
         { status: 400 }
       );
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-
-    const existingUser = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 }
-      );
-    }
-
-    // Check if this is the first user ever; if so, make them ADMIN
-    const totalUsers = await prisma.user.count();
-    const assignedRole = totalUsers === 0 ? 'ADMIN' : (role === 'ADMIN' ? 'ADMIN' : 'OPERATOR');
-
     const passwordHash = await hashPassword(password);
 
-    const newUser = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        email: normalizedEmail,
-        passwordHash,
-        role: assignedRole,
-        active: true,
+    // Re-check inside a serializable transaction so two concurrent first-run
+    // requests cannot both become ADMIN.
+    const newUser = await prisma.$transaction(
+      async (tx) => {
+        if ((await tx.user.count()) > 0) return null;
+        return tx.user.create({
+          data: {
+            name,
+            email: normalizedEmail,
+            passwordHash,
+            role: 'ADMIN',
+            active: true,
+          },
+        });
       },
-    });
+      { isolationLevel: 'Serializable' }
+    );
+
+    if (!newUser) {
+      return NextResponse.json(
+        { error: 'Public sign-up is disabled.', code: 'SIGNUP_DISABLED' },
+        { status: 403 }
+      );
+    }
 
     const token = generateToken({
       id: newUser.id,
@@ -87,10 +103,11 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    if (error instanceof RequestValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('Signup error:', error);
     return NextResponse.json(
-      { error: error?.message || 'Internal server error during signup' },
+      { error: 'Internal server error during signup' },
       { status: 500 }
     );
   }

@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error generating report:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to generate report' },
+      { error: 'Failed to generate report' },
       { status: 500 }
     );
   }

@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error fetching dashboard stats:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to fetch dashboard stats' },
+      { error: 'Failed to fetch dashboard stats' },
       { status: 500 }
     );
   }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { canAccessVisit } from '@/lib/gateAccess';
+import { sanitizeVisitsWithDbFlags } from '@/lib/personSanitizer';
 
 export async function GET(
   request: NextRequest,
@@ -25,14 +27,16 @@ export async function GET(
       },
     });
 
-    if (!visit) {
+    if (!visit || !canAccessVisit(user, visit)) {
       return NextResponse.json({ error: 'Visit record not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, visit });
+    // Strip raw document image data and internal storage paths before responding.
+    const [sanitizedVisit] = await sanitizeVisitsWithDbFlags([visit]);
+    return NextResponse.json({ success: true, visit: sanitizedVisit });
   } catch (error: any) {
     console.error('Error fetching visit:', error);
-    return NextResponse.json({ error: error?.message || 'Failed to fetch visit' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch visit' }, { status: 500 });
   }
 }
 
@@ -93,7 +97,7 @@ export async function DELETE(
   } catch (error: any) {
     console.error('Error deleting visit:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to delete visit record' },
+      { error: 'Failed to delete visit record' },
       { status: 500 }
     );
   }

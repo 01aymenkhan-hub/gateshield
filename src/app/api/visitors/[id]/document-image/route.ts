@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
+import { canAccessPerson, visitAccessWhere } from '@/lib/gateAccess';
 import { logAudit } from '@/lib/audit';
 import {
   validateDocumentImageDataUrl,
@@ -74,46 +75,38 @@ export async function GET(
     `;
 
     const person = rows[0];
-    if (!person) {
+    // Operators only get images of people from their gates or currently inside.
+    if (!person || !(await canAccessPerson(user, person.id))) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 });
+    }
+    const visitScope = visitAccessWhere(user);
+    if (visitId && !(await prisma.visit.findFirst({
+      where: { id: visitId, personId: id, ...visitScope },
+      select: { id: true },
+    }))) {
+      return NextResponse.json({ error: 'Visit not found' }, { status: 404 });
     }
 
     // 1. Handle Delivery Incoming / Outgoing Documents from Visit or Person
     if (docType === 'delivery_in' || docType === 'delivery_doc' || docType === 'delivery_out') {
-      const visitRows = visitId
-        ? await prisma.$queryRaw<
-            Array<{
-              incomingDocPath: string | null;
-              incomingDocMime: string | null;
-              outgoingDocPath: string | null;
-              outgoingDocMime: string | null;
-            }>
-          >`
-            SELECT "incomingDocPath", "incomingDocMime", "outgoingDocPath", "outgoingDocMime"
-            FROM "visits"
-            WHERE "id" = ${visitId} AND "personId" = ${id}
-            LIMIT 1
-          `
-        : await prisma.$queryRaw<
-            Array<{
-              incomingDocPath: string | null;
-              incomingDocMime: string | null;
-              outgoingDocPath: string | null;
-              outgoingDocMime: string | null;
-            }>
-          >`
-            SELECT "incomingDocPath", "incomingDocMime", "outgoingDocPath", "outgoingDocMime"
-            FROM "visits"
-            WHERE "personId" = ${id}
-              AND (
-                (${docType === 'delivery_out'} AND "outgoingDocPath" IS NOT NULL)
-                OR (${docType !== 'delivery_out'} AND "incomingDocPath" IS NOT NULL)
-              )
-            ORDER BY "checkInTime" DESC
-            LIMIT 1
-          `;
-
-      const visitDoc = visitRows[0];
+      const visitDoc = await prisma.visit.findFirst({
+        where: {
+          personId: id,
+          ...visitScope,
+          ...(visitId
+            ? { id: visitId }
+            : docType === 'delivery_out'
+              ? { outgoingDocPath: { not: null } }
+              : { incomingDocPath: { not: null } }),
+        },
+        orderBy: { checkInTime: 'desc' },
+        select: { incomingDocPath: true, incomingDocMime: true, outgoingDocPath: true, outgoingDocMime: true },
+      });
+      const mayReadLegacy = !visitId && !visitDoc && (
+        user.role === 'ADMIN' || !(await prisma.visit.findFirst({
+          where: { personId: id, NOT: visitScope }, select: { id: true },
+        }))
+      );
 
       if (docType === 'delivery_out') {
         if (visitDoc?.outgoingDocPath) {
@@ -137,7 +130,7 @@ export async function GET(
 
       // Incoming delivery document: check visit.incomingDocPath -> (when no visitId specified) person.deliveryDocImagePath -> legacy Base64
       const incomingFilePath =
-        visitDoc?.incomingDocPath || (!visitId ? person.deliveryDocImagePath : null);
+        visitDoc?.incomingDocPath || (mayReadLegacy ? person.deliveryDocImagePath : null);
       if (incomingFilePath) {
         const fileData = await readStoredFileBuffer(incomingFilePath);
         if (fileData) {
@@ -153,7 +146,7 @@ export async function GET(
         }
       }
 
-      if (!visitId && person.deliveryDocImageData) {
+      if (mayReadLegacy && person.deliveryDocImageData) {
         const parsed = validateDocumentImageDataUrl(person.deliveryDocImageData);
         const contentType = person.deliveryDocImageMime || parsed.mime || 'image/jpeg';
         return new NextResponse(new Uint8Array(parsed.buffer), {
@@ -258,7 +251,7 @@ export async function POST(
       select: { id: true, fullName: true },
     });
 
-    if (!existingPerson) {
+    if (!existingPerson || !(await canAccessPerson(user, existingPerson.id))) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 });
     }
 

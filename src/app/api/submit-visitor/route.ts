@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionUser } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
 
     const {
@@ -31,12 +37,11 @@ export async function POST(req: NextRequest) {
 
     const timestamp = new Date().toISOString();
 
+    // Do not log personal data (phone numbers, host names) to server logs.
     console.log(
-      `[Visitor Submission] New visitor registered: ${recordId} - Card No: ${
-        visitorCardNo || "N/A"
-      } - Host: ${visitInfo?.meetName || "N/A"} (${visitInfo?.department || "N/A"}) - Doc: ${documentType} - Phone: ${
-        phoneNumber || "N/A"
-      } - Photo attached: ${Boolean(visitorPhotoPreview)}`
+      `[Visitor Submission] ${recordId} - Doc: ${String(documentType).slice(0, 16)} - Visit info: ${Boolean(
+        visitInfo
+      )} - Phone: ${Boolean(phoneNumber)} - Photo: ${Boolean(visitorPhotoPreview)}`
     );
 
     return NextResponse.json({
@@ -52,7 +57,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: `Submission failed: ${message}`,
+        error: "Submission failed.",
       },
       { status: 500 }
     );

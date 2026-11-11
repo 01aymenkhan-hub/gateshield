@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
+import { getJwtSecret } from '@/lib/secrets';
 
 const COOKIE_PREFIX = process.env.AUTH_COOKIE_PREFIX || 'gk';
 export const RESET_TRACKER_COOKIE = `${COOKIE_PREFIX}_pwd_reset_tracker`;
@@ -36,11 +37,11 @@ export interface PasswordResetRequestRow {
   updatedAt: Date;
 }
 
-const SECRET_SEED =
-  (process.env.JWT_SECRET || 'gatekeeper_secret_jwt_key_2026') + ':gateshield_pwd_reset_v1';
-
 function getEncryptionKey(): Buffer {
-  return crypto.createHash('sha256').update(SECRET_SEED).digest();
+  return crypto
+    .createHash('sha256')
+    .update(`${getJwtSecret()}:gateshield_pwd_reset_v1`)
+    .digest();
 }
 
 export function getTenantId(): string {
@@ -266,10 +267,10 @@ export async function expireStalePasswordResetRequests(): Promise<void> {
       UPDATE "password_reset_requests"
       SET "status" = 'EXPIRED'::"PasswordResetStatus",
           "resetTokenHash" = NULL,
-          "updatedAt" = NOW()
+          "updatedAt" = (NOW() AT TIME ZONE 'UTC')
       WHERE "status"::text = 'APPROVED'
         AND "expiresAt" IS NOT NULL
-        AND "expiresAt" < NOW()
+        AND "expiresAt" < (NOW() AT TIME ZONE 'UTC')
     `;
   } catch (err) {
     console.error('[PasswordReset] Failed to expire stale requests:', err);

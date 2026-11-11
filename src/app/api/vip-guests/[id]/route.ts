@@ -145,7 +145,7 @@ export async function PATCH(
       let photoUrl: string | null = rawPhotoUrl;
       if (rawPhotoUrl) {
         try {
-          photoUrl = await ensureImageStoredAsFileUrl(rawPhotoUrl, 'vip', 'vip');
+          photoUrl = await ensureImageStoredAsFileUrl(rawPhotoUrl, 'vip', 'vip', vip.photoUrl);
         } catch (imgErr: any) {
           return NextResponse.json(
             { error: imgErr?.message || 'Invalid VIP Guest photo format.' },

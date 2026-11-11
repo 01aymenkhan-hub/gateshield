@@ -1,6 +1,8 @@
+import { RequestValidationError } from '@/lib/requestValidation';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
+import { checkAnonymousThrottle, getClientIp } from '@/lib/rateLimit';
 import {
   hashPassword,
   generateEmployeeToken,
@@ -108,6 +110,21 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Throttle self-registration: stops queue spam and bulk email enumeration via the
+    // "already exists" response. Per-IP behind a trusted proxy, global otherwise.
+    const registerThrottle = checkAnonymousThrottle('register-employee', getClientIp(request), {
+      windowMs: 60 * 60 * 1000,
+      perIp: 5,
+      globalWhenDirect: 60,
+    });
+    if (registerThrottle.limited) {
+      return NextResponse.json(
+        { error: 'Too many registration attempts. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(registerThrottle.retryAfterSeconds) } }
+      );
+    }
+    registerThrottle.hit();
 
     // Check duplicate email in users table
     const existingUsers = await prisma.$queryRaw<
@@ -278,6 +295,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error: unknown) {
+    if (error instanceof RequestValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('Employee registration error:', error);
     return NextResponse.json(
       { error: 'Failed to submit employee registration request.' },

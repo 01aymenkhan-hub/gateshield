@@ -1,3 +1,4 @@
+import { RequestValidationError } from '@/lib/requestValidation';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
@@ -443,6 +444,7 @@ export async function PATCH(
       message: 'Operator updated successfully.',
     });
   } catch (error: unknown) {
+    if (error instanceof RequestValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('[Admin Operators PATCH] Error:', error);
     return NextResponse.json(
       { error: 'Failed to update operator.' },

@@ -50,7 +50,7 @@ export async function GET() {
     return NextResponse.json({ success: true, gates: assignedGates });
   } catch (error: any) {
     console.error('Error fetching gates:', error);
-    return NextResponse.json({ error: error.message || 'Failed to fetch gates' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch gates' }, { status: 500 });
   }
 }
 
@@ -88,6 +88,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, gate });
   } catch (error: any) {
     console.error('Error creating gate:', error);
-    return NextResponse.json({ error: error.message || 'Failed to create gate' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create gate' }, { status: 500 });
   }
 }

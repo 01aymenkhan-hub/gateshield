@@ -1,3 +1,5 @@
+import { passwordSchema, readJson, RequestValidationError } from '@/lib/requestValidation';
+import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
@@ -26,17 +28,10 @@ export async function POST(request: NextRequest) {
     await ensurePasswordResetSchema();
     await expireStalePasswordResetRequests();
 
-    const body = await request.json().catch(() => ({}));
-    const password = typeof body.password === 'string' ? body.password : '';
-    const confirmPassword =
-      typeof body.confirmPassword === 'string' ? body.confirmPassword : '';
-
-    if (!password || password.length < 6) {
-      return NextResponse.json(
-        { error: 'New password must be at least 6 characters long.' },
-        { status: 400 }
-      );
-    }
+    const { password, confirmPassword } = await readJson(request, z.object({
+      password: passwordSchema.refine(value => value.length >= 6, 'New password must be at least 6 characters long.'),
+      confirmPassword: passwordSchema,
+    }));
 
     if (password !== confirmPassword) {
       return NextResponse.json(
@@ -175,14 +170,16 @@ export async function POST(request: NextRequest) {
       const consumed = await tx.$executeRaw`
         UPDATE "password_reset_requests"
         SET "status" = 'COMPLETED'::"PasswordResetStatus",
-            "usedAt" = ${now},
-            "completedAt" = ${now},
+            "usedAt" = (CAST(${now.toISOString()} AS timestamptz) AT TIME ZONE 'UTC'),
+            "completedAt" = (CAST(${now.toISOString()} AS timestamptz) AT TIME ZONE 'UTC'),
             "resetTokenHash" = NULL,
-            "updatedAt" = ${now}
+            "updatedAt" = (CAST(${now.toISOString()} AS timestamptz) AT TIME ZONE 'UTC')
         WHERE "id" = ${target!.id}
           AND "userId" = ${target!.userId}
           AND "status"::text = 'APPROVED'
           AND "usedAt" IS NULL
+          AND "resetTokenHash" = ${target!.resetTokenHash}
+          AND ("expiresAt" IS NULL OR "expiresAt" > (NOW() AT TIME ZONE 'UTC'))
       `;
 
       if (consumed === 0) {
@@ -192,8 +189,8 @@ export async function POST(request: NextRequest) {
       await tx.$executeRaw`
         UPDATE "users"
         SET "passwordHash" = ${newPasswordHash},
-            "passwordChangedAt" = ${now},
-            "updatedAt" = ${now}
+            "passwordChangedAt" = (CAST(${now.toISOString()} AS timestamptz) AT TIME ZONE 'UTC'),
+            "updatedAt" = (CAST(${now.toISOString()} AS timestamptz) AT TIME ZONE 'UTC')
         WHERE "id" = ${target!.userId}
       `;
 
@@ -269,6 +266,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    if (error instanceof RequestValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('[PasswordReset Complete POST] Error:', error);
     return NextResponse.json(
       { error: 'Failed to update password. Please try again.' },

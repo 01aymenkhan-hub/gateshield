@@ -182,7 +182,7 @@ export async function PATCH(
 
       let photoUrl: string | null = rawPhotoUrl;
       try {
-        photoUrl = await ensureImageStoredAsFileUrl(rawPhotoUrl, 'parcels', 'parcel');
+        photoUrl = await ensureImageStoredAsFileUrl(rawPhotoUrl, 'parcels', 'parcel', parcel.photoUrl);
       } catch (imgErr: any) {
         return NextResponse.json(
           { error: imgErr?.message || 'Invalid Parcel Photo format.' },

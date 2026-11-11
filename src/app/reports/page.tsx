@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import AdminGuard from '@/components/auth/AdminGuard';
 import DateFilterInput from '@/components/ui/DateFilterInput';
+import { downloadCsv } from '@/utils/csv';
 import {
   FileBarChart,
   Download,
@@ -83,28 +84,23 @@ export default function ReportsPage() {
     ];
 
     const rows = reportData.visits.map((v: any) => [
-      `"${v.visitNumber}"`,
-      `"${v.person?.fullName || ''}"`,
-      `"${v.person?.category || ''}"`,
-      `"${v.person?.cnicNumber || v.person?.dlsNumber || ''}"`,
-      `"${v.person?.phoneNumber || ''}"`,
-      `"${v.hostName}"`,
-      `"${v.department}"`,
-      `"${v.visitorCardNo || ''}"`,
-      `"${v.entryGate?.name || ''}"`,
-      `"${new Date(v.checkInTime).toLocaleString()}"`,
-      `"${v.exitGate?.name || ''}"`,
-      `"${v.checkOutTime ? new Date(v.checkOutTime).toLocaleString() : ''}"`,
-      `"${v.status}"`,
+      v.visitNumber,
+      v.person?.fullName,
+      v.person?.category,
+      v.person?.cnicNumber || v.person?.dlsNumber,
+      v.person?.phoneNumber,
+      v.hostName,
+      v.department,
+      v.visitorCardNo,
+      v.entryGate?.name,
+      new Date(v.checkInTime).toLocaleString(),
+      v.exitGate?.name,
+      v.checkOutTime ? new Date(v.checkOutTime).toLocaleString() : '',
+      v.status,
     ]);
 
-    const csv = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e: any[]) => e.join(','))].join('\n');
-    const link = document.createElement('a');
-    link.setAttribute('href', encodeURI(csv));
-    link.setAttribute('download', `gatekeeper_report_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Escapes quotes and neutralizes =,+,-,@ formulas (CSV injection).
+    downloadCsv(`gatekeeper_report_${Date.now()}.csv`, headers, rows);
   };
 
   const handlePrint = () => {

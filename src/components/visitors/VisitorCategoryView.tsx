@@ -31,6 +31,7 @@ import CheckOutModal from '@/components/modals/CheckOutModal';
 import VisitorBadgeModal from '@/components/modals/VisitorBadgeModal';
 import DateFilterInput from '@/components/ui/DateFilterInput';
 import { useAuth } from '@/context/AuthContext';
+import { downloadCsv } from '@/utils/csv';
 
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
   Users,
@@ -213,29 +214,25 @@ export default function VisitorCategoryView({
     ];
 
     const rows = visits.map((v) => [
-      `"${v.visitNumber}"`,
-      `"${v.person?.fullName || ''}"`,
-      `"${v.person?.category || ''}"`,
-      `"${v.person?.cnicNumber || v.person?.dlsNumber || ''}"`,
-      `"${v.person?.phoneNumber || ''}"`,
-      `"${v.hostName}"`,
-      `"${v.department}"`,
-      `"${String(v.person?.category || '').toUpperCase() === 'DELIVERY' ? v.vehicleNo || v.visitorCardNo || '' : v.visitorCardNo || ''}"`,
-      `"${v.entryGate?.name || ''}"`,
-      `"${new Date(v.checkInTime).toLocaleString()}"`,
-      `"${v.exitGate?.name || ''}"`,
-      `"${v.checkOutTime ? new Date(v.checkOutTime).toLocaleString() : ''}"`,
-      `"${v.status}"`,
+      v.visitNumber,
+      v.person?.fullName,
+      v.person?.category,
+      v.person?.cnicNumber || v.person?.dlsNumber,
+      v.person?.phoneNumber,
+      v.hostName,
+      v.department,
+      String(v.person?.category || '').toUpperCase() === 'DELIVERY'
+        ? v.vehicleNo || v.visitorCardNo
+        : v.visitorCardNo,
+      v.entryGate?.name,
+      new Date(v.checkInTime).toLocaleString(),
+      v.exitGate?.name,
+      v.checkOutTime ? new Date(v.checkOutTime).toLocaleString() : '',
+      v.status,
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `${title.toLowerCase().replace(/\s+/g, '_')}_export_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Escapes quotes and neutralizes =,+,-,@ formulas (CSV injection).
+    downloadCsv(`${title.toLowerCase().replace(/\s+/g, '_')}_export_${Date.now()}.csv`, headers, rows);
   };
 
   return (

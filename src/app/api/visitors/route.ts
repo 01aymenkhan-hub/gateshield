@@ -18,8 +18,9 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q')?.trim();
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '25', 10);
+    // Clamp pagination: NaN, negatives or huge limits must not crash or dump the whole table.
+    const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(searchParams.get('limit') || '25', 10) || 25));
     const skip = (page - 1) * limit;
 
     const where: any = {};
@@ -144,7 +145,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error fetching visitors list:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to fetch visitors' },
+      { error: 'Failed to fetch visitors' },
       { status: 500 }
     );
   }

@@ -15,6 +15,59 @@ import {
   ensureImageStoredAsFileUrl,
   StoredFileResult,
 } from '@/lib/fileStorage';
+import {
+  InputError,
+  isPersonCategory,
+  keepExisting,
+  normalizeCnic,
+  normalizeDls,
+  optionalText,
+  requiredText,
+  resolvePersonForCheckIn,
+} from '@/lib/identity';
+
+function imageField(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+/** Validates types, lengths, enums and identity formats before anything touches the DB. */
+function parseCheckInBody(b: Record<string, unknown>) {
+  const rawCategory = typeof b.category === 'string' && b.category.trim() ? b.category.trim().toUpperCase() : 'VISITOR';
+  if (!isPersonCategory(rawCategory)) {
+    throw new InputError('Invalid visitor category.');
+  }
+  return {
+    fullName: requiredText(b.fullName, 'Full name', 120),
+    fatherHusbandName: optionalText(b.fatherHusbandName, 'Father/Husband name', 120),
+    cnicNumber: normalizeCnic(b.cnicNumber),
+    dlsNumber: normalizeDls(b.dlsNumber),
+    category: rawCategory,
+    gender: optionalText(b.gender, 'Gender', 20),
+    dateOfBirth: optionalText(b.dateOfBirth, 'Date of birth', 20),
+    dateOfIssue: optionalText(b.dateOfIssue, 'Date of issue', 20),
+    dateOfExpiry: optionalText(b.dateOfExpiry, 'Date of expiry', 20),
+    licensingAuthority: optionalText(b.licensingAuthority, 'Licensing authority', 120),
+    identification: optionalText(b.identification, 'Identification', 120),
+    presentAddress: optionalText(b.presentAddress, 'Present address', 300),
+    permanentAddress: optionalText(b.permanentAddress, 'Permanent address', 300),
+    phoneNumber: optionalText(b.phoneNumber, 'Phone number', 20),
+    photoUrl: imageField(b.photoUrl),
+    cnicImageData: imageField(b.cnicImageData),
+    dlsImageData: imageField(b.dlsImageData),
+    deliveryDocImageData: imageField(b.deliveryDocImageData),
+    deliverySource: optionalText(b.deliverySource, 'Delivery source', 120),
+    company: optionalText(b.company, 'Company', 120),
+    hostName: optionalText(b.hostName, 'Host name', 120),
+    department: optionalText(b.department, 'Department', 120),
+    departmentId: optionalText(b.departmentId, 'Department', 64),
+    purpose: optionalText(b.purpose, 'Purpose', 300),
+    visitorCardNo: optionalText(b.visitorCardNo, 'Visitor card number', 30),
+    vehicleNo: optionalText(b.vehicleNo, 'Vehicle number', 30),
+    belongings: optionalText(b.belongings, 'Belongings', 500),
+    entryGateId: optionalText(b.entryGateId, 'Gate', 64),
+    notes: optionalText(b.notes, 'Notes', 1000),
+  };
+}
 
 function formatCardNoForStorage(raw: string): string {
   return raw
@@ -38,7 +91,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const rawBody = await request.json().catch(() => null);
+    if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) {
+      return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    }
+    const body = parseCheckInBody(rawBody as Record<string, unknown>);
     const {
       fullName,
       fatherHusbandName,
@@ -296,8 +353,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const cleanCnic = cnicNumber ? cnicNumber.trim() : null;
-    const cleanDls = dlsNumber ? dlsNumber.trim() : null;
+    // Already canonicalized by parseCheckInBody (CNIC -> XXXXX-XXXXXXX-X, DLS -> upper case).
+    const cleanCnic = cnicNumber;
+    const cleanDls = dlsNumber;
 
     // Concurrency-safe transaction: acquire advisory lock on normalized card key,
     // verify card is not assigned to any active visitor, verify person is not blacklisted or already inside,
@@ -354,36 +412,13 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      let existingPerson = null;
-
-      if (cleanCnic) {
-        existingPerson = await tx.person.findUnique({
-          where: { cnicNumber: cleanCnic },
-        });
-      }
-
-      if (!existingPerson && cleanDls) {
-        existingPerson = await tx.person.findUnique({
-          where: { dlsNumber: cleanDls },
-        });
-      }
-
-      if (!existingPerson && cleanPhone) {
-        existingPerson = await tx.person.findFirst({
-          where: { phoneNumber: cleanPhone },
-        });
-      }
-
-      if (existingPerson && existingPerson.isBlacklisted) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const blacklistErr: any = new Error(
-          `ACCESS DENIED: This person is blacklisted! Reason: ${existingPerson.blacklistReason || 'Security alert'}`
-        );
-        blacklistErr.status = 403;
-        blacklistErr.blacklisted = true;
-        blacklistErr.person = sanitizePersonForClient(existingPerson);
-        throw blacklistErr;
-      }
+      // Identity documents decide who this is; blacklist is checked across CNIC/DLS/phone
+      // in any formatting (throws BlacklistedError / IdentityConflictError).
+      const existingPerson = await resolvePersonForCheckIn(tx, {
+        cnic: cleanCnic,
+        dls: cleanDls,
+        phone: cleanPhone,
+      });
 
       if (existingPerson) {
         const activeVisit = await tx.visit.findFirst({
@@ -406,25 +441,26 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Fields left blank on a revisit keep their stored values instead of being wiped.
+      const prev = existingPerson;
       const personData = {
         fullName: fullName.trim(),
-        fatherHusbandName: fatherHusbandName?.trim() || null,
-        cnicNumber: cleanCnic,
-        dlsNumber: cleanDls,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        category: category as any,
-        gender: gender?.trim() || null,
-        dateOfBirth: dateOfBirth?.trim() || null,
-        dateOfIssue: dateOfIssue?.trim() || null,
-        dateOfExpiry: dateOfExpiry?.trim() || null,
-        licensingAuthority: licensingAuthority?.trim() || null,
-        identification: identification?.trim() || null,
-        presentAddress: presentAddress?.trim() || null,
-        permanentAddress: permanentAddress?.trim() || null,
-        phoneNumber: cleanPhone || existingPerson?.phoneNumber || null,
-        photoUrl: storedProfilePhotoUrl || existingPerson?.photoUrl || null,
-        company: effectiveCompany || existingPerson?.company || null,
-        belongings: belongings?.trim() || null,
+        fatherHusbandName: keepExisting(fatherHusbandName, prev?.fatherHusbandName),
+        cnicNumber: keepExisting(cleanCnic, prev?.cnicNumber),
+        dlsNumber: keepExisting(cleanDls, prev?.dlsNumber),
+        category,
+        gender: keepExisting(gender, prev?.gender),
+        dateOfBirth: keepExisting(dateOfBirth, prev?.dateOfBirth),
+        dateOfIssue: keepExisting(dateOfIssue, prev?.dateOfIssue),
+        dateOfExpiry: keepExisting(dateOfExpiry, prev?.dateOfExpiry),
+        licensingAuthority: keepExisting(licensingAuthority, prev?.licensingAuthority),
+        identification: keepExisting(identification, prev?.identification),
+        presentAddress: keepExisting(presentAddress, prev?.presentAddress),
+        permanentAddress: keepExisting(permanentAddress, prev?.permanentAddress),
+        phoneNumber: keepExisting(cleanPhone, prev?.phoneNumber),
+        photoUrl: keepExisting(storedProfilePhotoUrl, prev?.photoUrl),
+        company: keepExisting(effectiveCompany, prev?.company),
+        belongings: belongings || null,
       };
 
       const savedPerson = existingPerson
@@ -656,10 +692,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Never echo internal (Prisma/SQL) messages: they can contain visitor PII and schema details.
     console.error('Check-in error:', error);
-    return NextResponse.json(
-      { error: err?.message || 'Failed to complete check-in' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to complete check-in' }, { status: 500 });
   }
 }

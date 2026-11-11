@@ -1,10 +1,10 @@
 import crypto from 'crypto';
+import { getJwtSecret } from './secrets';
 
 const ALGORITHM = 'aes-256-gcm';
-const SECRET_KEY = crypto
-  .createHash('sha256')
-  .update(process.env.JWT_SECRET || 'gatekeeper_secret_jwt_key_2026')
-  .digest();
+function getQrEncryptionKey(): Buffer {
+  return crypto.createHash('sha256').update(getJwtSecret()).digest();
+}
 
 /**
  * Generates a cryptographically secure random token for an operator.
@@ -32,7 +32,7 @@ export function hashOperatorQrToken(token: string): string {
  */
 export function encryptOperatorQrToken(token: string): string {
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv(ALGORITHM, SECRET_KEY, iv);
+  const cipher = crypto.createCipheriv(ALGORITHM, getQrEncryptionKey(), iv);
   let encrypted = cipher.update(token.trim(), 'utf8', 'hex');
   encrypted += cipher.final('hex');
   const authTag = cipher.getAuthTag();
@@ -52,7 +52,7 @@ export function decryptOperatorQrToken(encryptedPayload: string): string | null 
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
 
-    const decipher = crypto.createDecipheriv(ALGORITHM, SECRET_KEY, iv);
+    const decipher = crypto.createDecipheriv(ALGORITHM, getQrEncryptionKey(), iv);
     decipher.setAuthTag(authTag);
 
     let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
@@ -104,7 +104,10 @@ export function cleanOperatorQrToken(raw: string): string {
 // In-memory rate limiting map for QR login attempts per IP
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 
-export function checkQrLoginRateLimit(ip: string): { allowed: boolean; remainingWaitMs?: number } {
+export function checkQrLoginRateLimit(
+  ip: string,
+  maxAttempts = 15
+): { allowed: boolean; remainingWaitMs?: number } {
   const now = Date.now();
   const record = loginAttempts.get(ip);
 
@@ -113,7 +116,7 @@ export function checkQrLoginRateLimit(ip: string): { allowed: boolean; remaining
     return { allowed: true };
   }
 
-  if (record.count >= 15) {
+  if (record.count >= maxAttempts) {
     return { allowed: false, remainingWaitMs: record.resetAt - now };
   }
 

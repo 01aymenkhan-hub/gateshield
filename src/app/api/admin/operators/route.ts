@@ -1,3 +1,4 @@
+import { RequestValidationError } from '@/lib/requestValidation';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
@@ -546,6 +547,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error: unknown) {
+    if (error instanceof RequestValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('[Admin Operators POST] Error:', error);
     const errMsg = error instanceof Error ? error.message : String(error);
     if (

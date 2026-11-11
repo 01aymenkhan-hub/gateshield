@@ -1,3 +1,4 @@
+import { sanitizeEmailHtml } from '@/lib/sanitizeEmailHtml';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import prisma from '@/lib/prisma';
@@ -208,7 +209,7 @@ async function dispatchEmailWithOutbox(params: {
       to: recipientEmail,
       subject: params.subject,
       text: params.text,
-      html: params.html,
+      html: sanitizeEmailHtml(params.html),
     });
 
     const messageId = info?.messageId || null;

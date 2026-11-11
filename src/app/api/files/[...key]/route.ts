@@ -1,8 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser, getEmployeeSessionUser } from '@/lib/auth';
 import { readStoredFileBuffer, resolveSafeStoragePath } from '@/lib/fileStorage';
+import prisma from '@/lib/prisma';
+import { visitAccessWhere } from '@/lib/gateAccess';
+import type { AuthUser, EmployeeAuthUser } from '@/lib/auth';
 
 const STAFF_ONLY_PREFIXES = ['cnic/', 'dls/', 'delivery/incoming/', 'delivery/outgoing/'];
+
+async function mayReadFile(key: string, staff: AuthUser | null, employee: EmployeeAuthUser | null) {
+  const references = [key, '/api/files/' + key, 'uploads/' + key, '/uploads/' + key];
+  const ref = { in: references };
+  if (key.startsWith('profiles/') || key.startsWith('cnic/') || key.startsWith('dls/')) {
+    if (!staff) return false;
+    const ownerField = key.startsWith('profiles/') ? 'photoUrl' : key.startsWith('cnic/') ? 'cnicImagePath' : 'dlsImagePath';
+    return Boolean(await prisma.person.findFirst({
+      where: { [ownerField]: ref, ...(staff.role === 'OPERATOR' ? { visits: { some: visitAccessWhere(staff) } } : {}) },
+      select: { id: true },
+    }));
+  }
+  if (key.startsWith('delivery/')) {
+    if (!staff) return false;
+    const incoming = key.startsWith('delivery/incoming/');
+    const ownerField = incoming ? 'incomingDocPath' : 'outgoingDocPath';
+    const linked = await prisma.visit.findFirst({ where: { [ownerField]: ref }, select: { id: true } });
+    if (linked) return Boolean(await prisma.visit.findFirst({
+      where: { [ownerField]: ref, ...visitAccessWhere(staff) }, select: { id: true },
+    }));
+    return incoming && Boolean(await prisma.person.findFirst({
+      where: {
+        deliveryDocImagePath: ref,
+        ...(staff.role === 'OPERATOR' ? { visits: { some: visitAccessWhere(staff), every: visitAccessWhere(staff) } } : {}),
+      },
+      select: { id: true },
+    }));
+  }
+  if (key.startsWith('parcels/')) return Boolean(await prisma.parcel.findFirst({
+    where: { photoUrl: ref, ...(!staff ? { employeeId: employee?.id } : {}) }, select: { id: true },
+  }));
+  if (key.startsWith('invitations/')) return Boolean(await prisma.guestInvitation.findFirst({
+    where: { guestPhotoUrl: ref, ...(!staff ? { employeeId: employee?.id } : {}) }, select: { id: true },
+  }));
+  return Boolean(staff && key.startsWith('vip/') && await prisma.vipGuest.findFirst({
+    where: { photoUrl: ref }, select: { id: true },
+  }));
+}
 
 export async function GET(
   _request: NextRequest,
@@ -28,17 +69,21 @@ export async function GET(
     );
 
     const staffUser = await getSessionUser();
+    const employee = !staffUser && !isStaffOnly ? await getEmployeeSessionUser() : null;
     if (isStaffOnly) {
       if (!staffUser || (staffUser.role !== 'ADMIN' && staffUser.role !== 'OPERATOR')) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     } else {
       if (!staffUser) {
-        const empUser = await getEmployeeSessionUser();
-        if (!empUser) {
+        if (!employee) {
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
       }
+    }
+
+    if (!(await mayReadFile(normalizedKey, staffUser, employee))) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
     const fileData = await readStoredFileBuffer(normalizedKey);
@@ -51,7 +96,7 @@ export async function GET(
       headers: {
         'Content-Type': fileData.mime,
         'Content-Length': String(fileData.size),
-        'Cache-Control': 'private, max-age=3600',
+        'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff',
       },
     });

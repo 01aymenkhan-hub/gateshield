@@ -1,3 +1,6 @@
+import { z } from 'zod';
+import { readJson, RequestValidationError } from '@/lib/requestValidation';
+import { getClientIp } from '@/lib/rateLimit';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { generateToken, TOKEN_COOKIE_NAME, OPERATOR_STATUS_COOKIE_NAME } from '@/lib/auth';
@@ -11,13 +14,11 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get client IP for rate limiting
-    const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown-ip';
-
-    const rateLimit = checkQrLoginRateLimit(ip);
+    // Client IP only from a trusted proxy; spoofed X-Forwarded-For no longer opens new buckets.
+    // Without a proxy every client shares one bucket, so it gets a larger global budget
+    // (QR tokens are 256-bit encrypted, so this limit is anti-flood, not anti-guessing).
+    const ip = getClientIp(request);
+    const rateLimit = checkQrLoginRateLimit(ip, ip === 'direct' ? 120 : 15);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: 'Too many failed login attempts. Please wait a minute before trying again.' },
@@ -25,16 +26,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const rawToken = body?.token;
-
-    if (!rawToken || typeof rawToken !== 'string') {
-      return NextResponse.json(
-        { error: 'No QR code data received. Please scan again.' },
-        { status: 400 }
-      );
-    }
-
+    const { token: rawToken } = await readJson(request, z.object({ token: z.string().trim().min(1).max(2048) }));
     const token = cleanOperatorQrToken(rawToken);
 
     // Safeguard: Check if this was a visitor checkout QR
@@ -114,7 +106,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Reset rate limiter on successful authentication
-    resetQrLoginRateLimit(ip);
+    // Never let one success reset the shared bucket used when no proxy is configured.
+    if (ip !== 'direct') resetQrLoginRateLimit(ip);
 
     const gateAccess = await prisma.userGateAccess.findMany({
       where: { userId: user.id },
@@ -168,9 +161,10 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch (error: unknown) {
+  } catch (error) {
+    if (error instanceof RequestValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('[QR Login] Error:', error);
-    const msg = error instanceof Error ? error.message : 'Authentication error during QR scan';
+    const msg = 'Authentication error during QR scan';
     return NextResponse.json(
       { error: msg },
       { status: 500 }

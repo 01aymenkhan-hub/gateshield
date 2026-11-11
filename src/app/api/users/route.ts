@@ -1,3 +1,4 @@
+import { RequestValidationError } from '@/lib/requestValidation';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser, hashPassword } from '@/lib/auth';
@@ -65,7 +66,7 @@ export async function GET() {
     return NextResponse.json({ success: true, users });
   } catch (error: any) {
     console.error('Error fetching users:', error);
-    return NextResponse.json({ error: error?.message || 'Failed to fetch users' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
 }
 
@@ -231,6 +232,7 @@ export async function POST(request: NextRequest) {
       qrCard,
     });
   } catch (error: any) {
+    if (error instanceof RequestValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('Error creating user:', error);
     const errMsg = error?.message || String(error);
     if (errMsg.includes('users_email_key') || (errMsg.includes('P2002') && errMsg.includes('email'))) {
@@ -255,11 +257,57 @@ export async function PATCH(request: NextRequest) {
 
     await ensureOperatorUserSchema(prisma);
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    }
     const { id, name, email, role, active, password, gateIds, phone, phoneNumber } = body;
 
-    if (!id) {
+    if (!id || typeof id !== 'string') {
       return NextResponse.json({ error: 'User ID is required.' }, { status: 400 });
+    }
+    if (name !== undefined && (typeof name !== 'string' || name.trim().length > 120)) {
+      return NextResponse.json({ error: 'Name must be text of at most 120 characters.' }, { status: 400 });
+    }
+    if (email !== undefined && (typeof email !== 'string' || email.length > 254)) {
+      return NextResponse.json({ error: 'Please enter a valid Email Address.' }, { status: 400 });
+    }
+    if (role !== undefined && role !== 'ADMIN' && role !== 'OPERATOR') {
+      return NextResponse.json({ error: 'Role must be ADMIN or OPERATOR.' }, { status: 400 });
+    }
+    if (active !== undefined && typeof active !== 'boolean') {
+      return NextResponse.json({ error: 'active must be true or false.' }, { status: 400 });
+    }
+    if (password !== undefined && password !== null && (typeof password !== 'string' || password.length > 256)) {
+      return NextResponse.json({ error: 'Invalid password.' }, { status: 400 });
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true, active: true },
+    });
+    if (!target) {
+      return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+    }
+
+    // Never allow the last active administrator to be demoted or deactivated.
+    const losesAdmin =
+      target.role === 'ADMIN' &&
+      target.active &&
+      ((role !== undefined && role !== 'ADMIN') || active === false);
+    if (losesAdmin) {
+      const otherActiveAdmins = await prisma.user.count({
+        where: { role: 'ADMIN', active: true, id: { not: id } },
+      });
+      if (otherActiveAdmins === 0) {
+        return NextResponse.json(
+          {
+            error: 'This is the last active Administrator. Create or activate another Administrator first.',
+            code: 'LAST_ADMIN',
+          },
+          { status: 409 }
+        );
+      }
     }
 
     const updateData: any = {};
@@ -378,6 +426,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'Member updated successfully' });
   } catch (error: any) {
+    if (error instanceof RequestValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('Error updating user:', error);
     return NextResponse.json(
       { error: 'Unable to update account due to a server or database error. Please try again.' },

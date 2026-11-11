@@ -1,6 +1,8 @@
+import { RequestValidationError } from '@/lib/requestValidation';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
+import { checkAnonymousThrottle, getClientIp } from '@/lib/rateLimit';
 import {
   hashPassword,
   generateOperatorApplicantToken,
@@ -68,6 +70,21 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Throttle self-registration: stops queue spam and bulk email enumeration via the
+    // "already exists" response. Per-IP behind a trusted proxy, global otherwise.
+    const registerThrottle = checkAnonymousThrottle('register-operator', getClientIp(request), {
+      windowMs: 60 * 60 * 1000,
+      perIp: 5,
+      globalWhenDirect: 60,
+    });
+    if (registerThrottle.limited) {
+      return NextResponse.json(
+        { error: 'Too many registration attempts. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(registerThrottle.retryAfterSeconds) } }
+      );
+    }
+    registerThrottle.hit();
 
     const existingUsers = await prisma.$queryRaw<
       Array<{ id: string; role: string; approvalStatus: string }>
@@ -181,6 +198,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error: unknown) {
+    if (error instanceof RequestValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('[Operator Register POST] Error:', error);
     return NextResponse.json(
       { error: 'Failed to submit operator registration request.' },

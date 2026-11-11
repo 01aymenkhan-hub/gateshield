@@ -7,6 +7,7 @@ import { generatePassCode } from '@/lib/qrUtils';
 import { sanitizeVisitsWithDbFlags, sanitizePersonForClient } from '@/lib/personSanitizer';
 import { formatCardNoForStorage, normalizeCardKey } from '@/lib/cardUtils';
 import { GuestInvitationRecord } from '@/app/api/employee/invitations/route';
+import { normalizeCnic, resolvePersonForCheckIn } from '@/lib/identity';
 
 export async function POST(
   request: NextRequest,
@@ -246,28 +247,14 @@ export async function POST(
       }
 
       // 3. Find or create Person record (preserving historical visitor records)
-      let existingPerson = null;
-      if (invitation.guestCnic) {
-        existingPerson = await tx.person.findUnique({
-          where: { cnicNumber: invitation.guestCnic },
-        });
-      }
-      if (!existingPerson && invitation.guestPhone) {
-        existingPerson = await tx.person.findFirst({
-          where: { phoneNumber: invitation.guestPhone },
-        });
-      }
-
-      if (existingPerson && existingPerson.isBlacklisted) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const blacklistErr: any = new Error(
-          `ACCESS DENIED: This person is blacklisted! Reason: ${existingPerson.blacklistReason || 'Security alert'}`
-        );
-        blacklistErr.status = 403;
-        blacklistErr.blacklisted = true;
-        blacklistErr.person = sanitizePersonForClient(existingPerson);
-        throw blacklistErr;
-      }
+      // Same identity rules as walk-in check-in: CNIC is authoritative (any formatting),
+      // phone only matches when no CNIC exists, blacklist checked across both.
+      const guestCnic = normalizeCnic(invitation.guestCnic);
+      const existingPerson = await resolvePersonForCheckIn(tx, {
+        cnic: guestCnic,
+        dls: null,
+        phone: invitation.guestPhone || null,
+      });
 
       if (existingPerson) {
         const activeVisitForPerson = await tx.visit.findFirst({
@@ -292,7 +279,7 @@ export async function POST(
             where: { id: existingPerson.id },
             data: {
               fullName: invitation.guestName,
-              cnicNumber: invitation.guestCnic || existingPerson.cnicNumber || null,
+              cnicNumber: guestCnic || existingPerson.cnicNumber || null,
               phoneNumber: invitation.guestPhone || existingPerson.phoneNumber || null,
               photoUrl: invitation.guestPhotoUrl || existingPerson.photoUrl || null,
             },
@@ -300,7 +287,7 @@ export async function POST(
         : await tx.person.create({
             data: {
               fullName: invitation.guestName,
-              cnicNumber: invitation.guestCnic || null,
+              cnicNumber: guestCnic,
               phoneNumber: invitation.guestPhone,
               photoUrl: invitation.guestPhotoUrl || null,
               category: 'SPECIAL_GUEST',
@@ -509,7 +496,7 @@ export async function POST(
           error: err.message,
           code: err.code,
           blacklisted: err.blacklisted,
-          person: err.person,
+          person: err.person ? sanitizePersonForClient(err.person) : undefined,
         },
         { status: err.status }
       );

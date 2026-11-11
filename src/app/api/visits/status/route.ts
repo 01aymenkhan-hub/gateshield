@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
+import { canAccessPerson, visitAccessWhere } from '@/lib/gateAccess';
 import { normalizeSearchValue, getCnicHyphenatedVariants } from '@/lib/searchUtils';
 import {
   sanitizePersonForClient,
@@ -117,8 +118,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Combine all person IDs
+    const visitScope = visitAccessWhere(user);
+    if (user.role === 'OPERATOR' && visitRows.length) {
+      const scopedRows = await prisma.visit.findMany({
+        where: { id: { in: visitRows.map(visit => visit.id) }, ...visitScope },
+        select: { id: true },
+      });
+      const scopedIds = new Set(scopedRows.map(visit => visit.id));
+      visitRows = visitRows.filter(visit => scopedIds.has(visit.id));
+    }
     const allPersonIdSet = new Set<string>(personIds);
     visitRows.forEach((v) => allPersonIdSet.add(v.personId));
+    // Operators only see people who used their gates or are inside right now.
+    if (user.role !== 'ADMIN') {
+      for (const pid of Array.from(allPersonIdSet)) {
+        if (!(await canAccessPerson(user, pid))) allPersonIdSet.delete(pid);
+      }
+    }
 
     if (allPersonIdSet.size === 0) {
       return NextResponse.json({
@@ -135,6 +151,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         visits: {
+          where: visitScope,
           orderBy: { checkInTime: 'desc' },
           take: 5,
           include: {
@@ -154,7 +171,7 @@ export async function GET(request: NextRequest) {
         const sanitizedVisits = await sanitizeVisitsWithDbFlags(p.visits as any);
         const activeVisit = sanitizedVisits.find((v: any) => v.status === 'CHECKED_IN') || null;
         const totalVisits = await prisma.visit.count({
-          where: { personId: p.id },
+          where: { personId: p.id, ...visitScope },
         });
 
         const latestVisit = sanitizedVisits[0] || null;
@@ -169,9 +186,9 @@ export async function GET(request: NextRequest) {
             visits: sanitizedVisits,
             hasCnicImage: dbFlags ? dbFlags.hasCnicImage : undefined,
             hasDlsImage: dbFlags ? dbFlags.hasDlsImage : undefined,
-            hasDeliveryDocImage: dbFlags ? dbFlags.hasDeliveryDocImage : undefined,
-            hasOutgoingDocImage: dbFlags ? dbFlags.hasOutgoingDocImage : undefined,
-            latestDeliveryVisitId: dbFlags ? dbFlags.latestDeliveryVisitId : null,
+            hasDeliveryDocImage: user.role === 'ADMIN' ? dbFlags?.hasDeliveryDocImage : Boolean(latestVisit?.hasIncomingDoc),
+            hasOutgoingDocImage: user.role === 'ADMIN' ? dbFlags?.hasOutgoingDocImage : Boolean(latestVisit?.hasOutgoingDoc),
+            latestDeliveryVisitId: user.role === 'ADMIN' ? dbFlags?.latestDeliveryVisitId ?? null : latestVisit?.id ?? null,
           }),
           activeVisit,
           isCurrentlyInside: !!activeVisit,
@@ -246,7 +263,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Status check error:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to check person status' },
+      { error: 'Failed to check person status' },
       { status: 500 }
     );
   }

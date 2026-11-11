@@ -12,8 +12,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
     const entityType = searchParams.get('entityType');
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    // Clamp pagination: NaN, negatives or huge limits must not crash or dump the whole table.
+    const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(searchParams.get('limit') || '50', 10) || 50));
     const skip = (page - 1) * limit;
 
     const where: any = {};
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error fetching audit logs:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to fetch audit logs' },
+      { error: 'Failed to fetch audit logs' },
       { status: 500 }
     );
   }

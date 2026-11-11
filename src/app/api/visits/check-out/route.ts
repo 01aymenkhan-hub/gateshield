@@ -186,6 +186,16 @@ export async function POST(request: NextRequest) {
       }
 
       const checkOutDate = new Date();
+      // Atomic compare-and-set: only one concurrent request can flip CHECKED_IN -> CHECKED_OUT.
+      const claimed = await tx.visit.updateMany({
+        where: { id: targetVisit.id, status: { not: 'CHECKED_OUT' }, checkOutTime: null },
+        data: { status: 'CHECKED_OUT', checkOutTime: checkOutDate },
+      });
+      if (claimed.count === 0) {
+        const alreadyOutErr: any = new Error('This visit was already checked out.');
+        alreadyOutErr.status = 400;
+        throw alreadyOutErr;
+      }
       const checkedOutVisit = await tx.visit.update({
         where: { id: targetVisit.id },
         data: {
@@ -267,7 +277,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Check-out error:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to complete check out' },
+      { error: 'Failed to complete check out' },
       { status: 500 }
     );
   }

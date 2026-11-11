@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
+import { checkAnonymousThrottle, getClientIp } from '@/lib/rateLimit';
 import {
   ensurePasswordResetSchema,
   expireStalePasswordResetRequests,
@@ -26,21 +27,33 @@ export async function POST(request: NextRequest) {
     await ensurePasswordResetSchema();
     await expireStalePasswordResetRequests();
 
-    const forwardedFor = request.headers.get('x-forwarded-for');
-    const clientIp = forwardedFor ? forwardedFor.split(',')[0].trim() : '127.0.0.1';
-
-    const rateCheck = checkPasswordResetRateLimit(clientIp);
-    if (!rateCheck.allowed) {
-      return NextResponse.json(
-        {
-          error: `Too many password reset requests. Please wait ${rateCheck.retryAfterSeconds} seconds before trying again.`,
-        },
-        { status: 429 }
-      );
-    }
+    // Forwarded headers are trusted only behind a configured proxy (TRUST_PROXY=true),
+    // so rotating a spoofed X-Forwarded-For can no longer reset the limit.
+    const clientIp = getClientIp(request);
 
     const body = await request.json().catch(() => ({}));
-    const rawEmail = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const rawEmail =
+      typeof body?.email === 'string' ? body.email.trim().toLowerCase().slice(0, 254) : '';
+
+    // Per-IP when a proxy gives us real IPs; otherwise per-email plus a global flood cap.
+    const rateCheck = checkPasswordResetRateLimit(
+      clientIp !== 'direct' ? `ip:${clientIp}` : `email:${rawEmail}`
+    );
+    const globalCheck = checkAnonymousThrottle('pwreset', clientIp, {
+      windowMs: 10 * 60 * 1000,
+      perIp: 30,
+      globalWhenDirect: 60,
+    });
+    if (!rateCheck.allowed || globalCheck.limited) {
+      const wait = Math.max(rateCheck.retryAfterSeconds || 0, globalCheck.retryAfterSeconds || 0);
+      return NextResponse.json(
+        {
+          error: `Too many password reset requests. Please wait ${wait} seconds before trying again.`,
+        },
+        { status: 429, headers: { 'Retry-After': String(wait) } }
+      );
+    }
+    globalCheck.hit();
     const portalContext =
       typeof body.portalContext === 'string' &&
       ['ADMIN', 'OPERATOR', 'EMPLOYEE'].includes(body.portalContext.toUpperCase())
@@ -115,7 +128,7 @@ export async function POST(request: NextRequest) {
         AND "tenantId" = ${tenantId}
         AND (
           "status"::text = 'PENDING'
-          OR ("status"::text = 'APPROVED' AND "usedAt" IS NULL AND ("expiresAt" IS NULL OR "expiresAt" > NOW()))
+          OR ("status"::text = 'APPROVED' AND "usedAt" IS NULL AND ("expiresAt" IS NULL OR "expiresAt" > (NOW() AT TIME ZONE 'UTC')))
         )
       ORDER BY "createdAt" DESC
       LIMIT 1
@@ -178,8 +191,8 @@ export async function POST(request: NextRequest) {
         ${trackerTokenHash},
         ${clientIp},
         ${tenantId},
-        ${now},
-        ${now}
+        (CAST(${now.toISOString()} AS timestamptz) AT TIME ZONE 'UTC'),
+        (CAST(${now.toISOString()} AS timestamptz) AT TIME ZONE 'UTC')
       )
     `;
 

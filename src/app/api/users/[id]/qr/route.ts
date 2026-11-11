@@ -87,7 +87,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     });
   } catch (error: unknown) {
     console.error('[Operator QR GET] Error:', error);
-    const msg = error instanceof Error ? error.message : 'Failed to retrieve operator QR card';
+    const msg = 'Failed to retrieve operator QR card';
     return NextResponse.json(
       { error: msg },
       { status: 500 }
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Invalid action. Use regenerate or revoke.' }, { status: 400 });
   } catch (error: unknown) {
     console.error('[Operator QR POST] Error:', error);
-    const msg = error instanceof Error ? error.message : 'Failed to update operator QR status';
+    const msg = 'Failed to update operator QR status';
     return NextResponse.json(
       { error: msg },
       { status: 500 }

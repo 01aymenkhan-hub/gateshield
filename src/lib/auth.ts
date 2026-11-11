@@ -1,9 +1,21 @@
+import { passwordSchema, RequestValidationError } from '@/lib/requestValidation';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import prisma from './prisma';
+import { getJwtSecret } from './secrets';
+import { ensureOperatorUserSchema } from './operatorQr';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gatekeeper_secret_jwt_key_2026';
+const JWT_ALGORITHM = 'HS256' as const;
+const STAFF_SESSION_PURPOSE = 'STAFF_SESSION';
+
+function signJwt(payload: object): string {
+  return jwt.sign(payload, getJwtSecret(), { algorithm: JWT_ALGORITHM, expiresIn: '7d' });
+}
+
+function verifyJwt<T>(token: string): T {
+  return jwt.verify(token, getJwtSecret(), { algorithms: [JWT_ALGORITHM] }) as T;
+}
 // Independent installations on different ports still share a browser cookie
 // host. Give each installation its own cookie names as well as its JWT secret.
 const COOKIE_PREFIX = process.env.AUTH_COOKIE_PREFIX || 'gk';
@@ -76,6 +88,9 @@ interface DbUserRow {
 }
 
 export async function hashPassword(password: string): Promise<string> {
+  if (!passwordSchema.safeParse(password).success) {
+    throw new RequestValidationError('Password must be at most 72 UTF-8 bytes.');
+  }
   return bcrypt.hash(password, 10);
 }
 
@@ -83,19 +98,29 @@ export async function comparePassword(password: string, hash: string): Promise<b
   return bcrypt.compare(password, hash);
 }
 
+let dummyHashPromise: Promise<string> | null = null;
+
+/**
+ * Compares against a real hash, or a throwaway hash when the account does not
+ * exist, so response timing does not reveal which email addresses are registered.
+ */
+export async function comparePasswordConstantTime(password: string, hash: string | null | undefined): Promise<boolean> {
+  if (hash) return bcrypt.compare(password, hash);
+  dummyHashPromise ??= bcrypt.hash('gateshield-dummy-password', 10);
+  await bcrypt.compare(password, await dummyHashPromise);
+  return false;
+}
+
 export function generateToken(user: AuthUser): string {
-  return jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      gateIds: user.gateIds || [],
-      issuedAtMs: Date.now(),
-    },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-  );
+  return signJwt({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    gateIds: user.gateIds || [],
+    purpose: STAFF_SESSION_PURPOSE,
+    issuedAtMs: Date.now(),
+  });
 }
 
 export function generateEmployeeToken(user: {
@@ -104,23 +129,26 @@ export function generateEmployeeToken(user: {
   name: string;
   purpose: 'EMPLOYEE_SESSION' | 'APPLICANT_STATUS';
 }): string {
-  return jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: 'EMPLOYEE',
-      purpose: user.purpose,
-      issuedAtMs: Date.now(),
-    },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-  );
+  return signJwt({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: 'EMPLOYEE',
+    purpose: user.purpose,
+    issuedAtMs: Date.now(),
+  });
 }
 
 export function verifyToken(token: string): (AuthUser & { iat?: number; issuedAtMs?: number }) | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as AuthUser & { iat?: number; issuedAtMs?: number };
+    const decoded = verifyJwt<AuthUser & { iat?: number; issuedAtMs?: number; purpose?: string }>(token);
+    // Reject tokens minted for another purpose (applicant status, employee portal).
+    // Legacy staff tokens issued before the purpose claim existed carry no purpose.
+    if (!decoded || (decoded.purpose !== undefined && decoded.purpose !== STAFF_SESSION_PURPOSE)) {
+      return null;
+    }
+    if (decoded.role !== 'ADMIN' && decoded.role !== 'OPERATOR') return null;
+    return decoded;
   } catch {
     return null;
   }
@@ -130,7 +158,7 @@ export function verifyEmployeeToken(
   token: string
 ): { id: string; email: string; name: string; role: 'EMPLOYEE'; purpose?: string; iat?: number; issuedAtMs?: number } | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as {
+    const decoded = verifyJwt<{
       id: string;
       email: string;
       name: string;
@@ -138,7 +166,7 @@ export function verifyEmployeeToken(
       purpose?: string;
       iat?: number;
       issuedAtMs?: number;
-    };
+    }>(token);
     if (!decoded || !decoded.id || decoded.role !== 'EMPLOYEE') return null;
     return {
       id: decoded.id,
@@ -166,6 +194,10 @@ export async function getSessionUser(): Promise<AuthUser | null> {
     if (!token) return null;
     const decoded = verifyToken(token);
     if (!decoded || !decoded.id) return null;
+
+    // Older local databases may lack newer user columns (e.g. passwordChangedAt);
+    // without them this query fails and every login bounces back to /login.
+    await ensureOperatorUserSchema(prisma);
 
     const rows = await prisma.$queryRaw<
       Array<{
@@ -208,13 +240,24 @@ export async function getSessionUser(): Promise<AuthUser | null> {
       return null;
     }
 
+    // Gate scoping must reflect current assignments, not the list baked into a 7-day token.
+    const gateAccess =
+      dbUser.role === 'ADMIN'
+        ? []
+        : await prisma.userGateAccess.findMany({
+            where: { userId: dbUser.id },
+            select: { gateId: true },
+          });
+
     return {
-      ...decoded,
+      id: dbUser.id,
       name: dbUser.name,
       email: dbUser.email,
       role: dbUser.role,
+      gateIds: gateAccess.map((ga) => ga.gateId),
     };
-  } catch {
+  } catch (error) {
+    console.error("[auth] getSessionUser failed:", error instanceof Error ? error.message : error);
     return null;
   }
 }
@@ -224,30 +267,26 @@ export function generateOperatorApplicantToken(user: {
   email: string;
   name: string;
 }): string {
-  return jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: 'OPERATOR',
-      purpose: 'OPERATOR_APPLICANT_STATUS',
-    },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-  );
+  return signJwt({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: 'OPERATOR',
+    purpose: 'OPERATOR_APPLICANT_STATUS',
+  });
 }
 
 export function verifyOperatorApplicantToken(
   token: string
 ): { id: string; email: string; name: string; role: 'OPERATOR'; purpose?: string } | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as {
+    const decoded = verifyJwt<{
       id: string;
       email: string;
       name: string;
       role: string;
       purpose?: string;
-    };
+    }>(token);
     if (!decoded || !decoded.id || decoded.role !== 'OPERATOR') return null;
     return {
       id: decoded.id,
@@ -348,6 +387,8 @@ export async function getEmployeeSessionUser(): Promise<EmployeeAuthUser | null>
     const decoded = verifyEmployeeToken(empToken);
     if (!decoded || !decoded.id) return null;
 
+    await ensureOperatorUserSchema(prisma);
+
     const rows = await prisma.$queryRaw<DbUserRow[]>`
       SELECT
         "id",
@@ -403,7 +444,8 @@ export async function getEmployeeSessionUser(): Promise<EmployeeAuthUser | null>
       rejectionReason: dbUser.rejectionReason,
       createdAt: dbUser.createdAt,
     };
-  } catch {
+  } catch (error) {
+    console.error("[auth] getEmployeeSessionUser failed:", error instanceof Error ? error.message : error);
     return null;
   }
 }

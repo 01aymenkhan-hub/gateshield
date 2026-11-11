@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { z } from 'zod';
+import { readJson, RequestValidationError } from '@/lib/requestValidation';
+
+const settingsSchema = z.object({
+  default_visitor_badge_prefix: z.string().optional(),
+  auto_checkout_hours: z.string().regex(/^\d+$/).refine(value => Number.isSafeInteger(Number(value)) && Number(value) > 0).optional(),
+  require_visitor_photo: z.enum(['true', 'false']).optional(),
+  company_name: z.string().optional(),
+});
 
 export async function GET() {
   try {
@@ -11,6 +20,7 @@ export async function GET() {
     }
 
     const settings = await prisma.systemSetting.findMany({
+      where: { key: { in: Object.keys(settingsSchema.shape) } },
       orderBy: { key: 'asc' },
     });
 
@@ -22,7 +32,7 @@ export async function GET() {
     return NextResponse.json({ success: true, settings: settingsMap });
   } catch (error: any) {
     console.error('Error fetching settings:', error);
-    return NextResponse.json({ error: error?.message || 'Failed to fetch settings' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
   }
 }
 
@@ -33,20 +43,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Admin role required' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { settings } = body;
-
-    if (!settings || typeof settings !== 'object') {
+    const { settings } = await readJson(request, z.object({ settings: settingsSchema.strict() }));
+    const entries = Object.entries(settings);
+    if (!entries.length) {
       return NextResponse.json({ error: 'Settings object is required' }, { status: 400 });
     }
 
-    for (const [key, value] of Object.entries(settings)) {
-      await prisma.systemSetting.upsert({
+    await prisma.$transaction(entries.map(([key, value]) =>
+      prisma.systemSetting.upsert({
         where: { key },
         update: { value: String(value) },
         create: { key, value: String(value) },
-      });
-    }
+      })
+    ));
 
     await logAudit({
       action: 'UPDATE_SYSTEM_SETTINGS',
@@ -56,8 +65,9 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, message: 'Settings saved successfully' });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    if (error instanceof RequestValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('Error saving settings:', error);
-    return NextResponse.json({ error: error?.message || 'Failed to save settings' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
   }
 }
