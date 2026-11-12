@@ -1310,9 +1310,9 @@ export default function VisitorStep({
                         deliveryDocumentPreview: null,
                       })
                     }
-                    className="py-2.5 px-4 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-rose-400 dark:hover:border-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400 shadow-2xs inline-flex items-center gap-2 transition-all cursor-pointer"
+                    className={`py-2.5 px-4 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-rose-400 dark:hover:border-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-bold text-rose-600 dark:text-rose-400 shadow-2xs inline-flex items-center gap-2 transition-all cursor-pointer ${isUr ? "text-[14px] leading-[1.5]" : "text-xs sm:text-sm"}`}
                   >
-                    <span>Remove</span>
+                    <span>{isUr ? "ہٹائیں" : "Remove"}</span>
                   </button>
                 </div>
               </div>

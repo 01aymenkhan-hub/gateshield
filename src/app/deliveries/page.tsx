@@ -4,8 +4,8 @@ export default function DeliveriesPage() {
   return (
     <VisitorCategoryView
       category="DELIVERY"
-      title="Courier & Cargo Deliveries"
-      description="Registry of cargo couriers, logistics dispatchers, and material deliveries"
+      title="Cargo & Logistics"
+      description="Registry of cargo, logistics dispatchers, and material deliveries"
       icon="Truck"
     />
   );

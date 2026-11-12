@@ -1313,14 +1313,22 @@ export default function ParcelManagementView({
                   <CheckCircle2 className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20">
+                  <span className={`font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20 ${isUrdu ? 'text-[12px] leading-[1.4]' : 'text-[10px]'}`}>
                     {confirmationModal.type === 'RECEIVED'
-                      ? 'Parcel Receiving Confirmation'
+                      ? isUrdu
+                        ? 'پارسل وصولی کی تصدیق'
+                        : 'Parcel Receiving Confirmation'
+                      : isUrdu
+                      ? 'پارسل حوالگی کی تصدیق'
                       : 'Parcel Delivery Confirmation'}
                   </span>
                   <h3 className="text-base sm:text-lg font-extrabold mt-0.5">
                     {confirmationModal.type === 'RECEIVED'
-                      ? `Parcel Received at ${confirmationModal.parcel.receivingGateName || 'Gate'}`
+                      ? isUrdu
+                        ? `پارسل ${confirmationModal.parcel.receivingGateName || 'گیٹ'} پر وصول ہو گیا`
+                        : `Parcel Received at ${confirmationModal.parcel.receivingGateName || 'Gate'}`
+                      : isUrdu
+                      ? `پارسل ${confirmationModal.parcel.ownerName} کے حوالے کر دیا گیا`
                       : `Parcel Delivered to ${confirmationModal.parcel.ownerName}`}
                   </h3>
                 </div>
@@ -1335,35 +1343,47 @@ export default function ParcelManagementView({
             </div>
 
             <div className="p-6 space-y-4">
-              <p className="text-xs text-slate-600 dark:text-slate-300">
+              <p className={`text-slate-600 dark:text-slate-300 ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-xs'}`}>
                 {confirmationModal.type === 'RECEIVED'
-                  ? `Parcel status has been updated to Received and ${confirmationModal.parcel.ownerName} has been notified that their parcel is available at ${confirmationModal.parcel.receivingGateName || 'the gate'}.`
+                  ? isUrdu
+                    ? `پارسل کی حیثیت "وصول شدہ" کر دی گئی ہے اور ${confirmationModal.parcel.ownerName} کو اطلاع بھیج دی گئی ہے کہ ان کا پارسل ${confirmationModal.parcel.receivingGateName || 'گیٹ'} پر موجود ہے۔`
+                    : `Parcel status has been updated to Received and ${confirmationModal.parcel.ownerName} has been notified that their parcel is available at ${confirmationModal.parcel.receivingGateName || 'the gate'}.`
+                  : isUrdu
+                  ? `پارسل کی حیثیت "پہنچا دیا گیا" کر دی گئی ہے اور ${confirmationModal.parcel.ownerName} کو اطلاع دے دی گئی ہے۔`
                   : `Parcel status has been updated to Delivered and ${confirmationModal.parcel.ownerName} has been notified.`}
               </p>
 
               <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 space-y-2 text-xs">
                 <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
-                  <span className="text-slate-500">Employee / Owner</span>
+                  <span className={`text-slate-500 ${isUrdu ? 'text-[14px] leading-[1.6]' : ''}`}>
+                    {isUrdu ? 'ملازم کا نام' : 'Employee / Owner'}
+                  </span>
                   <span className="font-extrabold text-slate-900 dark:text-white">
                     {confirmationModal.parcel.ownerName}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
-                  <span className="text-slate-500">Department &amp; Phone</span>
+                  <span className={`text-slate-500 ${isUrdu ? 'text-[14px] leading-[1.6]' : ''}`}>
+                    {isUrdu ? 'شعبہ اور فون نمبر' : 'Department & Phone'}
+                  </span>
                   <span className="font-bold text-slate-900 dark:text-white">
                     {confirmationModal.parcel.departmentName} &bull;{' '}
                     {confirmationModal.parcel.ownerPhone}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
-                  <span className="text-slate-500">Sender / Platform</span>
+                  <span className={`text-slate-500 ${isUrdu ? 'text-[14px] leading-[1.6]' : ''}`}>
+                    {isUrdu ? 'پارسل کا ذریعہ' : 'Sender / Platform'}
+                  </span>
                   <span className="font-extrabold text-amber-600 dark:text-amber-400">
                     {confirmationModal.parcel.senderPlatform}
                   </span>
                 </div>
                 {(confirmationModal.parcel.senderName || confirmationModal.parcel.senderPhone) && (
                   <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
-                    <span className="text-slate-500">Parcel Sender</span>
+                    <span className={`text-slate-500 ${isUrdu ? 'text-[14px] leading-[1.6]' : ''}`}>
+                      {isUrdu ? 'بھیجنے والا' : 'Parcel Sender'}
+                    </span>
                     <span className="font-bold text-slate-900 dark:text-white">
                       {confirmationModal.parcel.senderName}
                       {confirmationModal.parcel.senderName && confirmationModal.parcel.senderPhone
@@ -1374,14 +1394,18 @@ export default function ParcelManagementView({
                   </div>
                 )}
                 <div className="flex justify-between py-1 border-b border-slate-200/70 dark:border-slate-700/60">
-                  <span className="text-slate-500">Receiving Gate</span>
+                  <span className={`text-slate-500 ${isUrdu ? 'text-[14px] leading-[1.6]' : ''}`}>
+                    {isUrdu ? 'وصولی کا گیٹ' : 'Receiving Gate'}
+                  </span>
                   <span className="font-bold text-slate-900 dark:text-white">
                     {confirmationModal.parcel.receivingGateName || '—'}
                   </span>
                 </div>
                 {confirmationModal.type === 'DELIVERED' && (
                   <div className="flex justify-between py-1">
-                    <span className="text-slate-500">Delivered At</span>
+                    <span className={`text-slate-500 ${isUrdu ? 'text-[14px] leading-[1.6]' : ''}`}>
+                      {isUrdu ? 'حوالگی کا وقت' : 'Delivered At'}
+                    </span>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400">
                       {confirmationModal.parcel.deliveredAt
                         ? new Date(confirmationModal.parcel.deliveredAt).toLocaleString()
@@ -1395,9 +1419,9 @@ export default function ParcelManagementView({
                 <button
                   type="button"
                   onClick={() => setConfirmationModal(null)}
-                  className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-extrabold cursor-pointer"
+                  className={`px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 font-extrabold cursor-pointer ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}
                 >
-                  Done
+                  {isUrdu ? 'مکمل' : 'Done'}
                 </button>
               </div>
             </div>
@@ -1414,8 +1438,10 @@ export default function ParcelManagementView({
                 <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
                   {photoPreviewParcel.ownerName} &bull; {photoPreviewParcel.senderPlatform}
                 </h3>
-                <p className="text-[11px] text-slate-500">
-                  Received at {photoPreviewParcel.receivingGateName || 'Gate'}
+                <p className={`text-slate-500 ${isUrdu ? 'text-[13px] leading-[1.6]' : 'text-[11px]'}`}>
+                  {isUrdu
+                    ? `${photoPreviewParcel.receivingGateName || 'گیٹ'} پر وصول ہوا`
+                    : `Received at ${photoPreviewParcel.receivingGateName || 'Gate'}`}
                 </p>
               </div>
               <button

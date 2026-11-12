@@ -282,7 +282,7 @@ export default function DepartmentsPage() {
                 Department Management
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Manage organization departments, Heads of Department (HOD), and WhatsApp contact numbers used in visitor registration.
+              Manage organization departments, assign Heads of Department (HODs), and configure WhatsApp contact numbers for visitor notifications and department communication.
               </p>
             </div>
 

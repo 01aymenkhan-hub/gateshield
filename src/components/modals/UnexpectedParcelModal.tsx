@@ -243,7 +243,7 @@ export default function UnexpectedParcelModal({
     if (!selectedDepartmentId || !selectedDept) {
       setError(
         isUrdu
-          ? 'براہ کرم ملازم کا شعبہ (ڈیپارٹمنٹ) منتخب کریں۔'
+          ? 'براہ کرم ملازم کا شعبہ منتخب کریں۔'
           : 'Please select an Employee Department.'
       );
       return;
@@ -259,7 +259,7 @@ export default function UnexpectedParcelModal({
             ? 'براہ کرم بھیجنے والے کا نام درج کریں۔'
             : 'Please enter the sender name.'
           : isUrdu
-          ? 'براہ کرم پارسل کا ذریعہ (Parcel From) منتخب کریں۔'
+          ? 'براہ کرم پارسل کا ذریعہ منتخب کریں۔'
           : 'Please select Parcel From.'
       );
       return;
@@ -320,8 +320,10 @@ export default function UnexpectedParcelModal({
   if (!isOpen) return null;
 
   const getOptionLabel = (opt: ParcelFromOption) => {
-    if (opt === 'Other') return isUrdu ? 'دیگر (Other)' : 'Other';
-    if (opt === 'Bank') return isUrdu ? 'بینک (Bank)' : 'Bank';
+    if (opt === 'Other') return isUrdu ? 'دیگر' : 'Other';
+    if (opt === 'Bank') return isUrdu ? 'بینک' : 'Bank';
+    if (opt === 'Foodpanda') return isUrdu ? 'فوڈ پانڈا' : 'Foodpanda';
+    if (opt === 'TCS') return isUrdu ? 'ٹی سی ایس' : 'TCS';
     return opt;
   };
 
@@ -513,7 +515,7 @@ export default function UnexpectedParcelModal({
 
             {/* 1. Parcel Sender Name */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className={`block font-bold text-slate-700 dark:text-slate-300 mb-1.5 ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}>
                 {t('parcel_sender_name_label', 'Parcel Sender Name')} *
               </label>
               <div className="relative">
@@ -531,7 +533,7 @@ export default function UnexpectedParcelModal({
 
             {/* 2. Parcel Sender Phone Number */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className={`block font-bold text-slate-700 dark:text-slate-300 mb-1.5 ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}>
                 {t('parcel_sender_phone_label', 'Parcel Sender Phone Number')} *
               </label>
               <div className="relative">
@@ -550,7 +552,7 @@ export default function UnexpectedParcelModal({
 
             {/* 3. Employee Name */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className={`block font-bold text-slate-700 dark:text-slate-300 mb-1.5 ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}>
                 {t('employee_name_label', 'Employee Name')} *
               </label>
               <div className="relative">
@@ -568,7 +570,7 @@ export default function UnexpectedParcelModal({
 
             {/* 4. Employee Phone Number */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className={`block font-bold text-slate-700 dark:text-slate-300 mb-1.5 ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}>
                 {t('employee_phone_label', 'Employee Phone Number')} *
               </label>
               <div className="relative">
@@ -587,7 +589,7 @@ export default function UnexpectedParcelModal({
 
             {/* 5. Employee Department — Dynamic Dropdown from Admin Panel */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className={`block font-bold text-slate-700 dark:text-slate-300 mb-1.5 ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}>
                 {t('employee_department_label', 'Employee Department')} *
               </label>
               <div className="relative">
@@ -644,7 +646,7 @@ export default function UnexpectedParcelModal({
 
             {/* 6. Parcel From (Foodpanda, TCS, Bank, Other) */}
             <div className="space-y-3">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className={`block font-bold text-slate-700 dark:text-slate-300 ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}>
                 {t('parcel_from_label', 'Parcel From')} *
               </label>
 
@@ -656,7 +658,7 @@ export default function UnexpectedParcelModal({
                       key={opt}
                       type="button"
                       onClick={() => setParcelFromOption(opt)}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-extrabold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`py-2.5 px-3 rounded-xl font-extrabold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${isUrdu ? 'text-[14px] leading-[1.5]' : 'text-xs'} ${
                         selected
                           ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/20'
                           : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-blue-400'
@@ -685,7 +687,7 @@ export default function UnexpectedParcelModal({
 
             {/* 3. Parcel Photo Capture (Camera Only + Subtle Wave Animation + Prominent Capture Button) */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className={`block font-bold text-slate-700 dark:text-slate-300 mb-1.5 ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}>
                 {t('parcel_photo_label', 'Parcel Photo')} *
               </label>
 
@@ -776,7 +778,7 @@ export default function UnexpectedParcelModal({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className={`block font-bold text-slate-700 dark:text-slate-300 mb-1 ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}>
                 {t('notes_label', 'Notes')}
               </label>
               <input

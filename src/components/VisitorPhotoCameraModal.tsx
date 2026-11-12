@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
+import { useLanguage } from "../context/LanguageContext";
 
 interface VisitorPhotoCameraModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export default function VisitorPhotoCameraModal({
   mode = "face",
   instantCapture = false,
 }: VisitorPhotoCameraModalProps) {
+  const { language } = useLanguage();
+  const isUrdu = language === "ur";
   const isDocMode = mode === "document";
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -238,13 +241,21 @@ export default function VisitorPhotoCameraModal({
         <div className="relative z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
           <div className="flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            <span className="text-white text-sm font-semibold tracking-wide">
+            <span className={`text-white font-semibold tracking-wide ${isUrdu ? "text-[16px] leading-[1.6]" : "text-sm"}`}>
               {modalMode === "live"
                 ? isDocMode
-                  ? "Capture Delivery Document"
+                  ? isUrdu
+                    ? "ڈلیوری دستاویز کی تصویر لیں"
+                    : "Capture Delivery Document"
+                  : isUrdu
+                  ? "کارڈ ہولڈر کی تصویر لیں"
                   : "Capture Card Holder Photo"
                 : isDocMode
-                ? "Review Delivery Document"
+                ? isUrdu
+                  ? "ڈلیوری دستاویز چیک کریں"
+                  : "Review Delivery Document"
+                : isUrdu
+                ? "تصویر چیک کریں"
                 : "Review Photo"}
             </span>
           </div>
@@ -323,7 +334,7 @@ export default function VisitorPhotoCameraModal({
                 onClick={onClose}
                 className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-semibold"
               >
-                Close Camera
+                {isUrdu ? "کیمرہ بند کریں" : "Close Camera"}
               </button>
             </div>
           ) : modalMode === "live" ? (
@@ -350,8 +361,8 @@ export default function VisitorPhotoCameraModal({
                     }}
                   >
                     <div className="absolute inset-0 flex items-end justify-center pb-4 pointer-events-none">
-                      <span className="text-xs font-medium text-white/90 bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
-                        Align visitor face here
+                      <span className={`font-medium text-white/90 bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs ${isUrdu ? "text-[14px] leading-[1.6]" : "text-xs"}`}>
+                        {isUrdu ? "وزیٹر کا چہرہ یہاں رکھیں" : "Align visitor face here"}
                       </span>
                     </div>
                   </div>
@@ -384,9 +395,13 @@ export default function VisitorPhotoCameraModal({
                   )}
                 </div>
               )}
-              <p className="text-xs text-white/70 mt-3 text-center">
+              <p className={`text-white/70 mt-3 text-center ${isUrdu ? "text-[14px] leading-[1.6]" : "text-xs"}`}>
                 {isDocMode
-                  ? "Ensure the delivery document details are clearly readable."
+                  ? isUrdu
+                    ? "یقینی بنائیں کہ ڈلیوری دستاویز کی تفصیلات صاف پڑھی جا رہی ہیں۔"
+                    : "Ensure the delivery document details are clearly readable."
+                  : isUrdu
+                  ? "یقینی بنائیں کہ وزیٹر کا چہرہ صاف نظر آ رہا ہے۔"
                   : "Ensure the visitor's face is clearly visible."}
               </p>
             </div>
@@ -424,7 +439,7 @@ export default function VisitorPhotoCameraModal({
                       d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
                     />
                   </svg>
-                  <span>Capture</span>
+                  <span>{isUrdu ? "تصویر لیں" : "Capture"}</span>
                 </button>
               ) : (
                 <button
@@ -443,17 +458,25 @@ export default function VisitorPhotoCameraModal({
               <button
                 type="button"
                 onClick={handleReviewRetake}
-                className="flex-1 py-3 px-4 rounded-xl border border-white/30 bg-white/10 hover:bg-white/20 active:scale-95 text-white text-sm font-semibold transition-all text-center cursor-pointer"
+                className={`flex-1 py-3 px-4 rounded-xl border border-white/30 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-semibold transition-all text-center cursor-pointer ${isUrdu ? "text-[15px] leading-[1.6]" : "text-sm"}`}
               >
-                Retake
+                {isUrdu ? "دوبارہ لیں" : "Retake"}
               </button>
 
               <button
                 type="button"
                 onClick={handleReviewConfirm}
-                className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white text-sm font-semibold transition-all shadow-lg text-center flex items-center justify-center space-x-1.5 cursor-pointer"
+                className={`flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white font-semibold transition-all shadow-lg text-center flex items-center justify-center space-x-1.5 cursor-pointer ${isUrdu ? "text-[15px] leading-[1.6]" : "text-sm"}`}
               >
-                <span>{isDocMode ? "Continue" : "✓ Use Photo"}</span>
+                <span>
+                  {isDocMode
+                    ? isUrdu
+                      ? "آگے بڑھیں"
+                      : "Continue"
+                    : isUrdu
+                    ? "✓ تصویر استعمال کریں"
+                    : "✓ Use Photo"}
+                </span>
               </button>
             </div>
           )}

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Camera, X, RefreshCw, AlertTriangle, FlipHorizontal, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface QrScannerProps {
   onScan: (decodedText: string) => void;
@@ -9,6 +10,8 @@ interface QrScannerProps {
 }
 
 export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
+  const { language } = useLanguage();
+  const isUrdu = language === 'ur';
   const [permissionState, setPermissionState] = useState<'pending' | 'granted' | 'denied' | 'error'>('pending');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>([]);
@@ -231,7 +234,9 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
         {isInitializing && (
           <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center text-white gap-2 z-20">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <p className="text-xs font-semibold">Starting camera...</p>
+            <p className={`font-semibold ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-xs'}`}>
+              {isUrdu ? 'کیمرہ شروع ہو رہا ہے...' : 'Starting camera...'}
+            </p>
           </div>
         )}
 
@@ -242,17 +247,21 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
               <AlertTriangle className="w-8 h-8" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Camera Unavailable</h4>
-              <p className="text-xs text-slate-400 mt-1 max-w-[240px] leading-relaxed">
-                {errorMessage || 'Unable to access device camera.'}
+              <h4 className={`font-bold text-white ${isUrdu ? 'text-[16px] leading-[1.6]' : 'text-sm'}`}>
+                {isUrdu ? 'کیمرہ دستیاب نہیں' : 'Camera Unavailable'}
+              </h4>
+              <p className={`text-slate-400 mt-1 max-w-[240px] leading-relaxed ${isUrdu ? 'text-[13px]' : 'text-xs'}`}>
+                {isUrdu
+                  ? 'کیو آر پاس اسکین کرنے کے لیے براہ کرم کیمرے کی اجازت دیں۔'
+                  : errorMessage || 'Unable to access device camera.'}
               </p>
             </div>
             <button
               onClick={handleRetry}
-              className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+              className={`px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${isUrdu ? 'text-[14px] leading-[1.5]' : 'text-xs'}`}
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Retry Camera</span>
+              <span>{isUrdu ? 'کیمرہ دوبارہ چلائیں' : 'Retry Camera'}</span>
             </button>
           </div>
         )}
@@ -276,18 +285,18 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
 
       {/* Instructions & Controls */}
       <div className="mt-3 text-center space-y-2 w-full max-w-[320px]">
-        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-          Point camera at the Visitor Pass QR code
+        <p className={`font-semibold text-slate-700 dark:text-slate-300 ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-xs'}`}>
+          {isUrdu ? 'کیمرے کو وزیٹر پاس کے کیو آر کوڈ کے سامنے رکھیں' : 'Point camera at the Visitor Pass QR code'}
         </p>
 
         <div className="flex items-center justify-center gap-2">
           {cameras.length > 1 && (
             <button
               onClick={switchCamera}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer"
+              className={`px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer ${isUrdu ? 'text-[14px] leading-[1.5]' : 'text-xs'}`}
             >
               <FlipHorizontal className="w-3.5 h-3.5 text-blue-500" />
-              <span>Flip Camera</span>
+              <span>{isUrdu ? 'کیمرہ تبدیل کریں' : 'Flip Camera'}</span>
             </button>
           )}
 
@@ -296,10 +305,10 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
               stopScanner();
               onCancel();
             }}
-            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer"
+            className={`px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer ${isUrdu ? 'text-[14px] leading-[1.5]' : 'text-xs'}`}
           >
             <X className="w-3.5 h-3.5 text-slate-400" />
-            <span>Cancel Scan</span>
+            <span>{isUrdu ? 'اسکین منسوخ کریں' : 'Cancel Scan'}</span>
           </button>
         </div>
       </div>

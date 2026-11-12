@@ -58,6 +58,17 @@ export default function CategoryRecordsModal({
   onViewPerson,
 }: CategoryRecordsModalProps) {
   const { language, t } = useLanguage();
+  const isUrdu = language === 'ur';
+  const getCategoryDisplayName = (cat: string | null | undefined) => {
+    const upper = String(cat || 'VISITOR').toUpperCase();
+    if (!isUrdu) return upper;
+    if (upper === 'VENDOR') return 'وینڈر';
+    if (upper === 'INTERVIEW') return 'انٹرویو';
+    if (upper === 'SPECIAL_GUEST') return 'مہمان';
+    if (upper === 'CONTRACTOR') return 'ٹھیکیدار';
+    if (upper === 'DELIVERY') return 'ڈلیوری';
+    return 'وزیٹر';
+  };
   const [visits, setVisits] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -341,8 +352,8 @@ export default function CategoryRecordsModal({
                         </td>
 
                         <td className="px-4 py-3.5">
-                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                            {visit.person?.category || 'VISITOR'}
+                          <span className={`font-bold px-2.5 py-1 rounded-md uppercase tracking-wider bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 ${isUrdu ? 'text-[12px] leading-[1.4]' : 'text-[10px]'}`}>
+                            {getCategoryDisplayName(visit.person?.category)}
                           </span>
                         </td>
 
@@ -446,20 +457,22 @@ export default function CategoryRecordsModal({
                         </div>
                       </div>
 
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                        {visit.person?.category || 'VISITOR'}
+                      <span className={`font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 ${isUrdu ? 'text-[12px] leading-[1.4]' : 'text-[10px]'}`}>
+                        {getCategoryDisplayName(visit.person?.category)}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100 dark:border-slate-800">
                       <div>
-                        <span className="text-[10px] text-slate-400 block">{t('host_and_dept', 'Host')}</span>
+                        <span className={`text-slate-500 dark:text-slate-400 block font-bold ${isUrdu ? 'text-[13px] leading-[1.6]' : 'text-[10px]'}`}>
+                          {t('host_and_dept', 'Host')}
+                        </span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {visit.hostName} ({visit.department})
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400 block">
+                        <span className={`text-slate-500 dark:text-slate-400 block font-bold ${isUrdu ? 'text-[13px] leading-[1.6]' : 'text-[10px]'}`}>
                           {String(visit.person?.category || '').toUpperCase() === 'DELIVERY'
                             ? t('vehicle_no_label', 'Vehicle No.')
                             : t('card_badge', 'Badge')}
@@ -486,7 +499,7 @@ export default function CategoryRecordsModal({
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => onViewPass(visit)}
-                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer"
+                          className={`px-2.5 py-1 font-semibold rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer ${isUrdu ? 'text-[13px] leading-[1.5]' : 'text-xs'}`}
                         >
                           {t('view_pass', 'Pass')}
                         </button>
@@ -494,7 +507,7 @@ export default function CategoryRecordsModal({
                         {visit.status === 'CHECKED_IN' && (
                           <button
                             onClick={() => onCheckOut(visit)}
-                            className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                            className={`px-2.5 py-1 font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer ${isUrdu ? 'text-[13px] leading-[1.5]' : 'text-xs'}`}
                           >
                             {t('checkout_btn', 'Check Out')}
                           </button>
@@ -511,8 +524,10 @@ export default function CategoryRecordsModal({
         {/* Modal Pagination Footer */}
         {totalPages > 1 && (
           <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 shrink-0">
-            <span>
-              {t('showing', 'Showing')} {visits.length} of {total} records (Page {page} of {totalPages})
+            <span className={isUrdu ? 'text-[13px] leading-[1.5]' : ''}>
+              {isUrdu
+                ? `کل ${total} میں سے ${visits.length} ریکارڈز (صفحہ ${page} از ${totalPages})`
+                : `${t('showing', 'Showing')} ${visits.length} of ${total} records (Page ${page} of ${totalPages})`}
             </span>
 
             <div className="flex items-center gap-2">

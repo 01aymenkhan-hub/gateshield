@@ -87,11 +87,18 @@ export default function UpcomingGuestsModal({
           const data = await res.json();
           if (data.available) {
             setCardCheckStatus('available');
-            setCardCheckMessage(data.message || 'VC Card is available for check-in.');
+            setCardCheckMessage(
+              isUrdu
+                ? 'یہ وزیٹر کارڈ نمبر چیک اِن کے لیے دستیاب ہے۔'
+                : data.message || 'VC Card is available for check-in.'
+            );
           } else {
             setCardCheckStatus('unavailable');
             setCardCheckMessage(
-              data.message || 'This VC Card is already assigned to an active visitor. Please enter another card.'
+              isUrdu
+                ? 'یہ وزیٹر کارڈ نمبر پہلے ہی کسی موجودہ وزیٹر کو جاری کیا جا چکا ہے۔ براہ کرم دوسرا کارڈ نمبر درج کریں۔'
+                : data.message ||
+                    'This VC Card is already assigned to an active visitor. Please enter another card.'
             );
           }
         }
@@ -151,7 +158,7 @@ export default function UpcomingGuestsModal({
     currentGate || (user?.role === 'OPERATOR' ? user?.gates?.[0] || null : null);
   const displayGateName =
     user?.role === 'ADMIN'
-      ? currentGate?.name || 'All Gates'
+      ? currentGate?.name || (isUrdu ? 'تمام گیٹس' : 'All Gates')
       : operatorAssignedGate?.name || t('no_gate_assigned', 'No Gate Assigned');
 
   const handleCompleteCheckIn = async (e: React.FormEvent) => {
@@ -171,14 +178,20 @@ export default function UpcomingGuestsModal({
 
     const trimmedCard = vcCardNo.trim();
     if (!trimmedCard) {
-      setErrorBanner('Please enter a VC Card Number before checking in this guest.');
+      setErrorBanner(
+        isUrdu
+          ? 'مہمان کا چیک اِن مکمل کرنے سے پہلے وزیٹر کارڈ نمبر درج کریں۔'
+          : 'Please enter a VC Card Number before checking in this guest.'
+      );
       return;
     }
 
     if (cardCheckStatus === 'unavailable') {
       setErrorBanner(
         cardCheckMessage ||
-          'This VC Card Number is already assigned to an active visitor. Please enter an available card.'
+          (isUrdu
+            ? 'یہ وزیٹر کارڈ نمبر پہلے ہی کسی موجودہ وزیٹر کو جاری کیا جا چکا ہے۔ براہ کرم دوسرا کارڈ نمبر درج کریں۔'
+            : 'This VC Card Number is already assigned to an active visitor. Please enter an available card.')
       );
       return;
     }
@@ -203,14 +216,20 @@ export default function UpcomingGuestsModal({
       const data = await res.json();
       if (!res.ok) {
         setErrorBanner(
-          data.error || 'Could not complete check-in. Please verify the VC Card Number and try again.'
+          isUrdu
+            ? 'چیک اِن مکمل نہیں ہو سکا۔ براہ کرم وزیٹر کارڈ نمبر چیک کریں اور دوبارہ کوشش کریں۔'
+            : data.error || 'Could not complete check-in. Please verify the VC Card Number and try again.'
         );
         await onRefresh();
         if (res.status === 409 && data.code === 'INVITATION_ALREADY_CHECKED_IN') {
           setSelectedInvitation(null);
         } else if (res.status === 409 && data.code === 'CARD_ALREADY_ASSIGNED') {
           setCardCheckStatus('unavailable');
-          setCardCheckMessage(data.error || 'This VC Card is already assigned to another visitor.');
+          setCardCheckMessage(
+            isUrdu
+              ? 'یہ وزیٹر کارڈ پہلے ہی کسی دوسرے وزیٹر کو جاری کیا جا چکا ہے۔'
+              : data.error || 'This VC Card is already assigned to another visitor.'
+          );
         }
         return;
       }
@@ -221,7 +240,11 @@ export default function UpcomingGuestsModal({
       await onRefresh();
       onCheckInSuccess(data.visit);
     } catch {
-      setErrorBanner('Network error while checking in invited guest. Please try again.');
+      setErrorBanner(
+        isUrdu
+          ? 'مدعو مہمان کا چیک اِن کرتے وقت نیٹ ورک کی خرابی پیش آئی۔ براہ کرم دوبارہ کوشش کریں۔'
+          : 'Network error while checking in invited guest. Please try again.'
+      );
     } finally {
       setSubmittingId(null);
     }
@@ -303,9 +326,17 @@ export default function UpcomingGuestsModal({
               )}
             </div>
 
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Showing <strong>{filtered.length}</strong> of <strong>{invitations.length}</strong>{' '}
-              pending guest{invitations.length === 1 ? '' : 's'}
+            <div className={`text-xs text-slate-500 dark:text-slate-400 font-medium ${isUrdu ? 'text-[14px] leading-[1.6]' : ''}`}>
+              {isUrdu ? (
+                <>
+                  کل <strong>{invitations.length}</strong> میں سے <strong>{filtered.length}</strong> زیر التواء مہمان دکھائے جا رہے ہیں
+                </>
+              ) : (
+                <>
+                  Showing <strong>{filtered.length}</strong> of <strong>{invitations.length}</strong>{' '}
+                  pending guest{invitations.length === 1 ? '' : 's'}
+                </>
+              )}
             </div>
           </div>
         )}
@@ -314,14 +345,14 @@ export default function UpcomingGuestsModal({
           <div className="mx-4 mt-4 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{errorBanner}</span>
+              <span className={isUrdu ? 'text-[14px] leading-[1.6]' : ''}>{errorBanner}</span>
             </div>
             <button
               type="button"
               onClick={() => setErrorBanner(null)}
               className="text-rose-600 hover:underline text-[11px] cursor-pointer"
             >
-              Dismiss
+              {isUrdu ? 'ہٹائیں' : 'Dismiss'}
             </button>
           </div>
         )}
@@ -350,13 +381,15 @@ export default function UpcomingGuestsModal({
                       <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white truncate">
                         {selectedInvitation.guestName}
                       </h3>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
+                      <span className={`px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0 ${isUrdu ? 'text-[12px] leading-[1.4]' : 'text-[10px]'}`}>
                         {selectedInvitation.status === 'PENDING'
-                          ? 'PENDING CHECK-IN'
+                          ? isUrdu
+                            ? 'چیک اِن کا انتظار'
+                            : 'PENDING CHECK-IN'
                           : selectedInvitation.status}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                    <p className={`text-slate-500 dark:text-slate-400 mt-0.5 truncate ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-xs'}`}>
                       {t('confirm_guest_checkin_title', 'Guest Details & Card Assignment')}
                     </p>
                   </div>
@@ -368,7 +401,7 @@ export default function UpcomingGuestsModal({
                     setErrorBanner(null);
                     setSelectedInvitation(null);
                   }}
-                  className="self-start sm:self-auto px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer shrink-0"
+                  className={`self-start sm:self-auto px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold text-slate-700 dark:text-slate-300 cursor-pointer shrink-0 ${isUrdu ? 'text-[14px] leading-[1.5]' : 'text-xs'}`}
                 >
                   &larr; {t('back_btn', 'Back')}
                 </button>
@@ -377,9 +410,11 @@ export default function UpcomingGuestsModal({
               {/* Step 2: Selected Guest's Invitation Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 space-y-1 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <span className={`font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-[10px]'}`}>
                     <Phone className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                    <span className="truncate">{t('emp_guest_name', 'Guest Name')} &amp; {t('emp_phone', 'Phone Number')}</span>
+                    <span className="truncate">
+                      {t('emp_guest_name', 'Guest Name')} {isUrdu ? 'اور' : '&'} {t('emp_phone', 'Phone Number')}
+                    </span>
                   </span>
                   <p className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
                     {selectedInvitation.guestName}
@@ -390,7 +425,7 @@ export default function UpcomingGuestsModal({
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 space-y-1 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <span className={`font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-[10px]'}`}>
                     <FileText className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                     <span className="truncate">{t('emp_guest_cnic', 'CNIC')}</span>
                   </span>
@@ -399,14 +434,14 @@ export default function UpcomingGuestsModal({
                       {selectedInvitation.guestCnic}
                     </p>
                   ) : (
-                    <p className="text-xs italic text-slate-400 dark:text-slate-500">
+                    <p className={`italic text-slate-400 dark:text-slate-500 ${isUrdu ? 'text-[13px] leading-[1.6]' : 'text-xs'}`}>
                       {t('not_provided_optional', 'Not provided')}
                     </p>
                   )}
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 space-y-1 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <span className={`font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-[10px]'}`}>
                     <UserCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                     <span className="truncate">{t('inviting_employee_label', 'Inviting Employee')}</span>
                   </span>
@@ -420,9 +455,11 @@ export default function UpcomingGuestsModal({
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 space-y-1 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <span className={`font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-[10px]'}`}>
                     <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <span className="truncate">{t('emp_visit_date', 'Visit Date')} &amp; {t('estimated_arrival_slot', 'Arrival Time')}</span>
+                    <span className="truncate">
+                      {t('emp_visit_date', 'Visit Date')} {isUrdu ? 'اور' : '&'} {t('estimated_arrival_slot', 'Arrival Time')}
+                    </span>
                   </span>
                   <p className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
                     {selectedInvitation.visitDate}
@@ -435,7 +472,7 @@ export default function UpcomingGuestsModal({
 
                 {selectedInvitation.alongWith && (
                   <div className="sm:col-span-2 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 space-y-1 min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <span className={`font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-[10px]'}`}>
                       <Users className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                       <span className="truncate">{t('along_with_label', 'Along With')}</span>
                     </span>
@@ -452,12 +489,12 @@ export default function UpcomingGuestsModal({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <label
                       htmlFor="special-guest-vc-card-input"
-                      className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-blue-900 dark:text-blue-200 flex items-center gap-2 min-w-0"
+                      className={`font-extrabold uppercase tracking-wider text-blue-900 dark:text-blue-200 flex items-center gap-2 min-w-0 ${isUrdu ? 'text-[16px] leading-[1.6]' : 'text-xs sm:text-sm'}`}
                     >
                       <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                       <span className="truncate">{t('enter_vc_card_no', 'VC Card No.')} *</span>
                     </label>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-600 text-white shrink-0">
+                    <span className={`font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-600 text-white shrink-0 ${isUrdu ? 'text-[12px] leading-[1.4]' : 'text-[10px]'}`}>
                       {t('photo_required_badge', 'Required')}
                     </span>
                   </div>
@@ -484,7 +521,7 @@ export default function UpcomingGuestsModal({
 
                   {cardCheckStatus !== 'idle' ? (
                     <p
-                      className={`text-xs font-bold flex items-center gap-1.5 ${
+                      className={`font-bold flex items-center gap-1.5 ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-xs'} ${
                         cardCheckStatus === 'available'
                           ? 'text-emerald-700 dark:text-emerald-400'
                           : cardCheckStatus === 'unavailable'
@@ -492,7 +529,10 @@ export default function UpcomingGuestsModal({
                           : 'text-slate-500 dark:text-slate-400'
                       }`}
                     >
-                      {cardCheckStatus === 'checking' && 'Checking VC Card availability...'}
+                      {cardCheckStatus === 'checking' &&
+                        (isUrdu
+                          ? 'وزیٹر کارڈ کی دستیابی چیک کی جا رہی ہے...'
+                          : 'Checking VC Card availability...')}
                       {cardCheckStatus === 'available' && (
                         <>
                           <Check className="w-4 h-4 shrink-0" />
@@ -507,36 +547,44 @@ export default function UpcomingGuestsModal({
                       )}
                     </p>
                   ) : (
-                    <p className="text-[11px] text-blue-800/80 dark:text-blue-300/80 font-medium">
-                      Assign an available physical Visitor Card (VC) to this guest for entry at{' '}
-                      <strong>{displayGateName}</strong>.
+                    <p className={`text-blue-800/80 dark:text-blue-300/80 font-medium ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-[11px]'}`}>
+                      {isUrdu ? (
+                        <>
+                          اس مہمان کو <strong>{displayGateName}</strong> سے داخلے کے لیے دستیاب وزیٹر کارڈ نمبر جاری کریں۔
+                        </>
+                      ) : (
+                        <>
+                          Assign an available physical Visitor Card (VC) to this guest for entry at{' '}
+                          <strong>{displayGateName}</strong>.
+                        </>
+                      )}
                     </p>
                   )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Vehicle Number
+                    <label className={`block font-bold text-slate-700 dark:text-slate-300 mb-1 ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}>
+                      {t('vehicle_no_label', 'Vehicle Number')}
                     </label>
                     <input
                       type="text"
                       value={vehicleNo}
                       onChange={(e) => setVehicleNo(e.target.value.toUpperCase())}
                       placeholder="e.g. LEA-1234"
-                      className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Gate Notes
+                    <label className={`block font-bold text-slate-700 dark:text-slate-300 mb-1 ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}>
+                      {isUrdu ? 'گیٹ نوٹس' : 'Gate Notes'}
                     </label>
                     <input
                       type="text"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Check-in remark"
-                      className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
+                      placeholder={isUrdu ? 'چیک اِن ریمارکس درج کریں' : 'Check-in remark'}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
                     />
                   </div>
                 </div>
@@ -548,9 +596,9 @@ export default function UpcomingGuestsModal({
                       setErrorBanner(null);
                       setSelectedInvitation(null);
                     }}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer"
+                    className={`w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-300 cursor-pointer ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs'}`}
                   >
-                    Cancel
+                    {t('cancel_btn', 'Cancel')}
                   </button>
                   <button
                     type="submit"
@@ -560,14 +608,20 @@ export default function UpcomingGuestsModal({
                       cardCheckStatus === 'unavailable' ||
                       (user?.role === 'OPERATOR' && !operatorAssignedGate)
                     }
-                    className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white text-xs sm:text-sm font-extrabold shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                    className={`w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 text-white font-extrabold shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs sm:text-sm'}`}
                   >
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span className="truncate">
                       {submittingId === selectedInvitation.id
-                        ? 'Checking In Guest...'
+                        ? isUrdu
+                          ? 'مہمان کا چیک اِن ہو رہا ہے...'
+                          : 'Checking In Guest...'
                         : vcCardNo.trim()
-                        ? `Check In Guest (${vcCardNo.trim()})`
+                        ? isUrdu
+                          ? `مہمان چیک اِن کریں (${vcCardNo.trim()})`
+                          : `Check In Guest (${vcCardNo.trim()})`
+                        : isUrdu
+                        ? 'مہمان چیک اِن کریں'
                         : 'Check In Guest'}
                     </span>
                   </button>
@@ -579,14 +633,20 @@ export default function UpcomingGuestsModal({
               <div className="w-14 h-14 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                 <Users className="w-7 h-7 text-slate-400" />
               </div>
-              <p className="text-sm font-bold text-slate-600 dark:text-slate-300">
+              <p className={`font-bold text-slate-600 dark:text-slate-300 ${isUrdu ? 'text-[16px] leading-[1.6]' : 'text-sm'}`}>
                 {searchQuery.trim()
-                  ? `No invited guests match "${searchQuery.trim()}".`
+                  ? isUrdu
+                    ? `"${searchQuery.trim()}" سے ملتا جلتا کوئی مدعو مہمان نہیں ملا۔`
+                    : `No invited guests match "${searchQuery.trim()}".`
                   : t('upcoming_guests_empty', 'No pending guest invitations right now.')}
               </p>
-              <p className="text-xs text-slate-400 max-w-md mx-auto">
+              <p className={`text-slate-400 max-w-md mx-auto ${isUrdu ? 'text-[14px] leading-[1.6]' : 'text-xs'}`}>
                 {searchQuery.trim()
-                  ? 'Try searching by a partial guest name or inviting employee name.'
+                  ? isUrdu
+                    ? 'مہمان کے نام یا مدعو کرنے والے ملازم کے نام سے تلاش کریں۔'
+                    : 'Try searching by a partial guest name or inviting employee name.'
+                  : isUrdu
+                  ? 'جب کوئی ملازم ایمپلائی پورٹل سے مہمان کو مدعو کرے گا تو وہ خودکار طور پر یہاں تمام گیٹ آپریٹرز کو نظر آئے گا۔'
                   : 'When any employee invites a guest from the Employee Portal (/employee), the guest will appear here automatically for all gate operators.'}
               </p>
             </div>
@@ -634,15 +694,15 @@ export default function UpcomingGuestsModal({
                       </div>
                     </div>
 
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 shrink-0">
-                      PENDING
+                    <span className={`px-2.5 py-1 rounded-full font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 shrink-0 ${isUrdu ? 'text-[12px] leading-[1.4]' : 'text-[10px]'}`}>
+                      {isUrdu ? 'زیر التواء' : 'PENDING'}
                     </span>
                   </div>
 
                   {/* Inviting Employee, Department, Visit Date & Arrival Time */}
                   <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-xs min-w-0">
                     <div className="min-w-0">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 min-w-0">
+                      <span className={`font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1 min-w-0 ${isUrdu ? 'text-[13px] leading-[1.6]' : 'text-[10px]'}`}>
                         <Building2 className="w-3 h-3 shrink-0" />
                         <span className="truncate">{t('inviting_employee_label', 'Inviting Employee')}</span>
                       </span>
@@ -655,7 +715,7 @@ export default function UpcomingGuestsModal({
                     </div>
 
                     <div className="min-w-0">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 min-w-0">
+                      <span className={`font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1 min-w-0 ${isUrdu ? 'text-[13px] leading-[1.6]' : 'text-[10px]'}`}>
                         <Calendar className="w-3 h-3 shrink-0" />
                         <span className="truncate">{t('estimated_arrival_slot', 'Arrival Time')}</span>
                       </span>
@@ -669,7 +729,7 @@ export default function UpcomingGuestsModal({
                     </div>
                     {inv.alongWith && (
                       <div className="col-span-2 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60 min-w-0">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        <span className={`font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ${isUrdu ? 'text-[13px] leading-[1.6]' : 'text-[10px]'}`}>
                           {t('along_with_label', 'Along With')}:{' '}
                         </span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
@@ -679,7 +739,7 @@ export default function UpcomingGuestsModal({
                     )}
                   </div>
 
-                  <div className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all">
+                  <div className={`w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold shadow-xs flex items-center justify-center gap-2 transition-all ${isUrdu ? 'text-[15px] leading-[1.6]' : 'text-xs sm:text-sm'}`}>
                     <CreditCard className="w-4 h-4 shrink-0" />
                     <span className="truncate">
                       {t('verify_and_checkin_btn', 'Select & Assign Card')}

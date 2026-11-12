@@ -28,17 +28,17 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   },
   gate_control_dashboard: { en: 'Gate Control Dashboard', ur: 'گیٹ کنٹرول ڈیش بورڈ' },
   gate_control_subtitle: {
-    en: 'Live visitor tracking, instant CNIC & Driving License OCR check-in, and security access logs.',
+    en: 'Live visitor tracking, instant CNIC & Driving License scanning and security access logs.',
     ur: 'لائیو وزیٹر ٹریکنگ، شناختی کارڈ اور ڈرائیونگ لائسنس اندراج، اور سیکیورٹی لاگز۔',
   },
 
   // Main Action Tiles
   register_visitor: { en: 'Register', ur: 'رجسٹر کریں' },
-  register_visitor_desc: { en: 'CNIC / DLS OCR Check-in', ur: 'شناختی کارڈ یا لائسنس اسکین' },
-  checkout_visitor: { en: 'Check Out Visitor', ur: 'وزیٹر کی چھٹی کریں' },
+  register_visitor_desc: { en: 'CNIC / DLS Scanner', ur: 'شناختی کارڈ یا لائسنس اسکین' },
+  checkout_visitor: { en: 'Visitor Check Out', ur: ' چھٹی کریں' },
   checkout_visitor_desc: { en: 'Scan QR or enter pass', ur: 'کیو آر کوڈ یا پاس سے باہر بھیجیں' },
-  check_status: { en: 'Check Visitor Status', ur: 'وزیٹر کی تفصیل دیکھیں' },
-  check_status_desc: { en: 'Search badge or phone', ur: 'نام، کارڈ یا فون سے تلاش کریں' },
+  check_status: { en: 'Visitor Status', ur: 'وزیٹر کی تفصیل دیکھیں' },
+  check_status_desc: { en: 'Search visitor', ur: 'نام، کارڈ یا فون سے تلاش کریں' },
   add_vendor: { en: 'Guest', ur: 'مہمان' },
   add_vendor_desc: { en: 'Invited guest check-in', ur: 'مدعو مہمان کی انٹری' },
   guest_option_title: { en: 'Guest', ur: 'مہمان' },
@@ -211,7 +211,7 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
     en: 'Select who the visitor is meeting and their department',
     ur: 'میزبان کا نام اور شعبہ منتخب کریں',
   },
-  meet_name_label: { en: 'Visitor to Meet', ur: 'کس سے ملنا ہے (میزبان کا نام)' },
+  meet_name_label: { en: 'Host', ur: 'کس سے ملنا ہے (میزبان کا نام)' },
   meet_name_placeholder: {
     en: 'Search or enter host name (e.g. Muhammad Asif)',
     ur: 'میزبان کا نام تلاش کریں یا لکھیں (مثلاً محمد آصف)',
@@ -269,7 +269,7 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   },
   ocr_scanning_title: { en: 'Reading Card Details...', ur: 'کارڈ پڑھا جا رہا ہے...' },
   ocr_scanning_subtitle: {
-    en: 'Please wait a moment while OCR extracts the information',
+    en: 'Please wait a moment while we extracts the information',
     ur: 'براہ کرم انتظار کریں، کارڈ سے معلومات نکالی جا رہی ہیں',
   },
   scan_failed_title: {
@@ -297,8 +297,8 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   field_cnic_number: { en: 'CNIC Number', ur: 'شناختی کارڈ نمبر' },
   field_gender: { en: 'Gender', ur: 'جنس' },
   field_gender_select: { en: 'Select Gender', ur: 'جنس منتخب کریں' },
-  field_gender_male: { en: 'Male', ur: 'مرد (Male)' },
-  field_gender_female: { en: 'Female', ur: 'خاتون (Female)' },
+  field_gender_male: { en: 'Male', ur: 'مرد' },
+  field_gender_female: { en: 'Female', ur: 'خاتون' },
   field_dob: { en: 'Date of Birth', ur: 'تاریخ پیدائش' },
   field_issue_date: { en: 'Date of Issue', ur: 'تاریخ اجراء' },
   field_expiry_date: { en: 'Date of Expiry', ur: 'تاریخ تنسیخ' },
@@ -729,13 +729,13 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   employee_name_placeholder: { en: 'Enter employee name', ur: 'ملازم کا نام درج کریں' },
   employee_phone_label: { en: 'Employee Phone Number', ur: 'ملازم کا فون نمبر' },
   employee_phone_placeholder: { en: 'e.g. 03001234567', ur: 'مثلاً 03001234567' },
-  employee_department_label: { en: 'Employee Department', ur: 'ملازم کا شعبہ (ڈیپارٹمنٹ)' },
+  employee_department_label: { en: 'Employee Department', ur: 'ملازم کا شعبہ' },
   select_department_placeholder: { en: 'Select Department', ur: 'شعبہ منتخب کریں' },
   no_departments_available: {
     en: 'No departments available. Please configure departments in the Admin Panel.',
     ur: 'کوئی شعبہ دستیاب نہیں ہے۔ براہ کرم ایڈمن پینل میں شعبے شامل کریں۔',
   },
-  parcel_from_label: { en: 'Parcel From', ur: 'پارسل کا ذریعہ (Parcel From)' },
+  parcel_from_label: { en: 'Parcel From', ur: 'پارسل کا ذریعہ' },
   select_parcel_from: { en: 'Select Sender', ur: 'بھیجنے والا منتخب کریں' },
   other_sender_label: { en: 'Sender Name', ur: 'بھیجنے والے کا نام' },
   other_sender_placeholder: { en: 'Enter sender name', ur: 'بھیجنے والے کا نام لکھیں' },
@@ -779,8 +779,8 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   vip_status_upcoming: { en: 'Upcoming', ur: 'متوقع آمد' },
   vip_status_checked_in: { en: 'Inside', ur: 'اندر موجود' },
   vip_status_checked_out: { en: 'Checked Out', ur: 'باہر گئے' },
-  vip_checkin_btn: { en: 'Check In VIP', ur: 'چیک اِن کریں' },
-  vip_checkout_btn: { en: 'Check Out VIP', ur: 'چیک آؤٹ کریں' },
+  vip_checkin_btn: { en: 'VIP Check In', ur: 'چیک اِن کریں' },
+  vip_checkout_btn: { en: 'VIP Check Out', ur: 'چیک آؤٹ کریں' },
   save_vip_btn: { en: 'Save VIP Guest', ur: 'وی آئی پی محفوظ کریں' },
   update_vip_btn: { en: 'Update VIP Guest', ur: 'وی آئی پی اپ ڈیٹ کریں' },
   cancel_btn: { en: 'Cancel', ur: 'منسوخ کریں' },
@@ -925,7 +925,7 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   },
   vehicle_no_label: {
     en: 'Vehicle Number',
-    ur: 'گاڑی کا نمبر (Vehicle Number)',
+    ur: 'گاڑی کا نمبر',
   },
   vehicle_no_hint: {
     en: 'Enter the delivery vehicle registration number (e.g. KHI-1234 or LEB-4589)',
@@ -989,7 +989,7 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   },
   admin_qa_departments: {
     en: 'Departments',
-    ur: 'شعبہ جات (Departments)',
+    ur: 'شعبہ جات',
   },
   admin_qa_departments_desc: {
     en: 'Manage departments & HOD contacts',

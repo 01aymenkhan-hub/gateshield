@@ -265,7 +265,7 @@ export default function DashboardPage() {
               <p className="text-xs sm:text-sm text-blue-100 max-w-xl">
                 {t(
                   'gate_control_subtitle',
-                  'Live visitor tracking, instant CNIC & Driving License OCR check-in, and security access logs.'
+                  'Live visitor tracking, instant CNIC & Driving License scanning and security access logs.'
                 )}
               </p>
             </div>

@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { cameraCrop, takeNativePhoto, preparePhonePhoto } from "../utils/cameraCapture";
+import { useLanguage } from "../context/LanguageContext";
 
 interface CnicCameraModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ export default function CnicCameraModal({
   onCapture,
   documentTitle,
 }: CnicCameraModalProps) {
+  const { language } = useLanguage();
+  const isUrdu = language === "ur";
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const guideRef = useRef<HTMLDivElement>(null);
@@ -245,9 +248,13 @@ export default function CnicCameraModal({
         <div className="relative z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
           <div className="flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-            <span className="text-white text-sm font-semibold tracking-wide">
+            <span className={`text-white font-semibold tracking-wide ${isUrdu ? "text-[16px] leading-[1.6]" : "text-sm"}`}>
               {modalMode === "live"
-                ? `Scan ${documentTitle || "CNIC (Front)"}`
+                ? isUrdu
+                  ? `${documentTitle || "شناختی کارڈ"} اسکین کریں`
+                  : `Scan ${documentTitle || "CNIC (Front)"}`
+                : isUrdu
+                ? `${documentTitle || "شناختی کارڈ"} کی تصویر چیک کریں`
                 : `Review ${documentTitle || "CNIC"} Photo`}
             </span>
           </div>
@@ -280,7 +287,7 @@ export default function CnicCameraModal({
                 onClick={onClose}
                 className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-semibold"
               >
-                Close Camera
+                {isUrdu ? "کیمرہ بند کریں" : "Close Camera"}
               </button>
             </div>
           ) : modalMode === "live" ? (
@@ -317,8 +324,14 @@ export default function CnicCameraModal({
 
                   {/* Centered Guide Text */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-xs sm:text-sm font-medium text-white/90 bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-xs">
-                      {documentTitle ? `Place ${documentTitle} here` : "Place CNIC here"}
+                    <span className={`font-medium text-white/90 bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-xs ${isUrdu ? "text-[14px] leading-[1.6]" : "text-xs sm:text-sm"}`}>
+                      {isUrdu
+                        ? documentTitle
+                          ? `${documentTitle} یہاں رکھیں`
+                          : "شناختی کارڈ یہاں رکھیں"
+                        : documentTitle
+                        ? `Place ${documentTitle} here`
+                        : "Place CNIC here"}
                     </span>
                   </div>
                 </div>
@@ -337,8 +350,10 @@ export default function CnicCameraModal({
                   />
                 )}
               </div>
-              <p className="text-xs text-white/70 mt-3 text-center">
-                Review your CNIC photo. Ensure text and details are clear.
+              <p className={`text-white/70 mt-3 text-center ${isUrdu ? "text-[14px] leading-[1.6]" : "text-xs"}`}>
+                {isUrdu
+                  ? "اپنے شناختی کارڈ کی تصویر چیک کریں۔ یقینی بنائیں کہ تحریر اور تفصیلات صاف ہیں۔"
+                  : "Review your CNIC photo. Ensure text and details are clear."}
               </p>
             </div>
           )}
@@ -368,27 +383,33 @@ export default function CnicCameraModal({
                 type="button"
                 onClick={handleReviewCancel}
                 disabled={isTakingPhoto}
-                className="flex-1 py-3 px-4 rounded-xl border border-white/30 bg-white/10 hover:bg-white/20 active:scale-95 text-white text-sm font-semibold transition-all text-center"
+                className={`flex-1 py-3 px-4 rounded-xl border border-white/30 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-semibold transition-all text-center ${isUrdu ? "text-[15px] leading-[1.6]" : "text-sm"}`}
               >
-                Cancel
+                {isUrdu ? "منسوخ کریں" : "Cancel"}
               </button>
 
               <button
                 type="button"
                 onClick={handleReviewConfirm}
                 disabled={isTakingPhoto}
-                className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold transition-all shadow-lg text-center flex items-center justify-center space-x-1.5"
+                className={`flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold transition-all shadow-lg text-center flex items-center justify-center space-x-1.5 ${isUrdu ? "text-[15px] leading-[1.6]" : "text-sm"}`}
               >
-                <span>✓ Use Photo</span>
+                <span>{isUrdu ? "✓ تصویر استعمال کریں" : "✓ Use Photo"}</span>
               </button>
             </div>
           )}
-          {isTakingPhoto && <p role="status" className="mt-2 text-xs text-white/80">Capturing photo...</p>}
-          <button type="button" disabled={isTakingPhoto} className="mt-3 text-xs font-semibold text-blue-200 underline disabled:opacity-50"
+          {isTakingPhoto && (
+            <p role="status" className="mt-2 text-xs text-white/80">
+              {isUrdu ? "تصویر لی جا رہی ہے..." : "Capturing photo..."}
+            </p>
+          )}
+          <button type="button" disabled={isTakingPhoto} className={`mt-3 font-semibold text-blue-200 underline disabled:opacity-50 ${isUrdu ? "text-[14px] leading-[1.6]" : "text-xs"}`}
             onClick={() => { stopCameraStream(); phonePhotoRef.current?.click(); }}>
-            Use phone camera
+            {isUrdu ? "فون کیمرہ استعمال کریں" : "Use phone camera"}
           </button>
-          <p className="mt-1 text-[11px] text-white/60 text-center">For a sharper photo, fill the frame with the entire card.</p>
+          <p className={`mt-1 text-white/60 text-center ${isUrdu ? "text-[13px] leading-[1.6]" : "text-[11px]"}`}>
+            {isUrdu ? "صاف تصویر کے لیے پورے کارڈ کو فریم کے اندر رکھیں۔" : "For a sharper photo, fill the frame with the entire card."}
+          </p>
         </div>
       </div>
     </div>
