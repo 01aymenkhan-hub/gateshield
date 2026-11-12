@@ -132,7 +132,7 @@ export default function Sidebar() {
         className="flex-1 min-h-0 overflow-y-auto overscroll-contain sidebar-scroll px-3 py-3 space-y-1"
       >
         {!isCollapsed && (
-          <div className="px-3 pb-2 text-[10px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+          <div className={`px-3 pb-2 font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400 ${isUrdu ? 'text-[13px] leading-[1.6]' : 'text-[10px]'}`}>
             {isUrdu ? 'مینو' : 'Navigation'}
           </div>
         )}
@@ -158,11 +158,11 @@ export default function Sidebar() {
               onClick={onLinkClick}
               data-active={isActive ? 'true' : undefined}
               title={isCollapsed ? displayLabel : undefined}
-              className={`relative flex items-center rounded-xl text-sm font-medium transition-all group ${
+              className={`relative flex items-center rounded-xl font-medium transition-all group ${
                 isCollapsed
                   ? 'justify-center p-2.5 my-1'
                   : 'justify-between px-3 py-2'
-              } ${
+              } ${isUrdu ? 'text-[15px]' : 'text-sm'} ${
                 isActive
                   ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20 font-semibold'
                   : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
@@ -176,7 +176,11 @@ export default function Sidebar() {
                       : 'text-slate-500 group-hover:text-slate-900 dark:text-slate-400 dark:group-hover:text-slate-200'
                   }`}
                 />
-                {!isCollapsed && <span className="truncate">{displayLabel}</span>}
+                {!isCollapsed && (
+                  <span className={`truncate ${isUrdu ? 'text-[15px] leading-[1.6]' : ''}`}>
+                    {displayLabel}
+                  </span>
+                )}
               </div>
 
               {!isCollapsed && (
@@ -192,7 +196,13 @@ export default function Sidebar() {
                       {badgeCount}
                     </span>
                   )}
-                  {isActive && <ChevronRight className="w-4 h-4 opacity-70 shrink-0" />}
+                  {isActive && (
+                    isUrdu ? (
+                      <ChevronLeft className="w-4 h-4 opacity-70 shrink-0" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 opacity-70 shrink-0" />
+                    )
+                  )}
                 </div>
               )}
 
@@ -208,8 +218,8 @@ export default function Sidebar() {
         {/* Dedicated Parcel Management Section */}
         <div className="pt-3 mt-2 border-t border-slate-200/80 dark:border-slate-800/80 space-y-1">
           {!isCollapsed && (
-            <div className="px-3 pb-1.5 text-[10px] font-bold tracking-wider uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-              <Package className="w-3 h-3" />
+            <div className={`px-3 pb-1.5 font-bold tracking-wider uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1.5 ${isUrdu ? 'text-[13px] leading-[1.6]' : 'text-[10px]'}`}>
+              <Package className="w-3.5 h-3.5 shrink-0" />
               <span>{t('emp_card_parcel_management', 'Parcel Management')}</span>
             </div>
           )}
@@ -227,11 +237,11 @@ export default function Sidebar() {
                 onClick={onLinkClick}
                 data-active={isActive ? 'true' : undefined}
                 title={isCollapsed ? displayLabel : undefined}
-                className={`relative flex items-center rounded-xl text-sm font-medium transition-all group ${
+                className={`relative flex items-center rounded-xl font-medium transition-all group ${
                   isCollapsed
                     ? 'justify-center p-2.5 my-1'
                     : 'justify-between px-3 py-2'
-                } ${
+                } ${isUrdu ? 'text-[15px]' : 'text-sm'} ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20 font-bold'
                     : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
@@ -245,11 +255,19 @@ export default function Sidebar() {
                         : 'text-blue-600 group-hover:text-blue-700 dark:text-blue-400 dark:group-hover:text-blue-300'
                     }`}
                   />
-                  {!isCollapsed && <span className="truncate">{displayLabel}</span>}
+                  {!isCollapsed && (
+                    <span className={`truncate ${isUrdu ? 'text-[15px] leading-[1.6]' : ''}`}>
+                      {displayLabel}
+                    </span>
+                  )}
                 </div>
 
                 {!isCollapsed && isActive && (
-                  <ChevronRight className="w-4 h-4 opacity-70 shrink-0" />
+                  isUrdu ? (
+                    <ChevronLeft className="w-4 h-4 opacity-70 shrink-0" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 opacity-70 shrink-0" />
+                  )
                 )}
               </Link>
             );
@@ -273,12 +291,12 @@ export default function Sidebar() {
             {theme === 'dark' ? (
               <>
                 <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                {!isCollapsed && <span>{isUrdu ? 'روشن' : 'Light'}</span>}
+                {!isCollapsed && <span className={isUrdu ? 'text-[13px] leading-[1.5]' : ''}>{isUrdu ? 'روشن' : 'Light'}</span>}
               </>
             ) : (
               <>
                 <Moon className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
-                {!isCollapsed && <span>{isUrdu ? 'ڈارک' : 'Dark'}</span>}
+                {!isCollapsed && <span className={isUrdu ? 'text-[13px] leading-[1.5]' : ''}>{isUrdu ? 'ڈارک' : 'Dark'}</span>}
               </>
             )}
           </button>
@@ -291,7 +309,7 @@ export default function Sidebar() {
             title={t('logout', 'Sign out')}
           >
             <LogOut className="w-3.5 h-3.5 shrink-0" />
-            {!isCollapsed && <span>{t('logout', 'Logout')}</span>}
+            {!isCollapsed && <span className={isUrdu ? 'text-[13px] leading-[1.5]' : ''}>{t('logout', 'Logout')}</span>}
           </button>
         </div>
 
@@ -306,13 +324,21 @@ export default function Sidebar() {
               </p>
             </div>
             <span
-              className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ${
+              className={`font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ${
+                isUrdu ? 'text-[11px] leading-[1.4]' : 'text-[9px]'
+              } ${
                 user.role === 'ADMIN'
                   ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
                   : 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
               }`}
             >
-              {user.role}
+              {isUrdu
+                ? user.role === 'ADMIN'
+                  ? 'ایڈمن'
+                  : user.role === 'OPERATOR'
+                  ? 'آپریٹر'
+                  : 'ملازم'
+                : user.role}
             </span>
           </div>
         )}
@@ -409,8 +435,8 @@ export default function Sidebar() {
           <button
             onClick={closeMobileSidebar}
             className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer shrink-0"
-            title="Close menu"
-            aria-label="Close menu"
+            title={isUrdu ? 'مینو بند کریں' : 'Close menu'}
+            aria-label={isUrdu ? 'مینو بند کریں' : 'Close menu'}
           >
             <X className="w-5 h-5" />
           </button>
