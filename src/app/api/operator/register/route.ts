@@ -1,3 +1,4 @@
+import { isPortalNetworkAllowed, portalNetworkDenied } from '@/lib/portalNetwork';
 import { RequestValidationError } from '@/lib/requestValidation';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
@@ -14,6 +15,7 @@ import { createAppNotification } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   try {
+    if (!(await isPortalNetworkAllowed(request.headers))) return portalNetworkDenied();
     const body = await request.json();
     const rawName =
       typeof body.name === 'string' && body.name.trim()

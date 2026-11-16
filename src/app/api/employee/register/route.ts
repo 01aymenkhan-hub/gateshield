@@ -1,3 +1,4 @@
+import { isPortalNetworkAllowed, portalNetworkDenied } from '@/lib/portalNetwork';
 import { RequestValidationError } from '@/lib/requestValidation';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
@@ -17,6 +18,7 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!(await isPortalNetworkAllowed(request.headers))) return portalNetworkDenied();
     const body = await request.json();
     const fullName = typeof body.fullName === 'string' ? body.fullName.trim().replace(/\s+/g, ' ') : '';
     const departmentId = typeof body.departmentId === 'string' ? body.departmentId.trim() : '';

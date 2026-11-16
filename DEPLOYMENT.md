@@ -1,6 +1,27 @@
 # Contabo VPS deployment
 
 Target: `https://gateshield.pro`, Ubuntu 24.04, PostgreSQL 16, Nginx and systemd.
+
+## Portal IP restrictions
+
+Keep the Next.js listener on loopback and expose it through Nginx. In each
+proxied location (including any separate scan locations), set
+`proxy_set_header X-Real-IP $remote_addr;` so Nginx overwrites the incoming
+header. If a CDN or load balancer sits ahead of Nginx, configure Nginx's real IP
+module to accept the client address only from those trusted upstreams.
+Set `PORTAL_TRUST_PROXY=true` in the web service environment and restart the web
+service to pick up the variable. See the
+[Nginx proxy module documentation](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_set_header).
+
+In **Settings → Portal Network Access**, choose **Only approved networks**,
+add the public IPv4 or IPv6 addresses of the allowed networks, and save.
+Use **Add my current network** when connected to a network you want to approve.
+Select **Allow all networks** and save to remove restrictions and keep the
+approved list for later. Operators and employees share the list within an
+installation. Each installation stores its own policy in PostgreSQL and
+starts in **Allow all networks** mode. Admins can manage the policy from any network.
+When enabled, requests without a verified client IP are denied for restricted
+roles, including requests using an existing session.
 The VPS IP remains `217.216.78.153`; its existing HTTPS entry is retained.
 Web release: `/opt/gateshield/releases/20261103-frontend-01`.
 OCR remains 0.3.3 in `/opt/gateshield/releases/20261102-native-ocr-v033-01/backend`.

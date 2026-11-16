@@ -52,7 +52,7 @@ export default function Header({
   onOpenCheckStatus,
 }: HeaderProps) {
   const router = useRouter();
-  const { user, currentGate, setCurrentGate, theme, toggleTheme, logout } = useAuth();
+  const { user, currentGate, setCurrentGate, theme, toggleTheme, logout, refreshUser } = useAuth();
   const { toggleMobileSidebar } = useLayout();
   const { language, toggleLanguage, t } = useLanguage();
   const isAdmin = user?.role === 'ADMIN';
@@ -77,6 +77,10 @@ export default function Header({
     if (!user) return;
     try {
       const res = await fetch('/api/notifications?limit=25', { cache: 'no-store' });
+      if (res.status === 401) {
+        await refreshUser();
+        return;
+      }
       if (!res.ok) return;
       const data = await res.json();
       const fetched: HeaderNotification[] = Array.isArray(data.notifications) ? data.notifications : [];
@@ -104,7 +108,7 @@ export default function Header({
     } catch {
       // Ignore transient network errors
     }
-  }, [user]);
+  }, [user, refreshUser]);
 
   useEffect(() => {
     if (!user) return;

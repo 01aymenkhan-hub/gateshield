@@ -1,3 +1,4 @@
+import { isPortalNetworkAllowed, portalNetworkDenied } from '@/lib/portalNetwork';
 import { NextResponse } from 'next/server';
 import {
   getEmployeePortalAccountFromCookies,
@@ -5,8 +6,9 @@ import {
   EMPLOYEE_TOKEN_COOKIE_NAME,
 } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    if (!(await isPortalNetworkAllowed(request.headers))) return portalNetworkDenied();
     const account = await getEmployeePortalAccountFromCookies();
     if (!account) {
       return NextResponse.json({

@@ -275,6 +275,17 @@ export default function EmployeePortalPage() {
     statusRequestInFlightRef.current = true;
     try {
       const res = await fetch('/api/employee/status', { cache: 'no-store' });
+      if (res.status === 403) {
+        const data = await res.json();
+        setAuthenticated(false);
+        setApprovalStatus(null);
+        setEmployee(null);
+        setApplicant(null);
+        setInvitations([]);
+        setParcels([]);
+        setAuthError(data.error || 'Access denied.');
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setAuthenticated(Boolean(data.authenticated));

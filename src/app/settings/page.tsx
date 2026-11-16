@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/layout/AppLayout';
 import AdminGuard from '@/components/auth/AdminGuard';
 import AdminPasswordResetSection from '@/components/admin/AdminPasswordResetSection';
+import PortalNetworkSettings from '@/components/admin/PortalNetworkSettings';
 import { Settings, Building, Plus, Save, CheckCircle2 } from 'lucide-react';
 
 function SettingsContent() {
@@ -228,6 +229,7 @@ function SettingsContent() {
         </div>
 
         {/* Section 3: Administrator Account Recovery Requests (ADMIN role only) */}
+        <PortalNetworkSettings />
         <AdminPasswordResetSection
           roleFilter="ADMIN"
           highlightRequestId={highlightRequestId}

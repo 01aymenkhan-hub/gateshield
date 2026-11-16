@@ -1,3 +1,4 @@
+import { isPortalNetworkAllowed, portalNetworkDenied } from '@/lib/portalNetwork';
 import { z } from 'zod';
 import { readJson, RequestValidationError } from '@/lib/requestValidation';
 import { getClientIp } from '@/lib/rateLimit';
@@ -81,6 +82,9 @@ export async function POST(request: NextRequest) {
     }
 
     const user = userRows[0];
+    if (user.role === 'OPERATOR' && !(await isPortalNetworkAllowed(request.headers))) {
+      return portalNetworkDenied();
+    }
 
     if (user.approvalStatus !== 'APPROVED') {
       return NextResponse.json(

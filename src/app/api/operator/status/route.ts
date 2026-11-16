@@ -1,11 +1,13 @@
+import { isPortalNetworkAllowed, portalNetworkDenied } from '@/lib/portalNetwork';
 import { NextResponse } from 'next/server';
 import {
   getOperatorApplicantFromCookies,
   OPERATOR_STATUS_COOKIE_NAME,
 } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    if (!(await isPortalNetworkAllowed(request.headers))) return portalNetworkDenied();
     const applicant = await getOperatorApplicantFromCookies();
     if (!applicant) {
       return NextResponse.json({

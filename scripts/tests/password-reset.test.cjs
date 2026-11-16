@@ -96,12 +96,18 @@ test('schema initialization is idempotent and expiry cleanup executes',async()=>
 test('password changes revoke a session issued one second earlier',async()=>{
   const now=Date.now(),decoded={id:'u',email:'u@example.invalid',name:'Test',role:'OPERATOR',iat:Math.floor((now-1000)/1000)};
   const auth=load('src/lib/auth.ts',{
-    'next/headers':{cookies:async()=>({get:()=>({value:'signed-test-token'})})},
-    './prisma':{$queryRaw:async()=>[{...decoded,active:true,approvalStatus:'APPROVED',passwordChangedAt:new Date(now)}]},
+    'next/headers':{cookies:async()=>({get:()=>({value:'signed-test-token'})}),headers:async()=>new Headers()},
+    './prisma':{
+      $queryRaw:async()=>[{...decoded,active:true,approvalStatus:'APPROVED',passwordChangedAt:new Date(now)}],
+      systemSetting:{findUnique:async()=>null},
+      userGateAccess:{findMany:async()=>[]},
+    },
     './operatorQr':{ensureOperatorUserSchema:async()=>{}},
     'jsonwebtoken':{verify:()=>decoded},
   });
   assert.equal(await auth.getSessionUser(),null);
+  decoded.issuedAtMs=now+1;
+  assert.equal((await auth.getSessionUser())?.id,'u');
 });
 
 test('password login validates UTF-8 bytes and rejects oversized JSON', async()=>{

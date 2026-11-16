@@ -1,7 +1,8 @@
 import { passwordSchema, RequestValidationError } from '@/lib/requestValidation';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { isPortalNetworkAllowed } from '@/lib/portalNetwork';
 import prisma from './prisma';
 import { getJwtSecret } from './secrets';
 import { ensureOperatorUserSchema } from './operatorQr';
@@ -239,6 +240,7 @@ export async function getSessionUser(): Promise<AuthUser | null> {
     if (dbUser.role !== 'ADMIN' && dbUser.role !== 'OPERATOR') {
       return null;
     }
+    if (dbUser.role === 'OPERATOR' && !(await isPortalNetworkAllowed(await headers()))) return null;
 
     // Gate scoping must reflect current assignments, not the list baked into a 7-day token.
     const gateAccess =
@@ -386,6 +388,7 @@ export async function getEmployeeSessionUser(): Promise<EmployeeAuthUser | null>
 
     const decoded = verifyEmployeeToken(empToken);
     if (!decoded || !decoded.id) return null;
+    if (!(await isPortalNetworkAllowed(await headers()))) return null;
 
     await ensureOperatorUserSchema(prisma);
 

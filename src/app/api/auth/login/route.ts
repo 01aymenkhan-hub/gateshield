@@ -1,3 +1,4 @@
+import { isPortalNetworkAllowed, portalNetworkDenied } from '@/lib/portalNetwork';
 import { passwordLoginSchema, readJson, RequestValidationError } from '@/lib/requestValidation';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
@@ -72,6 +73,9 @@ export async function POST(request: NextRequest) {
       );
     }
     const deviceToken = throttle.succeed();
+    if (userRow.role === 'OPERATOR' && !(await isPortalNetworkAllowed(request.headers))) {
+      return portalNetworkDenied();
+    }
 
     if (userRow.role === 'EMPLOYEE') {
       return NextResponse.json(

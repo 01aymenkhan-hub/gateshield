@@ -1,3 +1,4 @@
+import { isPortalNetworkAllowed, portalNetworkDenied } from '@/lib/portalNetwork';
 import { passwordLoginSchema, readJson, RequestValidationError } from '@/lib/requestValidation';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
@@ -37,6 +38,7 @@ interface EmployeeLoginRow {
 export async function POST(request: NextRequest) {
   let releaseAttempt: (() => void) | undefined;
   try {
+    if (!(await isPortalNetworkAllowed(request.headers))) return portalNetworkDenied();
     const { email: rawEmail, password } = await readJson(request, passwordLoginSchema);
     const throttle = checkLoginThrottle(
       'employee',
