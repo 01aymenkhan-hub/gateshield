@@ -12,7 +12,7 @@ const endpoint = '/api/settings/portal-network';
 
 export default function PortalNetworkSettings() {
   const fieldId = useId();
-  const [loaded, setLoaded] = useState(false);
+  const [savedPolicy, setSavedPolicy] = useState<NetworkSettings['policy'] | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [addresses, setAddresses] = useState<string[]>([]);
   const [address, setAddress] = useState('');
@@ -20,6 +20,11 @@ export default function PortalNetworkSettings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const hasChanges = savedPolicy !== null && (
+    enabled !== savedPolicy.enabled ||
+    addresses.length !== savedPolicy.addresses.length ||
+    addresses.some(ip => !savedPolicy.addresses.includes(ip))
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -31,7 +36,7 @@ export default function PortalNetworkSettings() {
         setEnabled(policy.enabled);
         setAddresses(policy.addresses);
         setClientIp(clientIp);
-        setLoaded(true);
+        setSavedPolicy(policy);
       } catch {
         if (!controller.signal.aborted) setError('Unable to load portal network settings.');
       }
@@ -39,6 +44,12 @@ export default function PortalNetworkSettings() {
     void load();
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!saved) return;
+    const timeout = window.setTimeout(() => setSaved(false), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [saved]);
 
   function addAddress(value: string) {
     setSaved(false);
@@ -62,6 +73,7 @@ export default function PortalNetworkSettings() {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!hasChanges || saving || (enabled && !clientIp)) return;
     setError('');
     setSaved(false);
     if (enabled && address.trim()) {
@@ -88,6 +100,7 @@ export default function PortalNetworkSettings() {
       const result: NetworkSettings = data;
       setEnabled(result.policy.enabled);
       setAddresses(result.policy.addresses);
+      setSavedPolicy(result.policy);
       setClientIp(result.clientIp);
       setSaved(true);
     } catch {
@@ -110,7 +123,7 @@ export default function PortalNetworkSettings() {
         Choose where operators and employees can sign in. Admins can sign in from any network.
       </p>
       <form className="mt-4 space-y-4" onSubmit={save}>
-        <fieldset className="space-y-3" disabled={!loaded || saving}>
+        <fieldset className="space-y-3" disabled={!savedPolicy || saving}>
           <legend className="mb-2 text-xs font-semibold">Access for operators and employees</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {[
@@ -172,19 +185,21 @@ export default function PortalNetworkSettings() {
                   ))}
                 </ul>
               )}
-              {loaded && !clientIp && (
+              {savedPolicy && !clientIp && (
                 <p className="text-xs text-amber-800 dark:text-amber-300">
                   This server needs to detect your network before restrictions can be turned on. Contact the person who manages the server.
                 </p>
               )}
             </div>
           )}
-          <button type="submit" disabled={enabled && !clientIp}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
-            {saving ? 'Saving…' : 'Save network access'}
-          </button>
+          {hasChanges && (
+            <button type="submit" disabled={enabled && !clientIp}
+              className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
+              {saving ? 'Saving…' : 'Save network access'}
+            </button>
+          )}
         </fieldset>
-        {!loaded && !error && <p role="status" className="text-xs">Loading network settings…</p>}
+        {!savedPolicy && !error && <p role="status" className="text-xs">Loading network settings…</p>}
         {error && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{error}</p>}
         {saved && <p role="status" className="text-xs text-emerald-700 dark:text-emerald-300">Network access saved.</p>}
       </form>
