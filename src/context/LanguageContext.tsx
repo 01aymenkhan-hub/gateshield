@@ -689,7 +689,7 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
 
   // ── Sidebar Navigation & Admin Menu ──
   nav_dashboard: { en: 'Dashboard', ur: 'ڈیش بورڈ' },
-  nav_visitors: { en: 'Visitors & Logs', ur: 'وزیٹرز اور ریکارڈز' },
+  nav_visitors: { en: 'Visitors', ur: 'وزیٹرز' },
   nav_guest: { en: 'Guest', ur: 'مہمان' },
   nav_parcel_tracker: { en: 'Parcel Tracker', ur: 'پارسل ٹریکر' },
   nav_vip_guest: { en: 'VIP Guest', ur: 'وی آئی پی مہمان' },

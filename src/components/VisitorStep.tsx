@@ -12,6 +12,8 @@ import {
   ArrowRight,
   FileText,
   Truck,
+  User,
+  Building2,
 } from "lucide-react";
 import VisitorPhotoCameraModal from "./VisitorPhotoCameraModal";
 import { VisitorStepData, SubmissionStatus, VisitInfoData } from "../types/visitor";
@@ -25,6 +27,115 @@ import {
   playBackSound,
 } from "@/utils/interactionSound";
 import { compressIdentityImageFile } from "@/utils/documentImageCompression";
+
+function VisitorSummaryHeaderCard({
+  displayName,
+  displayDocNum,
+  documentType,
+  visitInfo,
+  isDelivery,
+  isUr,
+  t,
+}: {
+  displayName: string;
+  displayDocNum: string;
+  documentType: DocumentType;
+  visitInfo: VisitInfoData;
+  isDelivery: boolean;
+  isUr: boolean;
+  t: (key: string, fallback?: string) => string;
+}) {
+  return (
+    <div className="bg-slate-50/90 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 shadow-2xs space-y-3">
+      {/* 1. Visitor Full Identity & Document Badge */}
+      <div className="space-y-1 pb-2.5 border-b border-slate-200/80 dark:border-slate-700/70">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span
+            className={`inline-flex items-center gap-1.5 ${
+              isUr ? "text-[13px] leading-[1.6]" : "text-[11px]"
+            } font-bold text-slate-500 dark:text-slate-400`}
+          >
+            <CreditCard className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+            <span>
+              {documentType === "cnic"
+                ? t("cnic_title", "Pakistani CNIC")
+                : t("dls_title", "Driving Licence")}
+            </span>
+          </span>
+
+          <span
+            dir="ltr"
+            className="inline-flex items-center text-xs font-mono font-extrabold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 rounded-lg shadow-2xs shrink-0"
+          >
+            {displayDocNum}
+          </span>
+        </div>
+
+        <p
+          dir="auto"
+          className={`font-extrabold text-slate-900 dark:text-white text-sm sm:text-base leading-snug break-words ${
+            isUr ? "text-right" : "text-left"
+          }`}
+        >
+          {displayName}
+        </p>
+      </div>
+
+      {/* 2. Visit Info: Host & Department (or Delivery Source) */}
+      <div
+        className={`grid ${
+          isDelivery ? "grid-cols-1" : "grid-cols-2"
+        } gap-3 text-xs`}
+      >
+        <div className={`min-w-0 ${isUr ? "text-right" : "text-left"}`}>
+          <span
+            className={`inline-flex items-center gap-1.5 ${
+              isUr ? "text-[13px] leading-[1.6]" : "text-[11px]"
+            } font-bold text-slate-500 dark:text-slate-400 block mb-0.5`}
+          >
+            {isDelivery ? (
+              <Truck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            ) : (
+              <User className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            )}
+            <span className="truncate">
+              {isDelivery
+                ? t("delivery_source_label", "Delivery Source / Company Name")
+                : t("host_summary_label", "Visitor to Meet")}
+            </span>
+          </span>
+          <p
+            dir="auto"
+            className="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-sm break-words"
+          >
+            {isDelivery
+              ? visitInfo.deliverySource || visitInfo.meetName || "N/A"
+              : visitInfo.meetName || "N/A"}
+          </p>
+        </div>
+
+        {!isDelivery && (
+          <div className={`min-w-0 ${isUr ? "text-right" : "text-left"}`}>
+            <span
+              className={`inline-flex items-center gap-1.5 ${
+                isUr ? "text-[13px] leading-[1.6]" : "text-[11px]"
+              } font-bold text-slate-500 dark:text-slate-400 block mb-0.5`}
+            >
+              <Building2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <span>{t("dept_label", "Dept")}</span>
+            </span>
+            <p
+              dir="auto"
+              className="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-sm break-words"
+            >
+              {visitInfo.department || "N/A"}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface VisitorStepProps {
   category?: string;
@@ -934,45 +1045,16 @@ export default function VisitorStep({
   if (operatorMode === "photo") {
     return (
       <div className="space-y-3.5">
-        {/* 1. Compact Summary of Fetched Visitor Details at the Top */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-2xs">
-          <div className="grid grid-cols-2 gap-2.5 text-xs">
-            <div className={isUr ? "text-right" : "text-left"}>
-              <span className={`${isUr ? "text-xs leading-[1.6]" : "text-[11px]"} font-bold text-slate-500 dark:text-slate-400 block`}>
-                {isDelivery
-                  ? t("delivery_source_label", "Delivery Source / Company Name")
-                  : t("host_summary_label", "Visitor to Meet")}
-              </span>
-              <p className="font-extrabold text-slate-900 dark:text-white truncate text-xs sm:text-sm">
-                {isDelivery
-                  ? visitInfo.deliverySource || visitInfo.meetName || "N/A"
-                  : visitInfo.meetName || "N/A"}
-              </p>
-              {!isDelivery && (
-                <p className="text-slate-500 dark:text-slate-400 text-[11px] font-semibold truncate">
-                  {t("dept_label", "Dept")}:{" "}
-                  <span className="text-slate-800 dark:text-slate-200 font-bold">
-                    {visitInfo.department || "N/A"}
-                  </span>
-                </p>
-              )}
-            </div>
-
-            <div className={isUr ? "text-right" : "text-left"}>
-              <span className={`${isUr ? "text-xs leading-[1.6]" : "text-[11px]"} font-bold text-slate-500 dark:text-slate-400 block`}>
-                {documentType === "cnic"
-                  ? t("cnic_title", "Pakistani CNIC")
-                  : t("dls_title", "Driving Licence")}
-              </span>
-              <p className="font-extrabold text-slate-900 dark:text-white truncate text-xs sm:text-sm">
-                {displayName}
-              </p>
-              <span className="inline-block text-[11px] font-mono font-extrabold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-md mt-0.5">
-                {displayDocNum}
-              </span>
-            </div>
-          </div>
-        </div>
+        {/* 1. Verified Visitor & Host Details Summary */}
+        <VisitorSummaryHeaderCard
+          displayName={displayName}
+          displayDocNum={displayDocNum}
+          documentType={documentType}
+          visitInfo={visitInfo}
+          isDelivery={isDelivery}
+          isUr={isUr}
+          t={t}
+        />
 
         {/* 2. Visitor Photo Capture Section */}
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs">
@@ -1149,33 +1231,16 @@ export default function VisitorStep({
   if (operatorMode === "delivery-document") {
     return (
       <div className="space-y-3.5">
-        {/* 1. Compact Summary of Delivery Source & Scanned ID */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-2xs">
-          <div className="grid grid-cols-2 gap-2.5 text-xs">
-            <div className={isUr ? "text-right" : "text-left"}>
-              <span className={`${isUr ? "text-xs leading-[1.6]" : "text-[11px]"} font-bold text-slate-500 dark:text-slate-400 block`}>
-                {t("delivery_source_label", "Delivery Source / Company Name")}
-              </span>
-              <p className="font-extrabold text-slate-900 dark:text-white truncate text-xs sm:text-sm">
-                {visitInfo.deliverySource || visitInfo.meetName || "N/A"}
-              </p>
-            </div>
-
-            <div className={isUr ? "text-right" : "text-left"}>
-              <span className={`${isUr ? "text-xs leading-[1.6]" : "text-[11px]"} font-bold text-slate-500 dark:text-slate-400 block`}>
-                {documentType === "cnic"
-                  ? t("cnic_title", "Pakistani CNIC")
-                  : t("dls_title", "Driving Licence")}
-              </span>
-              <p className="font-extrabold text-slate-900 dark:text-white truncate text-xs sm:text-sm">
-                {displayName}
-              </p>
-              <span className="inline-block text-[11px] font-mono font-extrabold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-md mt-0.5">
-                {displayDocNum}
-              </span>
-            </div>
-          </div>
-        </div>
+        {/* 1. Verified Visitor & Delivery Details Summary */}
+        <VisitorSummaryHeaderCard
+          displayName={displayName}
+          displayDocNum={displayDocNum}
+          documentType={documentType}
+          visitInfo={visitInfo}
+          isDelivery={isDelivery}
+          isUr={isUr}
+          t={t}
+        />
 
         {/* 2. Capture Document Section (Optional) */}
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs">
